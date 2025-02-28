@@ -9,6 +9,9 @@ import { Wand2 } from 'lucide-react';
 import AudioPlayer from '@/components/ui/AudioPlayer';
 import LanguageSelector from '@/components/ui/LanguageSelector';
 import VoiceSelector from '@/components/ui/VoiceSelector';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 interface LanguageOption {
   code: string;
@@ -39,21 +42,127 @@ const Generator = () => {
     gender: 'male' 
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [audioData, setAudioData] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [remainingGenerations, setRemainingGenerations] = useState(3); // For free tier
+  const { toast } = useToast();
+  const { user, profile } = useAuth();
 
-  const handleGenerate = () => {
-    if (!text.trim()) return;
+  // Base64 to Blob conversion for creating audio URL
+  const base64ToBlob = (base64: string, mimeType: string) => {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+    
+    for (let i = 0; i < byteCharacters.length; i += 512) {
+      const slice = byteCharacters.slice(i, i + 512);
+      
+      const byteNumbers = new Array(slice.length);
+      for (let j = 0; j < slice.length; j++) {
+        byteNumbers[j] = slice.charCodeAt(j);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    
+    return new Blob(byteArrays, { type: mimeType });
+  };
+  
+  const handleGenerate = async () => {
+    if (!text.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a product description.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsGenerating(true);
+    setAudioData(null);
+    setAudioUrl(null);
     
-    // Simulate API call
-    setTimeout(() => {
-      // In a real application, this would be the URL returned from your backend
-      setAudioUrl('https://audio-samples.github.io/samples/mp3/blizzard_biased/sample-4.mp3');
+    try {
+      // Call the Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('generate-audio', {
+        body: {
+          text: text.trim(),
+          language: selectedLanguage.code,
+          voice: selectedVoice.id,
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (!data.success || !data.audio_content) {
+        throw new Error(data.error || 'Failed to generate audio');
+      }
+      
+      // Create a blob from the base64 audio data
+      const audioBlob = base64ToBlob(data.audio_content, 'audio/mpeg');
+      const url = URL.createObjectURL(audioBlob);
+      
+      // Set the audio URL for the player
+      setAudioData(data.audio_content);
+      setAudioUrl(url);
+      
+      // Only decrement remaining generations if user isn't logged in or is on free tier
+      if (!user || (profile?.plan === 'free')) {
+        setRemainingGenerations(prev => Math.max(0, prev - 1));
+      }
+      
+      // If user is logged in, save the audio file to their history
+      if (user) {
+        await saveAudioToHistory(url, data.audio_content);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Audio generated successfully!",
+      });
+    } catch (error) {
+      console.error('Error generating audio:', error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate audio.",
+        variant: "destructive",
+      });
+    } finally {
       setIsGenerating(false);
-      setRemainingGenerations(prev => prev - 1);
-    }, 3000);
+    }
+  };
+  
+  // Save audio to user's history in Supabase
+  const saveAudioToHistory = async (audioUrl: string, audioData: string) => {
+    try {
+      // Generate filename based on first few words of text and timestamp
+      const firstWords = text.trim().split(' ').slice(0, 5).join('-');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `${firstWords.toLowerCase()}-${timestamp}.mp3`;
+      
+      // Get audio duration - this is a dummy calculation since we don't have actual duration
+      // In a production app, you'd want to properly calculate this
+      const approximateDuration = Math.max(10, Math.ceil(text.length / 20));
+      
+      // Insert record into audio_files table
+      const { error } = await (supabase
+        .from('audio_files') as any)
+        .insert({
+          user_id: user?.id,
+          title: text.trim().substring(0, 50) + (text.length > 50 ? '...' : ''),
+          description: text.trim(),
+          language: selectedLanguage.code,
+          voice_name: selectedVoice.name,
+          audio_url: audioUrl, // Note: this URL will expire when the page refreshes
+          audio_data: audioData, // Store the base64 data
+          duration: approximateDuration,
+        });
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving audio to history:', error);
+      // Don't show error toast to user to avoid confusion - the audio generation was successful
+    }
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -62,12 +171,14 @@ const Generator = () => {
 
   const handleSelectLanguage = (language: LanguageOption) => {
     setSelectedLanguage(language);
-    // Reset voice when language changes
-    setSelectedVoice({ 
-      id: `${language.code}-1`, 
-      name: 'Default', 
+    // Reset voice when language changes to match the language
+    const languagePrefix = language.code;
+    const defaultVoice = { 
+      id: `${languagePrefix}-${languagePrefix === 'en' ? 'US-1' : 'ES-1'}`, 
+      name: languagePrefix === 'en' ? 'Matthew' : 'Default', 
       gender: 'male' 
-    });
+    };
+    setSelectedVoice(defaultVoice);
   };
 
   const handleSelectVoice = (voice: VoiceOption) => {
@@ -132,17 +243,28 @@ const Generator = () => {
 
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-muted-foreground">
-                    <Badge variant="outline" className="mr-2">
-                      Free Plan
-                    </Badge>
-                    {remainingGenerations} generations remaining today
-                  </p>
+                  {!user ? (
+                    <p className="text-sm text-muted-foreground">
+                      <Badge variant="outline" className="mr-2">
+                        Free Plan
+                      </Badge>
+                      {remainingGenerations} generations remaining today
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      <Badge variant={profile?.plan === 'premium' ? 'default' : profile?.plan === 'basic' ? 'secondary' : 'outline'} className="mr-2">
+                        {profile?.plan ? (profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1)) : 'Free'} Plan
+                      </Badge>
+                      {profile?.plan === 'premium' ? 'Unlimited generations' : 
+                       profile?.plan === 'basic' ? `${profile.remaining_generations} / ${profile.daily_limit} generations remaining` : 
+                       `${remainingGenerations} generations remaining today`}
+                    </p>
+                  )}
                 </div>
                 
                 <Button 
                   onClick={handleGenerate} 
-                  disabled={isGenerating || !text.trim() || remainingGenerations <= 0}
+                  disabled={isGenerating || !text.trim() || (!user && remainingGenerations <= 0)}
                   className="gap-1"
                 >
                   <Wand2 size={18} />
@@ -169,9 +291,11 @@ const Generator = () => {
             <div className="text-center py-10">
               <h3 className="text-xl font-semibold mb-2">Your Audio History</h3>
               <p className="text-muted-foreground mb-4">
-                Sign in to view and manage your previously generated audio files.
+                {user ? 'View and manage your previously generated audio files.' : 'Sign in to view and manage your previously generated audio files.'}
               </p>
-              <Button>Sign In</Button>
+              {!user && (
+                <Button>Sign In</Button>
+              )}
             </div>
           </TabsContent>
         </Tabs>

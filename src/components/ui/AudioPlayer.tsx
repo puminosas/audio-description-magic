@@ -4,6 +4,7 @@ import { Play, Pause, Download, Code, Volume2, Volume1, VolumeX } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useToast } from '@/hooks/use-toast';
 
 interface AudioPlayerProps {
   audioUrl?: string;
@@ -19,19 +20,22 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
   const [isMuted, setIsMuted] = useState(false);
   const [embedCode, setEmbedCode] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
 
-  // Simulated audio URL if not provided
-  const effectiveAudioUrl = audioUrl || 'https://example.com/audio.mp3';
+  // Simulated audio URL if not provided - this is just a fallback
+  const effectiveAudioUrl = audioUrl || '';
 
   useEffect(() => {
     // Generate embed code
-    setEmbedCode(`<iframe 
+    if (effectiveAudioUrl) {
+      setEmbedCode(`<iframe 
   src="${window.location.origin}/embed?audio=${encodeURIComponent(effectiveAudioUrl)}" 
   width="300" 
   height="80" 
   frameborder="0" 
   allow="autoplay"
 ></iframe>`);
+    }
   }, [effectiveAudioUrl]);
 
   useEffect(() => {
@@ -63,13 +67,28 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
     }
   }, [audioRef.current]);
 
+  // Reset player state when audioUrl changes
+  useEffect(() => {
+    if (audioUrl) {
+      setCurrentTime(0);
+      setIsPlaying(false);
+    }
+  }, [audioUrl]);
+
   const togglePlayPause = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !audioUrl) return;
     
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(error => {
+        console.error('Error playing audio:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to play audio file. Please try again.',
+          variant: 'destructive',
+        });
+      });
     }
     
     setIsPlaying(!isPlaying);
@@ -117,14 +136,17 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
 
   const copyEmbedCode = () => {
     navigator.clipboard.writeText(embedCode);
-    // Could add a toast notification here
+    toast({
+      title: 'Success',
+      description: 'Embed code copied to clipboard.',
+    });
   };
 
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">
       {/* Hidden audio element */}
-      {!isGenerating && (
-        <audio ref={audioRef} src={effectiveAudioUrl} preload="metadata" />
+      {!isGenerating && audioUrl && (
+        <audio ref={audioRef} src={audioUrl} preload="metadata" />
       )}
       
       <div className="flex flex-col space-y-4">
@@ -143,7 +165,7 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
               </div>
               <p className="text-sm text-muted-foreground mt-2">Generating audio...</p>
             </div>
-          ) : (
+          ) : audioUrl ? (
             <div className={`w-full h-12 flex items-center ${isPlaying ? 'opacity-100' : 'opacity-60'}`}>
               {Array.from({ length: 40 }).map((_, i) => (
                 <div
@@ -157,6 +179,10 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
                 ></div>
               ))}
             </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No audio generated yet
+            </div>
           )}
         </div>
         
@@ -167,7 +193,7 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
               variant="outline" 
               size="icon" 
               onClick={togglePlayPause}
-              disabled={isGenerating}
+              disabled={isGenerating || !audioUrl}
               className="h-10 w-10 rounded-full"
             >
               {isPlaying ? <Pause size={18} /> : <Play size={18} />}
@@ -176,8 +202,10 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
             <div className="text-sm font-medium">
               {isGenerating ? (
                 <span className="text-muted-foreground">--:--</span>
-              ) : (
+              ) : audioUrl ? (
                 <span>{formatTime(currentTime)} <span className="text-muted-foreground">/ {formatTime(duration)}</span></span>
+              ) : (
+                <span className="text-muted-foreground">--:--</span>
               )}
             </div>
           </div>
@@ -189,7 +217,7 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
               max={duration || 100} 
               step={0.1} 
               onValueChange={handleTimeChange}
-              disabled={isGenerating}
+              disabled={isGenerating || !audioUrl}
               className="cursor-pointer"
             />
           </div>
@@ -198,7 +226,7 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
             <button 
               onClick={toggleMute}
               className="text-muted-foreground hover:text-foreground transition-colors"
-              disabled={isGenerating}
+              disabled={isGenerating || !audioUrl}
             >
               {isMuted ? (
                 <VolumeX size={18} />
@@ -216,7 +244,7 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
                 max={1} 
                 step={0.01} 
                 onValueChange={handleVolumeChange}
-                disabled={isGenerating}
+                disabled={isGenerating || !audioUrl}
               />
             </div>
             
@@ -224,12 +252,18 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
               <Button 
                 variant="outline" 
                 size="icon"
-                disabled={isGenerating}
-                asChild
+                disabled={isGenerating || !audioUrl}
+                asChild={!!audioUrl}
               >
-                <a href={effectiveAudioUrl} download={fileName}>
-                  <Download size={18} />
-                </a>
+                {audioUrl ? (
+                  <a href={audioUrl} download={fileName}>
+                    <Download size={18} />
+                  </a>
+                ) : (
+                  <span>
+                    <Download size={18} />
+                  </span>
+                )}
               </Button>
               
               <Popover>
@@ -237,7 +271,7 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
                   <Button 
                     variant="outline" 
                     size="icon"
-                    disabled={isGenerating}
+                    disabled={isGenerating || !audioUrl}
                   >
                     <Code size={18} />
                   </Button>
