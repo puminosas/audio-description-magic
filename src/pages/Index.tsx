@@ -14,8 +14,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FeatureCard from '@/components/ui/FeatureCard';
+import { useTheme } from '@/context/ThemeContext';
 
 const Index = () => {
+  const { theme } = useTheme();
+  
   // Add scroll reveal animation
   useEffect(() => {
     const observerOptions = {
@@ -45,6 +48,70 @@ const Index = () => {
     };
   }, []);
 
+  // Matrix rain effect for dark mode
+  useEffect(() => {
+    if (theme !== 'dark') return;
+    
+    const canvas = document.createElement('canvas');
+    canvas.id = 'matrix-canvas';
+    canvas.className = 'fixed top-0 left-0 w-full h-full -z-20 opacity-10';
+    document.body.appendChild(canvas);
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%"\'#&_(),.;:?!\\|{}<>[]^~';
+    const fontSize = 14;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops: number[] = [];
+    
+    for (let i = 0; i < columns; i++) {
+      drops[i] = Math.random() * -100;
+    }
+    
+    const drawMatrix = () => {
+      if (!ctx) return;
+      
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#00ff41'; // Matrix green
+      ctx.font = `${fontSize}px monospace`;
+      
+      for (let i = 0; i < drops.length; i++) {
+        const text = characters[Math.floor(Math.random() * characters.length)];
+        
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        
+        drops[i]++;
+      }
+    };
+    
+    const matrixInterval = setInterval(drawMatrix, 50);
+    
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      clearInterval(matrixInterval);
+      window.removeEventListener('resize', handleResize);
+      if (canvas.parentNode) {
+        canvas.parentNode.removeChild(canvas);
+      }
+    };
+  }, [theme]);
+
   return (
     <>
       {/* Hero Section */}
@@ -52,7 +119,7 @@ const Index = () => {
         <div className="hero-gradient absolute top-0 left-0 right-0 bottom-0 -z-10"></div>
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight reveal">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight reveal matrix-text">
               Automated Audio Descriptions for E-Commerce
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto reveal">
@@ -108,7 +175,7 @@ const Index = () => {
       <section id="how-it-works" className="py-20 bg-secondary/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 reveal">How It Works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 reveal matrix-text">How It Works</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto reveal">
               Our platform makes it easy to create professional audio descriptions for your products in just a few simple steps.
             </p>
@@ -158,7 +225,7 @@ const Index = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 reveal">Key Features</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 reveal matrix-text">Key Features</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto reveal">
               Everything you need to enhance your product descriptions with high-quality audio.
             </p>
@@ -215,7 +282,7 @@ const Index = () => {
       <section className="py-20 bg-primary/10">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 reveal">Ready to Enhance Your Product Descriptions?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 reveal matrix-text">Ready to Enhance Your Product Descriptions?</h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto reveal">
               Start generating audio descriptions today and take your e-commerce experience to the next level.
             </p>

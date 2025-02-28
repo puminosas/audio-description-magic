@@ -13,6 +13,7 @@ import {
   Shield
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,7 +85,7 @@ const Navbar = () => {
             <div className="bar animate-pulse-sound-3"></div>
             <div className="bar animate-pulse-sound-4"></div>
           </div>
-          <span className="text-xl font-bold">AudioDesc</span>
+          <span className="text-xl font-bold matrix-text">AudioDesc</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -100,6 +101,8 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
+          
+          <ThemeToggle />
           
           {user ? (
             <DropdownMenu>
@@ -149,12 +152,15 @@ const Navbar = () => {
         </nav>
 
         {/* Mobile Menu Button */}
-        <button 
-          className="md:hidden text-foreground"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggle />
+          <button 
+            className="text-foreground"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Navigation */}
