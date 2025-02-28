@@ -32,6 +32,7 @@ const App = () => (
               <main className="flex-grow pt-20">
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/index" element={<Index />} />
                   <Route path="/generator" element={<Generator />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/api" element={<ApiDocs />} />
