@@ -2,7 +2,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseTyped } from '@/utils/supabaseHelper';
 
 type AuthContextType = {
   session: Session | null;
@@ -68,8 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Fetch user profile
-      const { data: profileData, error: profileError } = await supabaseTyped.profiles
+      // Fetch user profile with more aggressive type assertion
+      const { data: profileData, error: profileError } = await (supabase
+        .from('profiles') as any)
         .select()
         .eq('id', userId)
         .single();
@@ -77,7 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileError) throw profileError;
 
       // Fetch user roles to check if admin
-      const { data: roleData, error: roleError } = await supabaseTyped.user_roles
+      const { data: roleData, error: roleError } = await (supabase
+        .from('user_roles') as any)
         .select()
         .eq('user_id', userId)
         .eq('role', 'admin')

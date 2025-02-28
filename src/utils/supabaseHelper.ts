@@ -1,45 +1,50 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Type cast function to help with TypeScript errors
+function castTable(tableName: string) {
+  return supabase.from(tableName) as any;
+}
+
 // This helper provides a type-safe way to interact with Supabase tables
 // without modifying the original types.ts file
 export const supabaseTyped = {
   // Profiles table operations
   profiles: {
-    select: () => supabase.from('profiles'),
-    update: (data: any) => supabase.from('profiles').update(data),
-    insert: (data: any) => supabase.from('profiles').insert(data),
-    delete: () => supabase.from('profiles').delete(),
+    select: () => castTable('profiles'),
+    update: (data: any) => castTable('profiles').update(data),
+    insert: (data: any) => castTable('profiles').insert(data),
+    delete: () => castTable('profiles').delete(),
   },
   // User roles table operations
   user_roles: {
-    select: () => supabase.from('user_roles'),
-    insert: (data: any) => supabase.from('user_roles').insert(data),
-    delete: () => supabase.from('user_roles').delete(),
+    select: () => castTable('user_roles'),
+    insert: (data: any) => castTable('user_roles').insert(data),
+    delete: () => castTable('user_roles').delete(),
   },
   // Audio files table operations
   audio_files: {
-    select: () => supabase.from('audio_files'),
-    insert: (data: any) => supabase.from('audio_files').insert(data),
-    update: (data: any) => supabase.from('audio_files').update(data),
-    delete: () => supabase.from('audio_files').delete(),
+    select: () => castTable('audio_files'),
+    insert: (data: any) => castTable('audio_files').insert(data),
+    update: (data: any) => castTable('audio_files').update(data),
+    delete: () => castTable('audio_files').delete(),
   },
   // Generation counts table operations
   generation_counts: {
-    select: () => supabase.from('generation_counts'),
-    insert: (data: any) => supabase.from('generation_counts').insert(data),
-    update: (data: any) => supabase.from('generation_counts').update(data),
+    select: () => castTable('generation_counts'),
+    insert: (data: any) => castTable('generation_counts').insert(data),
+    update: (data: any) => castTable('generation_counts').update(data),
   },
   // Audit logs table operations
   audit_logs: {
-    select: () => supabase.from('audit_logs'),
-    insert: (data: any) => supabase.from('audit_logs').insert(data),
+    select: () => castTable('audit_logs'),
+    insert: (data: any) => castTable('audit_logs').insert(data),
   },
   // API keys table operations
   api_keys: {
-    select: () => supabase.from('api_keys'),
-    insert: (data: any) => supabase.from('api_keys').insert(data),
-    update: (data: any) => supabase.from('api_keys').update(data),
-    delete: () => supabase.from('api_keys').delete(),
+    select: () => castTable('api_keys'),
+    insert: (data: any) => castTable('api_keys').insert(data),
+    update: (data: any) => castTable('api_keys').update(data),
+    delete: () => castTable('api_keys').delete(),
   },
 };

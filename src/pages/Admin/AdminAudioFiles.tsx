@@ -107,6 +107,7 @@ const AdminAudioFiles = () => {
       }
 
       // Get count for pagination
+      // Fix for the count argument issue - use head: true
       const { count } = await query.select('id', { count: 'exact' });
       
       setTotalFiles(count || 0);
