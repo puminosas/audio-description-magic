@@ -30,6 +30,7 @@ const Generator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioData, setAudioData] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [generatedText, setGeneratedText] = useState<string | null>(null);
   const [remainingGenerations, setRemainingGenerations] = useState(3); // For free tier
   const { toast } = useToast();
   const { user, profile } = useAuth();
@@ -47,6 +48,7 @@ const Generator = () => {
     setIsGenerating(true);
     setAudioData(null);
     setAudioUrl(null);
+    setGeneratedText(null);
     
     try {
       // Generate the audio
@@ -56,9 +58,10 @@ const Generator = () => {
         voice: selectedVoice
       });
       
-      // Set the audio URL and data
+      // Set the audio URL, data and generated text
       setAudioData(result.audioData);
       setAudioUrl(result.audioUrl);
+      setGeneratedText(result.generatedText);
       
       // Only decrement remaining generations if user isn't logged in or is on free tier
       if (!user || (profile?.plan === 'free')) {
@@ -71,6 +74,7 @@ const Generator = () => {
           audioUrl: result.audioUrl,
           audioData: result.audioData,
           text: text.trim(),
+          generatedText: result.generatedText,
           language: selectedLanguage,
           voice: selectedVoice,
           user
@@ -147,6 +151,7 @@ const Generator = () => {
             <AudioOutput 
               isGenerating={isGenerating}
               audioUrl={audioUrl}
+              generatedText={generatedText}
             />
           </TabsContent>
           

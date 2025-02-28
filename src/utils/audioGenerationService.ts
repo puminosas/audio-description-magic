@@ -28,6 +28,7 @@ export interface SaveAudioParams {
   audioUrl: string;
   audioData: string;
   text: string;
+  generatedText: string;
   language: LanguageOption;
   voice: VoiceOption;
   user: User;
@@ -76,7 +77,8 @@ export const generateAudio = async ({ text, language, voice }: GenerateAudioPara
   
   return {
     audioUrl: url,
-    audioData: data.audio_content
+    audioData: data.audio_content,
+    generatedText: data.generated_text
   };
 };
 
@@ -85,6 +87,7 @@ export const saveAudioToHistory = async ({
   audioUrl,
   audioData,
   text,
+  generatedText,
   language,
   voice,
   user
@@ -97,14 +100,14 @@ export const saveAudioToHistory = async ({
     
     // Get audio duration - this is a dummy calculation since we don't have actual duration
     // In a production app, you'd want to properly calculate this
-    const approximateDuration = Math.max(10, Math.ceil(text.length / 20));
+    const approximateDuration = Math.max(10, Math.ceil(generatedText.length / 20));
     
     // Insert record into audio_files table
     const { error } = await supabaseTyped.audio_files
       .insert({
         user_id: user?.id,
         title: text.trim().substring(0, 50) + (text.length > 50 ? '...' : ''),
-        description: text.trim(),
+        description: generatedText, // Save the generated description here
         language: language.code,
         voice_name: voice.name,
         audio_url: audioUrl, // Note: this URL will expire when the page refreshes

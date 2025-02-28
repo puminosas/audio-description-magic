@@ -1,9 +1,8 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import OpenAI from "https://esm.sh/openai@4.28.0";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,86 +17,106 @@ serve(async (req) => {
 
   try {
     const { text, language, voice } = await req.json();
-
+    
     if (!text) {
-      return new Response(
-        JSON.stringify({ error: 'Text is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Text is required');
     }
 
-    // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: openAIApiKey,
+    console.log(`Generating description for "${text}" in language ${language} with voice ${voice}`);
+
+    // Step 1: Generate a detailed product description with GPT-4o
+    const descriptionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // Using GPT-4o mini for cost efficiency
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional e-commerce product description writer.'
+          },
+          {
+            role: 'user',
+            content: `Write a high-quality, engaging product description for "${text}" in ${language}.
+            - Highlight its main features and benefits.
+            - Mention why it is better than competitors.
+            - Keep the description natural and appealing for an online store.
+            - Output a clear, well-structured 150-200 word description that would be useful for e-commerce listings.`
+          }
+        ],
+        temperature: 0.7,
+      }),
     });
 
-    // Map frontend voice IDs to OpenAI voice names
-    // OpenAI voices: alloy, echo, fable, onyx, nova, shimmer
-    const voiceMapping: Record<string, string> = {
-      // Default male voices by language
-      'en-US-1': 'onyx',   // Matthew -> onyx (male)
-      'en-US-4': 'echo',   // Joey -> echo (male)
-      'en-US-7': 'fable',  // Brian -> fable (male)
-      'en-US-9': 'nova',   // Russell -> nova (male)
-      'es-ES-1': 'onyx',   // Miguel -> onyx
-      'fr-FR-1': 'onyx',   // Mathieu -> onyx
-      'de-DE-1': 'onyx',   // Hans -> onyx
-      
-      // Default female voices by language
-      'en-US-2': 'nova',   // Joanna -> nova (female)
-      'en-US-3': 'shimmer', // Salli -> shimmer (female)
-      'en-US-5': 'alloy',  // Kimberly -> alloy (female)
-      'en-US-6': 'fable',  // Amy -> fable (female)
-      'en-US-8': 'shimmer', // Emma -> shimmer (female)
-      'es-ES-2': 'nova',   // Penélope -> nova
-      'es-ES-3': 'shimmer', // Lupe -> shimmer
-      'fr-FR-2': 'nova',   // Céline -> nova
-      'fr-FR-3': 'shimmer', // Léa -> shimmer
-      'de-DE-2': 'nova',   // Marlene -> nova
-      'de-DE-3': 'shimmer', // Vicki -> shimmer
-    };
+    const descriptionData = await descriptionResponse.json();
+    
+    if (!descriptionData.choices || !descriptionData.choices[0]) {
+      throw new Error('Failed to generate product description');
+    }
 
-    // Get the appropriate OpenAI voice or default to 'alloy'
-    const openaiVoice = voiceMapping[voice] || 'alloy';
+    const generatedDescription = descriptionData.choices[0].message.content;
+    console.log("Generated description:", generatedDescription);
 
-    console.log(`Generating audio with text: "${text.substring(0, 50)}..." in language: ${language}, voice: ${openaiVoice}`);
-
-    // Generate speech with OpenAI
-    const mp3 = await openai.audio.speech.create({
-      model: "tts-1",
-      voice: openaiVoice,
-      input: text,
+    // Step 2: Convert the generated description to speech using TTS-1
+    const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        voice: voice,
+        input: generatedDescription,
+        response_format: 'mp3'
+      }),
     });
 
-    // Convert response to arraybuffer
-    const buffer = await mp3.arrayBuffer();
-    
-    // Convert to base64 for easy transport
-    const uint8Array = new Uint8Array(buffer);
-    const binary = Array.from(uint8Array).map(byte => String.fromCharCode(byte)).join("");
-    const base64Audio = btoa(binary);
+    if (!ttsResponse.ok) {
+      const errorData = await ttsResponse.json();
+      throw new Error(`TTS API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
 
-    // For development/testing - store a timestamp with the generated audio
-    const timestamp = new Date().toISOString();
+    // Get audio data as array buffer
+    const audioArrayBuffer = await ttsResponse.arrayBuffer();
     
-    // Return success response with the base64-encoded audio
+    // Convert to base64
+    const audioBase64 = _arrayBufferToBase64(audioArrayBuffer);
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        audio_content: base64Audio,
-        timestamp: timestamp 
+      JSON.stringify({
+        success: true,
+        audio_content: audioBase64,
+        generated_text: generatedDescription
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Error in generate-audio function:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to generate audio' }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
 });
+
+// Helper function to convert ArrayBuffer to base64
+function _arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
