@@ -1,77 +1,77 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Wand2, Loader2 } from 'lucide-react';
 import DescriptionInput from './DescriptionInput';
 import LanguageVoiceSelector from './LanguageVoiceSelector';
-import PlanStatus from './PlanStatus';
-import { LanguageOption, VoiceOption } from '@/utils/audioGenerationService';
-import { User } from '@supabase/supabase-js';
+import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audioGenerationService';
 
 interface GeneratorFormProps {
-  text: string;
-  selectedLanguage: LanguageOption;
-  selectedVoice: VoiceOption;
-  isGenerating: boolean;
-  remainingGenerations: number;
-  user: User | null;
-  profile: any | null;
-  onTextChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onSelectLanguage: (language: LanguageOption) => void;
-  onSelectVoice: (voice: VoiceOption) => void;
-  onGenerate: () => void;
+  onGenerate: (formData: {
+    text: string;
+    language: LanguageOption;
+    voice: VoiceOption;
+  }) => Promise<void>;
+  loading: boolean;
 }
 
-const GeneratorForm = ({
-  text,
-  selectedLanguage,
-  selectedVoice,
-  isGenerating,
-  remainingGenerations,
-  user,
-  profile,
-  onTextChange,
-  onSelectLanguage,
-  onSelectVoice,
-  onGenerate
-}: GeneratorFormProps) => {
-  const isDisabled = isGenerating || !text.trim() || (!user && remainingGenerations <= 0);
+const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
+  const [text, setText] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(getAvailableLanguages()[0]);
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(getAvailableVoices('en')[0]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+  };
+
+  const handleSelectLanguage = (language: LanguageOption) => {
+    setSelectedLanguage(language);
+  };
+
+  const handleSelectVoice = (voice: VoiceOption) => {
+    setSelectedVoice(voice);
+  };
+
+  const handleSubmit = async () => {
+    if (!text.trim()) return;
+
+    await onGenerate({
+      text: text.trim(),
+      language: selectedLanguage,
+      voice: selectedVoice
+    });
+  };
+
+  const isDisabled = loading || !text.trim();
   const getButtonText = () => {
-    if (isGenerating) return "Generating...";
+    if (loading) return "Generating...";
     if (!text.trim()) return "Enter a product name";
-    if (!user && remainingGenerations <= 0) return "No generations left";
     return "Generate Audio";
   };
 
   return (
-    <div className="p-6">
+    <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <DescriptionInput 
           value={text} 
-          onChange={onTextChange} 
+          onChange={handleTextChange} 
         />
         
         <LanguageVoiceSelector 
           selectedLanguage={selectedLanguage}
           selectedVoice={selectedVoice}
-          onSelectLanguage={onSelectLanguage}
-          onSelectVoice={onSelectVoice}
+          onSelectLanguage={handleSelectLanguage}
+          onSelectVoice={handleSelectVoice}
         />
       </div>
 
-      <div className="flex justify-between items-center">
-        <PlanStatus 
-          user={user}
-          profile={profile}
-          remainingGenerations={remainingGenerations}
-        />
-        
+      <div className="flex justify-end">
         <Button 
-          onClick={onGenerate} 
+          onClick={handleSubmit} 
           disabled={isDisabled}
           className="gap-1"
         >
-          {isGenerating ? (
+          {loading ? (
             <Loader2 size={18} className="animate-spin" />
           ) : (
             <Wand2 size={18} />

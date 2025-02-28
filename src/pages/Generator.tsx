@@ -24,7 +24,7 @@ const Generator = () => {
   const [loading, setLoading] = useState(false);
   const [generatedAudio, setGeneratedAudio] = useState<{
     audioUrl: string;
-    description: string;
+    text: string;
   } | null>(null);
 
   const handleGenerate = async (formData: {
@@ -63,7 +63,7 @@ const Generator = () => {
       
       setGeneratedAudio({
         audioUrl: result.audioUrl,
-        description: result.text
+        text: result.text
       });
       
     } catch (error) {
@@ -113,7 +113,8 @@ const Generator = () => {
             <div className="mt-6">
               <AudioOutput 
                 audioUrl={generatedAudio.audioUrl} 
-                description={generatedAudio.description} 
+                generatedText={generatedAudio.text} 
+                isGenerating={loading}
               />
             </div>
           )}

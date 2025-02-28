@@ -1,9 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseTyped } from './supabaseHelper';
 import { saveBlobAsFile, getOrCreateGuestSessionId } from './fileStorageService';
 
-// Reuse the types from the components
+// Import the types from the UI components
 import { LanguageOption } from '@/components/ui/LanguageSelector';
 import { VoiceOption } from '@/components/ui/VoiceSelector';
 
@@ -86,8 +85,9 @@ export const saveAudioToHistory = async (
       throw new Error('Failed to save audio file');
     }
     
-    // Add to audio_files table
-    const { data, error } = await supabaseTyped.audio_files
+    // Add to audio_files table - use direct Supabase call
+    const { data, error } = await supabase
+      .from('audio_files')
       .insert([{
         user_id: userId,
         title: text.substring(0, 50),
@@ -115,15 +115,14 @@ export const saveAudioToHistory = async (
 };
 
 // Update the generation count for the user
-export const updateGenerationCount = async (userId?: string): Promise<void> => {
-  if (!userId) return;
-  
+export const updateGenerationCount = async (userId: string): Promise<void> => {
   try {
     const today = new Date().toISOString().split('T')[0];
     
     // Check if we already have a count for today
-    const { data: existingData, error: fetchError } = await supabaseTyped.generation_counts
-      .select()
+    const { data: existingData, error: fetchError } = await supabase
+      .from('generation_counts')
+      .select('*')
       .eq('user_id', userId)
       .eq('date', today)
       .single();
@@ -135,7 +134,8 @@ export const updateGenerationCount = async (userId?: string): Promise<void> => {
     
     if (existingData) {
       // Update existing count
-      const { error: updateError } = await supabaseTyped.generation_counts
+      const { error: updateError } = await supabase
+        .from('generation_counts')
         .update({ count: existingData.count + 1 })
         .eq('id', existingData.id);
       
@@ -144,7 +144,8 @@ export const updateGenerationCount = async (userId?: string): Promise<void> => {
       }
     } else {
       // Create new count
-      const { error: insertError } = await supabaseTyped.generation_counts
+      const { error: insertError } = await supabase
+        .from('generation_counts')
         .insert([{
           user_id: userId,
           date: today,

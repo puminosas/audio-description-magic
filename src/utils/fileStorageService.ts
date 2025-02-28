@@ -23,15 +23,14 @@ export const saveFile = async (
 ): Promise<FileMetadata | null> => {
   try {
     const isAuthenticated = !!userId;
-    const sessionId = !isAuthenticated ? uuidv4() : undefined;
+    const sessionId = !isAuthenticated ? getOrCreateGuestSessionId() : undefined;
     
     // Create path: 'user_id/filename' for authenticated users or 'temp/session_id/filename' for guests
     const folderPath = isAuthenticated 
       ? `${userId}/` 
-      : `temp/${sessionId || uuidv4()}/`;
+      : `temp/${sessionId}/`;
     
     // Generate a unique filename to avoid collisions
-    const fileExtension = file.name.split('.').pop();
     const uniqueFileName = `${Date.now()}_${file.name.substring(0, 50)}`;
     const filePath = folderPath + uniqueFileName;
     
@@ -69,6 +68,7 @@ export const saveFile = async (
       session_id: sessionId || null
     };
     
+    // Use raw supabase call instead of typed helper
     const { data: metadataData, error: metadataError } = await supabase
       .from('user_files')
       .insert([fileData])
@@ -141,6 +141,8 @@ export const getUserFiles = async (
       console.error('Error fetching user files:', error);
       return [];
     }
+    
+    if (!data) return [];
     
     return data.map(item => ({
       id: item.id,
