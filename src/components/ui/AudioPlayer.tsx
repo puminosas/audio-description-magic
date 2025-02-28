@@ -1,9 +1,10 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Download, Code, Volume2, Volume1, VolumeX } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import AudioControls from './audio-player/AudioControls';
+import AudioSeekBar from './audio-player/AudioSeekBar';
+import VolumeControl from './audio-player/VolumeControl';
+import ActionButtons from './audio-player/ActionButtons';
+import AudioWaveform from './audio-player/AudioWaveform';
 import { useToast } from '@/hooks/use-toast';
 
 interface AudioPlayerProps {
@@ -12,7 +13,11 @@ interface AudioPlayerProps {
   isGenerating?: boolean;
 }
 
-const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGenerating = false }: AudioPlayerProps) => {
+const AudioPlayer = ({ 
+  audioUrl, 
+  fileName = 'audio-description.mp3', 
+  isGenerating = false 
+}: AudioPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -128,20 +133,6 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
     }
   };
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  };
-
-  const copyEmbedCode = () => {
-    navigator.clipboard.writeText(embedCode);
-    toast({
-      title: 'Success',
-      description: 'Embed code copied to clipboard.',
-    });
-  };
-
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">
       {/* Hidden audio element */}
@@ -151,148 +142,47 @@ const AudioPlayer = ({ audioUrl, fileName = 'audio-description.mp3', isGeneratin
       
       <div className="flex flex-col space-y-4">
         {/* Waveform visualization */}
-        <div className="h-20 w-full bg-secondary/50 rounded-lg flex items-center justify-center">
-          {isGenerating ? (
-            <div className="text-center">
-              <div className="sound-wave inline-flex mx-auto">
-                <div className="bar animate-pulse-sound-1"></div>
-                <div className="bar animate-pulse-sound-2"></div>
-                <div className="bar animate-pulse-sound-3"></div>
-                <div className="bar animate-pulse-sound-4"></div>
-                <div className="bar animate-pulse-sound-2"></div>
-                <div className="bar animate-pulse-sound-3"></div>
-                <div className="bar animate-pulse-sound-1"></div>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">Generating audio...</p>
-            </div>
-          ) : audioUrl ? (
-            <div className={`w-full h-12 flex items-center ${isPlaying ? 'opacity-100' : 'opacity-60'}`}>
-              {Array.from({ length: 40 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="w-1 mx-0.5 rounded-full bg-primary transition-all duration-150"
-                  style={{
-                    height: isPlaying 
-                      ? `${Math.max(15, Math.abs(Math.sin(i * 0.45) * 40))}px` 
-                      : `${Math.max(5, Math.abs(Math.sin(i * 0.45) * 20))}px`
-                  }}
-                ></div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">
-              No audio generated yet
-            </div>
-          )}
-        </div>
+        <AudioWaveform 
+          isGenerating={isGenerating} 
+          audioUrl={audioUrl} 
+          isPlaying={isPlaying} 
+        />
         
         {/* Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0">
-          <div className="flex items-center justify-between sm:w-auto sm:justify-start sm:space-x-4">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={togglePlayPause}
-              disabled={isGenerating || !audioUrl}
-              className="h-10 w-10 rounded-full"
-            >
-              {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-            </Button>
-            
-            <div className="text-sm font-medium">
-              {isGenerating ? (
-                <span className="text-muted-foreground">--:--</span>
-              ) : audioUrl ? (
-                <span>{formatTime(currentTime)} <span className="text-muted-foreground">/ {formatTime(duration)}</span></span>
-              ) : (
-                <span className="text-muted-foreground">--:--</span>
-              )}
-            </div>
-          </div>
+          <AudioControls 
+            isPlaying={isPlaying}
+            isGenerating={isGenerating}
+            audioUrl={audioUrl}
+            currentTime={currentTime}
+            duration={duration}
+            togglePlayPause={togglePlayPause}
+          />
           
-          <div className="flex-grow mx-0 sm:mx-4">
-            <Slider 
-              value={[currentTime]} 
-              min={0} 
-              max={duration || 100} 
-              step={0.1} 
-              onValueChange={handleTimeChange}
-              disabled={isGenerating || !audioUrl}
-              className="cursor-pointer"
-            />
-          </div>
+          <AudioSeekBar 
+            currentTime={currentTime}
+            duration={duration}
+            isGenerating={isGenerating}
+            audioUrl={audioUrl}
+            handleTimeChange={handleTimeChange}
+          />
           
           <div className="flex items-center space-x-3">
-            <button 
-              onClick={toggleMute}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              disabled={isGenerating || !audioUrl}
-            >
-              {isMuted ? (
-                <VolumeX size={18} />
-              ) : volume > 0.5 ? (
-                <Volume2 size={18} />
-              ) : (
-                <Volume1 size={18} />
-              )}
-            </button>
+            <VolumeControl 
+              volume={volume}
+              isMuted={isMuted}
+              isGenerating={isGenerating}
+              audioUrl={audioUrl}
+              toggleMute={toggleMute}
+              handleVolumeChange={handleVolumeChange}
+            />
             
-            <div className="w-20 hidden sm:block">
-              <Slider 
-                value={[isMuted ? 0 : volume]} 
-                min={0} 
-                max={1} 
-                step={0.01} 
-                onValueChange={handleVolumeChange}
-                disabled={isGenerating || !audioUrl}
-              />
-            </div>
-            
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="icon"
-                disabled={isGenerating || !audioUrl}
-                asChild={!!audioUrl}
-              >
-                {audioUrl ? (
-                  <a href={audioUrl} download={fileName}>
-                    <Download size={18} />
-                  </a>
-                ) : (
-                  <span>
-                    <Download size={18} />
-                  </span>
-                )}
-              </Button>
-              
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    disabled={isGenerating || !audioUrl}
-                  >
-                    <Code size={18} />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Embed Code</h3>
-                    <div className="bg-secondary p-2 rounded-md text-xs overflow-x-auto">
-                      <code>{embedCode}</code>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      className="w-full mt-2"
-                      onClick={copyEmbedCode}
-                    >
-                      Copy Code
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
+            <ActionButtons 
+              isGenerating={isGenerating}
+              audioUrl={audioUrl}
+              fileName={fileName}
+              embedCode={embedCode}
+            />
           </div>
         </div>
       </div>

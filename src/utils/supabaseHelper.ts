@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Type cast function to help with TypeScript errors
 function castTable(tableName: string) {
-  // Use a more aggressive type assertion to bypass TypeScript type checking
+  // Use a stronger type assertion to bypass TypeScript type checking
   return supabase.from(tableName as any) as any;
 }
 
