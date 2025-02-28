@@ -2,17 +2,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
-// Inicializuojame Resend su API raktu
+// Initialize Resend with API key
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-// CORS antraštės
+// CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
 
-// El. laiško siuntimo užklausos tipas
+// Email request type
 interface EmailRequest {
   to: string | string[];
   subject: string;
@@ -24,30 +24,30 @@ interface EmailRequest {
 const handler = async (req: Request): Promise<Response> => {
   console.log("Processing email request");
   
-  // Apdorojame CORS OPTIONS užklausą
+  // Handle CORS OPTIONS request
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Tikriname, ar metodas yra POST
+    // Check if method is POST
     if (req.method !== "POST") {
       throw new Error("Method not allowed");
     }
 
-    // Gauname užklausos duomenis
+    // Get request data
     const { to, subject, html, from, text }: EmailRequest = await req.json();
 
     console.log(`Sending email to: ${Array.isArray(to) ? to.join(", ") : to}`);
     
-    // Tikriname, ar yra būtini laukai
+    // Check for required fields
     if (!to || !subject || !html) {
       throw new Error("Missing required fields: to, subject, or html");
     }
 
-    // Siunčiame el. laišką
+    // Send email using Resend
     const { data, error } = await resend.emails.send({
-      from: from || "AudioDescriptions <noreply@audiodescriptions.com>",
+      from: from || "AudioDescriptions <info@audiodescriptions.online>", // Using your verified domain
       to,
       subject,
       html,
@@ -61,7 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", data);
 
-    // Grąžiname sėkmės atsakymą
+    // Return success response
     return new Response(
       JSON.stringify({
         success: true,
@@ -78,7 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-email function:", error);
     
-    // Grąžiname klaidos atsakymą
+    // Return error response
     return new Response(
       JSON.stringify({
         success: false,
@@ -95,5 +95,5 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// Paleidžiame serverį
+// Start the server
 serve(handler);
