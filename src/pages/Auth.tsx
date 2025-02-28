@@ -48,8 +48,8 @@ const Auth = () => {
     e.preventDefault();
     if (!email || !password) {
       toast({
-        title: 'Klaida',
-        description: 'Įveskite el. paštą ir slaptažodį.',
+        title: 'Error',
+        description: 'Please enter your email and password.',
         variant: 'destructive',
       });
       return;
@@ -61,14 +61,14 @@ const Auth = () => {
       if (error) throw error;
       
       toast({
-        title: 'Sėkmingai',
-        description: 'Jūs prisijungėte.',
+        title: 'Success',
+        description: 'You are now logged in.',
       });
       navigate(from, { replace: true });
     } catch (error: any) {
       toast({
-        title: 'Klaida',
-        description: error.message || 'Nepavyko prisijungti.',
+        title: 'Error',
+        description: error.message || 'Failed to log in.',
         variant: 'destructive',
       });
     } finally {
@@ -80,8 +80,8 @@ const Auth = () => {
     e.preventDefault();
     if (!signupEmail || !signupPassword || !confirmPassword) {
       toast({
-        title: 'Klaida',
-        description: 'Užpildykite visus privalomus laukus.',
+        title: 'Error',
+        description: 'Please fill in all required fields.',
         variant: 'destructive',
       });
       return;
@@ -89,8 +89,8 @@ const Auth = () => {
 
     if (signupPassword !== confirmPassword) {
       toast({
-        title: 'Klaida',
-        description: 'Slaptažodžiai nesutampa.',
+        title: 'Error',
+        description: 'Passwords do not match.',
         variant: 'destructive',
       });
       return;
@@ -107,14 +107,14 @@ const Auth = () => {
       if (error) throw error;
       
       toast({
-        title: 'Sėkmingai',
-        description: 'Registracija sėkminga! Patikrinkite savo el. paštą, kad patvirtintumėte paskyrą.',
+        title: 'Success',
+        description: 'Registration successful! Please check your email to confirm your account.',
       });
       setActiveTab('login');
     } catch (error: any) {
       toast({
-        title: 'Klaida',
-        description: error.message || 'Nepavyko užsiregistruoti.',
+        title: 'Error',
+        description: error.message || 'Failed to sign up.',
         variant: 'destructive',
       });
     } finally {
@@ -129,8 +129,8 @@ const Auth = () => {
       // No need for success toast as the page will redirect
     } catch (error: any) {
       toast({
-        title: 'Klaida',
-        description: error.message || 'Nepavyko prisijungti su Google.',
+        title: 'Error',
+        description: error.message || 'Failed to sign in with Google.',
         variant: 'destructive',
       });
       setAuthLoading(false);
@@ -141,8 +141,8 @@ const Auth = () => {
     e.preventDefault();
     if (!resetEmail) {
       toast({
-        title: 'Klaida',
-        description: 'Įveskite el. paštą.',
+        title: 'Error',
+        description: 'Please enter your email.',
         variant: 'destructive',
       });
       return;
@@ -155,13 +155,13 @@ const Auth = () => {
       
       setResetSent(true);
       toast({
-        title: 'Sėkmingai',
-        description: 'Slaptažodžio atkūrimo nuoroda išsiųsta jūsų el. paštu.',
+        title: 'Success',
+        description: 'Password reset link has been sent to your email.',
       });
     } catch (error: any) {
       toast({
-        title: 'Klaida',
-        description: error.message || 'Nepavyko išsiųsti slaptažodžio atkūrimo nuorodos.',
+        title: 'Error',
+        description: error.message || 'Failed to send password reset link.',
         variant: 'destructive',
       });
     } finally {
@@ -173,42 +173,42 @@ const Auth = () => {
     <div className="container mx-auto flex flex-col items-center justify-center px-4 py-20">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold">Sveiki, AudioDesc naudotojau</h1>
+          <h1 className="text-3xl font-bold">Welcome to AudioDesc</h1>
           <p className="text-muted-foreground mt-2">
-            Prisijunkite prie savo paskyros arba sukurkite naują
+            Sign in to your account or create a new one
           </p>
         </div>
 
         <Card>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'signup' | 'reset')}>
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="login">Prisijungti</TabsTrigger>
-              <TabsTrigger value="signup">Registruotis</TabsTrigger>
-              <TabsTrigger value="reset">Atkurti slaptažodį</TabsTrigger>
+              <TabsTrigger value="login">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Register</TabsTrigger>
+              <TabsTrigger value="reset">Reset Password</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <form onSubmit={handleLogin}>
                 <CardHeader>
-                  <CardTitle>Prisijungimas</CardTitle>
+                  <CardTitle>Sign In</CardTitle>
                   <CardDescription>
-                    Įveskite savo el. paštą ir slaptažodį, kad prisijungtumėte
+                    Enter your email and password to sign in
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">El. paštas</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="vardas.pavarde@pavyzdys.lt"
+                      placeholder="name.surname@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Slaptažodis</Label>
+                    <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
                       type="password"
@@ -223,7 +223,7 @@ const Auth = () => {
                     className="p-0 h-auto" 
                     onClick={() => setActiveTab('reset')}
                   >
-                    Pamiršote slaptažodį?
+                    Forgot your password?
                   </Button>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4">
@@ -231,10 +231,10 @@ const Auth = () => {
                     {authLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Jungiamasi...
+                        Signing in...
                       </>
                     ) : (
-                      'Prisijungti'
+                      'Sign In'
                     )}
                   </Button>
                   <div className="relative w-full">
@@ -243,7 +243,7 @@ const Auth = () => {
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                       <span className="bg-card px-2 text-muted-foreground">
-                        arba prisijunkite su
+                        or sign in with
                       </span>
                     </div>
                   </div>
@@ -281,34 +281,34 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup}>
                 <CardHeader>
-                  <CardTitle>Registracija</CardTitle>
+                  <CardTitle>Register</CardTitle>
                   <CardDescription>
-                    Sukurkite naują paskyrą, kad galėtumėte naudotis AudioDesc paslaugomis
+                    Create a new account to use AudioDesc services
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Vardas ir pavardė</Label>
+                    <Label htmlFor="fullName">Full Name</Label>
                     <Input
                       id="fullName"
-                      placeholder="Jonas Jonaitis"
+                      placeholder="John Smith"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signupEmail">El. paštas</Label>
+                    <Label htmlFor="signupEmail">Email</Label>
                     <Input
                       id="signupEmail"
                       type="email"
-                      placeholder="vardas.pavarde@pavyzdys.lt"
+                      placeholder="name.surname@example.com"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signupPassword">Slaptažodis</Label>
+                    <Label htmlFor="signupPassword">Password</Label>
                     <Input
                       id="signupPassword"
                       type="password"
@@ -318,7 +318,7 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Pakartokite slaptažodį</Label>
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -333,10 +333,10 @@ const Auth = () => {
                     {authLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Kuriama paskyra...
+                        Creating account...
                       </>
                     ) : (
-                      'Registruotis'
+                      'Register'
                     )}
                   </Button>
                   <div className="relative w-full">
@@ -345,7 +345,7 @@ const Auth = () => {
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                       <span className="bg-card px-2 text-muted-foreground">
-                        arba registruokitės su
+                        or register with
                       </span>
                     </div>
                   </div>
@@ -383,9 +383,9 @@ const Auth = () => {
             <TabsContent value="reset">
               <form onSubmit={handleResetPassword}>
                 <CardHeader>
-                  <CardTitle>Atkurti slaptažodį</CardTitle>
+                  <CardTitle>Reset Password</CardTitle>
                   <CardDescription>
-                    Įveskite savo el. paštą ir mes atsiųsime jums slaptažodžio atkūrimo nuorodą
+                    Enter your email and we'll send you a password reset link
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -393,17 +393,17 @@ const Auth = () => {
                     <Alert className="mb-4">
                       <Mail className="h-4 w-4" />
                       <AlertDescription>
-                        Slaptažodžio atkūrimo nuoroda išsiųsta. Patikrinkite savo el. paštą.
+                        Password reset link has been sent. Please check your email.
                       </AlertDescription>
                     </Alert>
                   )}
                   
                   <div className="space-y-2">
-                    <Label htmlFor="resetEmail">El. paštas</Label>
+                    <Label htmlFor="resetEmail">Email</Label>
                     <Input
                       id="resetEmail"
                       type="email"
-                      placeholder="vardas.pavarde@pavyzdys.lt"
+                      placeholder="name.surname@example.com"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
                       required
@@ -415,12 +415,12 @@ const Auth = () => {
                     {authLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Siunčiama...
+                        Sending...
                       </>
                     ) : resetSent ? (
-                      'Nuoroda išsiųsta'
+                      'Link Sent'
                     ) : (
-                      'Atkurti slaptažodį'
+                      'Reset Password'
                     )}
                   </Button>
                   <Button 
@@ -429,7 +429,7 @@ const Auth = () => {
                     className="w-full" 
                     onClick={() => setActiveTab('login')}
                   >
-                    Grįžti į prisijungimą
+                    Back to Sign In
                   </Button>
                 </CardFooter>
               </form>
