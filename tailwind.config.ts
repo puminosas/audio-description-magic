@@ -111,6 +111,19 @@ export default {
 					'50%': {
 						transform: 'translateY(-10px)'
 					}
+				},
+				'matrix-drip': {
+					'0%': {
+						transform: 'translateY(-100%)',
+						opacity: '0'
+					},
+					'50%': {
+						opacity: '1'
+					},
+					'100%': {
+						transform: 'translateY(100%)',
+						opacity: '0'
+					}
 				}
 			},
 			animation: {
@@ -122,7 +135,8 @@ export default {
 				'pulse-sound-2': 'pulse-sound 1.7s ease-in-out infinite 0.1s',
 				'pulse-sound-3': 'pulse-sound 1.3s ease-in-out infinite 0.2s',
 				'pulse-sound-4': 'pulse-sound 1.6s ease-in-out infinite 0.3s',
-				'float': 'float 4s ease-in-out infinite'
+				'float': 'float 4s ease-in-out infinite',
+				'matrix-drip': 'matrix-drip 2.5s ease-in-out infinite'
 			},
 			backdropFilter: {
 				'none': 'none',
