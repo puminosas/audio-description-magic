@@ -59,15 +59,14 @@ export const saveFile = async (
     }
     
     // Create file metadata entry in the database
-    const fileData: Omit<FileMetadata, 'id'> = {
-      fileName: file.name,
-      filePath: filePath,
-      fileType: file.type,
+    const fileData = {
+      file_name: file.name,
+      file_path: filePath,
+      file_type: file.type,
       size: file.size,
-      isTemporary: !isAuthenticated,
-      userId: userId || null,
-      sessionId: sessionId || null,
-      createdAt: new Date()
+      is_temporary: !isAuthenticated,
+      user_id: userId || null,
+      session_id: sessionId || null
     };
     
     const { data: metadataData, error: metadataError } = await supabase

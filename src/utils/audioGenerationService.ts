@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { saveFile, saveBlobAsFile, getOrCreateGuestSessionId } from './fileStorageService';
-import { useAuth } from '@/context/AuthContext';
+import { supabaseTyped } from './supabaseHelper';
+import { saveBlobAsFile, getOrCreateGuestSessionId } from './fileStorageService';
 
 // Reuse the types from the components
 import { LanguageOption } from '@/components/ui/LanguageSelector';
@@ -87,8 +87,7 @@ export const saveAudioToHistory = async (
     }
     
     // Add to audio_files table
-    const { data, error } = await supabase
-      .from('audio_files')
+    const { data, error } = await supabaseTyped.audio_files
       .insert([{
         user_id: userId,
         title: text.substring(0, 50),
@@ -123,9 +122,8 @@ export const updateGenerationCount = async (userId?: string): Promise<void> => {
     const today = new Date().toISOString().split('T')[0];
     
     // Check if we already have a count for today
-    const { data: existingData, error: fetchError } = await supabase
-      .from('generation_counts')
-      .select('*')
+    const { data: existingData, error: fetchError } = await supabaseTyped.generation_counts
+      .select()
       .eq('user_id', userId)
       .eq('date', today)
       .single();
@@ -137,8 +135,7 @@ export const updateGenerationCount = async (userId?: string): Promise<void> => {
     
     if (existingData) {
       // Update existing count
-      const { error: updateError } = await supabase
-        .from('generation_counts')
+      const { error: updateError } = await supabaseTyped.generation_counts
         .update({ count: existingData.count + 1 })
         .eq('id', existingData.id);
       
@@ -147,8 +144,7 @@ export const updateGenerationCount = async (userId?: string): Promise<void> => {
       }
     } else {
       // Create new count
-      const { error: insertError } = await supabase
-        .from('generation_counts')
+      const { error: insertError } = await supabaseTyped.generation_counts
         .insert([{
           user_id: userId,
           date: today,

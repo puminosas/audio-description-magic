@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { getUserFiles, getOrCreateGuestSessionId, convertTemporaryFilesToUserFiles } from '@/utils/fileStorageService';
+import { supabaseTyped } from '@/utils/supabaseHelper';
+import { getOrCreateGuestSessionId, convertTemporaryFilesToUserFiles } from '@/utils/fileStorageService';
 import { Loader2, FileAudio, Play, Download, Code } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -58,9 +59,8 @@ const HistoryTab = ({ user }: HistoryTabProps) => {
 
       if (user) {
         // Fetch files for logged-in user
-        const { data, error } = await supabase
-          .from('audio_files')
-          .select('*')
+        const { data, error } = await supabaseTyped.audio_files
+          .select()
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -79,9 +79,8 @@ const HistoryTab = ({ user }: HistoryTabProps) => {
       } else {
         // Fetch temporary files for guest session
         const sessionId = getOrCreateGuestSessionId();
-        const { data, error } = await supabase
-          .from('audio_files')
-          .select('*')
+        const { data, error } = await supabaseTyped.audio_files
+          .select()
           .eq('session_id', sessionId)
           .eq('is_temporary', true)
           .order('created_at', { ascending: false });

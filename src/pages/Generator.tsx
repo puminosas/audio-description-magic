@@ -8,9 +8,14 @@ import HistoryTab from '@/components/generator/HistoryTab';
 import TipsCard from '@/components/generator/TipsCard';
 import PlanStatus from '@/components/generator/PlanStatus';
 import AudioOutput from '@/components/generator/AudioOutput';
-import { generateAudioDescription, saveAudioToHistory } from '@/utils/audioGenerationService';
+import { 
+  generateAudioDescription, 
+  saveAudioToHistory, 
+  updateGenerationCount,
+  LanguageOption,
+  VoiceOption
+} from '@/utils/audioGenerationService';
 import { useToast } from '@/hooks/use-toast';
-import { updateGenerationCount } from '@/utils/audioGenerationService';
 
 const Generator = () => {
   const { user, profile } = useAuth();
@@ -19,13 +24,13 @@ const Generator = () => {
   const [loading, setLoading] = useState(false);
   const [generatedAudio, setGeneratedAudio] = useState<{
     audioUrl: string;
-    text: string;
+    description: string;
   } | null>(null);
 
   const handleGenerate = async (formData: {
     text: string;
-    language: { code: string; name: string; nativeName: string; flag?: string };
-    voice: { id: string; name: string; gender: 'male' | 'female' | 'neutral'; premium?: boolean };
+    language: LanguageOption;
+    voice: VoiceOption;
   }) => {
     try {
       setLoading(true);
@@ -58,7 +63,7 @@ const Generator = () => {
       
       setGeneratedAudio({
         audioUrl: result.audioUrl,
-        text: result.text
+        description: result.text
       });
       
     } catch (error) {
@@ -108,14 +113,18 @@ const Generator = () => {
             <div className="mt-6">
               <AudioOutput 
                 audioUrl={generatedAudio.audioUrl} 
-                text={generatedAudio.text} 
+                description={generatedAudio.description} 
               />
             </div>
           )}
         </div>
         
         <div className="space-y-6">
-          <PlanStatus user={user} profile={profile} />
+          <PlanStatus 
+            user={user} 
+            profile={profile}
+            remainingGenerations={profile?.remaining_generations || 10} 
+          />
           <TipsCard />
         </div>
       </div>

@@ -33,6 +33,13 @@ export const supabaseTyped = {
     update: (data: any) => castTable('audio_files').update(data),
     delete: () => castTable('audio_files').delete(),
   },
+  // User files table operations
+  user_files: {
+    select: () => castTable('user_files'),
+    insert: (data: any) => castTable('user_files').insert(data),
+    update: (data: any) => castTable('user_files').update(data),
+    delete: () => castTable('user_files').delete(),
+  },
   // Generation counts table operations
   generation_counts: {
     select: () => castTable('generation_counts'),
