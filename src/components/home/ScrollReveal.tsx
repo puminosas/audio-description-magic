@@ -12,13 +12,22 @@ const ScrollReveal = () => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
+          // Add the animation class
           entry.target.classList.add('animate-fade-in-up');
+          // Make sure opacity is set to 1 immediately after animation
+          setTimeout(() => {
+            if (entry.target instanceof HTMLElement) {
+              entry.target.style.opacity = '1';
+            }
+          }, 700); // Match the animation duration
+          
           observer.unobserve(entry.target);
         }
       });
     }, observerOptions);
 
     document.querySelectorAll('.reveal').forEach(el => {
+      // Initial state
       el.classList.add('opacity-0');
       observer.observe(el);
     });

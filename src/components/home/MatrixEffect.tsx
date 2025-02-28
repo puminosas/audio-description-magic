@@ -6,16 +6,26 @@ const MatrixEffect = () => {
   const { theme } = useTheme();
   
   useEffect(() => {
-    const canvas = document.createElement('canvas');
-    canvas.id = 'matrix-canvas';
-    canvas.className = 'fixed top-0 left-0 w-full h-full -z-20 opacity-10';
-    document.body.appendChild(canvas);
+    // Check if canvas already exists to prevent duplicates
+    let canvas = document.getElementById('matrix-canvas') as HTMLCanvasElement;
+    
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.id = 'matrix-canvas';
+      canvas.className = 'fixed top-0 left-0 w-full h-full -z-20 opacity-10';
+      document.body.appendChild(canvas);
+    }
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // Set canvas dimensions
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    
+    resizeCanvas();
     
     // Audio-related characters instead of random ones
     const audioChars = '♪♫♬¶♬♪♩♭♮♯🎵🎶♫♬🔊🎤🎧🎼AUDIODESCSOUNDVOICE';
@@ -69,21 +79,23 @@ const MatrixEffect = () => {
       }
     };
     
-    const animationInterval = setInterval(drawAudioWave, 50);
+    // Use requestAnimationFrame for smoother animation
+    let animationId: number;
     
-    const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    const animate = () => {
+      drawAudioWave();
+      animationId = requestAnimationFrame(animate);
     };
     
-    window.addEventListener('resize', handleResize);
+    animate();
+    
+    window.addEventListener('resize', resizeCanvas);
     
     return () => {
-      clearInterval(animationInterval);
-      window.removeEventListener('resize', handleResize);
-      if (canvas.parentNode) {
-        canvas.parentNode.removeChild(canvas);
-      }
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', resizeCanvas);
+      // Don't remove the canvas on component unmount as it may cause flickering
+      // if the component re-mounts quickly
     };
   }, [theme]);
 

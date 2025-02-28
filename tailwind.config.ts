@@ -129,8 +129,8 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.5s ease-out',
-				'fade-in-up': 'fade-in-up 0.7s ease-out',
+				'fade-in': 'fade-in 1s ease-out forwards',
+				'fade-in-up': 'fade-in-up 1s ease-out forwards',
 				'pulse-sound-1': 'pulse-sound 1.5s ease-in-out infinite',
 				'pulse-sound-2': 'pulse-sound 1.7s ease-in-out infinite 0.1s',
 				'pulse-sound-3': 'pulse-sound 1.3s ease-in-out infinite 0.2s',

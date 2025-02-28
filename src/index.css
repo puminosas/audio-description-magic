@@ -141,3 +141,29 @@
 .light .matrix-text {
   animation: audio-pulse 2s ease-in-out infinite;
 }
+
+/* Fix reveal animations to ensure content stays visible */
+.reveal {
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+  will-change: opacity, transform;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure animated elements stay visible */
+.animate-fade-in-up.opacity-0 {
+  opacity: 1 !important;
+}

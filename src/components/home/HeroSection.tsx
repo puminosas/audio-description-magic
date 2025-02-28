@@ -9,13 +9,13 @@ const HeroSection = () => {
       <div className="hero-gradient absolute top-0 left-0 right-0 bottom-0 -z-10"></div>
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight reveal matrix-text">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight reveal matrix-text opacity-100">
             Automated Audio Descriptions for E-Commerce
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto reveal">
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto reveal opacity-100">
             Transform your product descriptions into engaging audio content. Enhance accessibility and boost sales with natural-sounding voices in multiple languages.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 reveal">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 reveal opacity-100">
             <Button size="lg" asChild>
               <Link to="/generator" className="gap-1">
                 Try Now <FastForward size={18} />
