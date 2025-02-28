@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Wand2 } from 'lucide-react';
+import { Wand2, Loader2 } from 'lucide-react';
 import DescriptionInput from './DescriptionInput';
 import LanguageVoiceSelector from './LanguageVoiceSelector';
 import PlanStatus from './PlanStatus';
@@ -35,6 +35,14 @@ const GeneratorForm = ({
   onSelectVoice,
   onGenerate
 }: GeneratorFormProps) => {
+  const isDisabled = isGenerating || !text.trim() || (!user && remainingGenerations <= 0);
+  const getButtonText = () => {
+    if (isGenerating) return "Generating...";
+    if (!text.trim()) return "Enter a product name";
+    if (!user && remainingGenerations <= 0) return "No generations left";
+    return "Generate Audio";
+  };
+
   return (
     <div className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -60,11 +68,15 @@ const GeneratorForm = ({
         
         <Button 
           onClick={onGenerate} 
-          disabled={isGenerating || !text.trim() || (!user && remainingGenerations <= 0)}
+          disabled={isDisabled}
           className="gap-1"
         >
-          <Wand2 size={18} />
-          {isGenerating ? 'Generating...' : 'Generate Audio'}
+          {isGenerating ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Wand2 size={18} />
+          )}
+          {getButtonText()}
         </Button>
       </div>
     </div>

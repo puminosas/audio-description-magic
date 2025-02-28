@@ -56,26 +56,34 @@ export const base64ToBlob = (base64: string, mimeType: string) => {
 
 // Generate audio via Supabase Edge Function
 export const generateAudio = async ({ text, language, voice }: GenerateAudioParams) => {
-  console.log('Calling generate-audio function with:', { 
+  // Log the parameters first to see what's being sent
+  console.log('Generating audio with:', {
     text, 
-    language: language.code, 
-    voice: voice.id 
+    language, 
+    voice
   });
+  
+  // Then simplify to just the values we're sending to the API
+  const params = {
+    text: text.trim(),
+    language: language.code,
+    voice: voice.id
+  };
+  
+  console.log('Calling generate-audio function with:', params);
   
   try {
     // Call the Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('generate-audio', {
-      body: {
-        text: text.trim(),
-        language: language.code,
-        voice: voice.id, // Send OpenAI voice ID directly
-      },
+      body: params,
     });
     
     if (error) {
       console.error('Error from Supabase function:', error);
-      throw error;
+      throw new Error(`Edge Function error: ${error.message}`);
     }
+    
+    console.log('Response received from generate-audio:', data);
     
     if (!data || !data.success) {
       console.error('Invalid response from generate-audio:', data);
