@@ -12,6 +12,7 @@ import VoiceSelector from '@/components/ui/VoiceSelector';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { supabaseTyped } from '@/utils/supabaseHelper';
 
 interface LanguageOption {
   code: string;
@@ -145,8 +146,7 @@ const Generator = () => {
       const approximateDuration = Math.max(10, Math.ceil(text.length / 20));
       
       // Insert record into audio_files table
-      const { error } = await (supabase
-        .from('audio_files') as any)
+      const { error } = await supabaseTyped.audio_files
         .insert({
           user_id: user?.id,
           title: text.trim().substring(0, 50) + (text.length > 50 ? '...' : ''),
@@ -173,7 +173,7 @@ const Generator = () => {
     setSelectedLanguage(language);
     // Reset voice when language changes to match the language
     const languagePrefix = language.code;
-    const defaultVoice = { 
+    const defaultVoice: VoiceOption = { 
       id: `${languagePrefix}-${languagePrefix === 'en' ? 'US-1' : 'ES-1'}`, 
       name: languagePrefix === 'en' ? 'Matthew' : 'Default', 
       gender: 'male' 
