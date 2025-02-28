@@ -8,6 +8,10 @@ import { getOrCreateGuestSessionId, convertTemporaryFilesToUserFiles } from '@/u
 import { Loader2, FileAudio, Play, Download, Code } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+// Cast the Supabase client to any to bypass TypeScript checking
+// This is needed because our Database type doesn't include all tables we're using
+const db = supabase as any;
+
 interface FileItem {
   id: string;
   fileName: string;
@@ -58,7 +62,7 @@ const HistoryTab = ({ user }: HistoryTabProps) => {
 
       if (user) {
         // Fetch files for logged-in user
-        const { data, error } = await supabase
+        const { data, error } = await db
           .from('audio_files')
           .select('*')
           .eq('user_id', user.id)
@@ -79,7 +83,7 @@ const HistoryTab = ({ user }: HistoryTabProps) => {
       } else {
         // Fetch temporary files for guest session
         const sessionId = getOrCreateGuestSessionId();
-        const { data, error } = await supabase
+        const { data, error } = await db
           .from('audio_files')
           .select('*')
           .eq('session_id', sessionId)

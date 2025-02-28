@@ -6,6 +6,10 @@ import { saveBlobAsFile, getOrCreateGuestSessionId } from './fileStorageService'
 import { LanguageOption } from '@/components/ui/LanguageSelector';
 import { VoiceOption } from '@/components/ui/VoiceSelector';
 
+// Cast the Supabase client to any to bypass TypeScript checking
+// This is needed because our Database type doesn't include all tables we're using
+const db = supabase as any;
+
 export type { LanguageOption, VoiceOption };
 
 export interface AudioGenerationResult {
@@ -86,7 +90,7 @@ export const saveAudioToHistory = async (
     }
     
     // Add to audio_files table - use direct Supabase call
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('audio_files')
       .insert([{
         user_id: userId,
@@ -120,7 +124,7 @@ export const updateGenerationCount = async (userId: string): Promise<void> => {
     const today = new Date().toISOString().split('T')[0];
     
     // Check if we already have a count for today
-    const { data: existingData, error: fetchError } = await supabase
+    const { data: existingData, error: fetchError } = await db
       .from('generation_counts')
       .select('*')
       .eq('user_id', userId)
@@ -134,7 +138,7 @@ export const updateGenerationCount = async (userId: string): Promise<void> => {
     
     if (existingData) {
       // Update existing count
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from('generation_counts')
         .update({ count: existingData.count + 1 })
         .eq('id', existingData.id);
@@ -144,7 +148,7 @@ export const updateGenerationCount = async (userId: string): Promise<void> => {
       }
     } else {
       // Create new count
-      const { error: insertError } = await supabase
+      const { error: insertError } = await db
         .from('generation_counts')
         .insert([{
           user_id: userId,
