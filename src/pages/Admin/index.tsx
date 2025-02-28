@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { 
@@ -43,37 +43,37 @@ const AdminDashboard = () => {
       
       try {
         // Fetch total users
-        const { count: totalUsers, error: usersError } = await (supabase
-          .from('profiles') as any)
+        const { count: totalUsers, error: usersError } = await supabaseTyped.profiles
+          .select()
           .select('*', { count: 'exact', head: true });
 
         if (usersError) throw usersError;
 
         // Fetch plan distribution
-        const { data: premiumData, error: premiumError } = await (supabase
-          .from('profiles') as any)
+        const { data: premiumData, error: premiumError } = await supabaseTyped.profiles
+          .select()
           .select('*')
           .eq('plan', 'premium');
 
         if (premiumError) throw premiumError;
 
-        const { data: basicData, error: basicError } = await (supabase
-          .from('profiles') as any)
+        const { data: basicData, error: basicError } = await supabaseTyped.profiles
+          .select()
           .select('*')
           .eq('plan', 'basic');
 
         if (basicError) throw basicError;
 
         // Fetch total audio files
-        const { count: totalAudioFiles, error: audioError } = await (supabase
-          .from('audio_files') as any)
+        const { count: totalAudioFiles, error: audioError } = await supabaseTyped.audio_files
+          .select()
           .select('*', { count: 'exact', head: true });
 
         if (audioError) throw audioError;
 
         // Fetch total generations
-        const { data: genData, error: genError } = await (supabase
-          .from('generation_counts') as any)
+        const { data: genData, error: genError } = await supabaseTyped.generation_counts
+          .select()
           .select('count');
 
         if (genError) throw genError;

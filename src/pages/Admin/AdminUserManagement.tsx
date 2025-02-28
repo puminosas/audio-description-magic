@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -74,8 +74,8 @@ const AdminUserManagement = () => {
     setLoading(true);
     try {
       // Get total count for pagination
-      const { count, error: countError } = await (supabase
-        .from('profiles') as any)
+      const { count, error: countError } = await supabaseTyped.profiles
+        .select()
         .select('*', { count: 'exact', head: true });
 
       if (countError) throw countError;
@@ -84,8 +84,8 @@ const AdminUserManagement = () => {
       setTotalPages(Math.ceil((count || 0) / usersPerPage));
 
       // Fetch users for current page
-      const { data: userData, error: userError } = await (supabase
-        .from('profiles') as any)
+      const { data: userData, error: userError } = await supabaseTyped.profiles
+        .select()
         .select('*')
         .range((page - 1) * usersPerPage, page * usersPerPage - 1)
         .order('created_at', { ascending: false });
@@ -93,8 +93,8 @@ const AdminUserManagement = () => {
       if (userError) throw userError;
 
       // Fetch admin roles
-      const { data: adminData, error: adminError } = await (supabase
-        .from('user_roles') as any)
+      const { data: adminData, error: adminError } = await supabaseTyped.user_roles
+        .select()
         .select('user_id')
         .eq('role', 'admin');
 
@@ -132,8 +132,7 @@ const AdminUserManagement = () => {
     if (!selectedUser) return;
 
     try {
-      const { error } = await (supabase
-        .from('profiles') as any)
+      const { error } = await supabaseTyped.profiles
         .update({
           plan: newPlan,
           daily_limit: parseInt(newDailyLimit),
@@ -165,8 +164,7 @@ const AdminUserManagement = () => {
     try {
       if (isCurrentlyAdmin) {
         // Remove admin role
-        const { error } = await (supabase
-          .from('user_roles') as any)
+        const { error } = await supabaseTyped.user_roles
           .delete()
           .eq('user_id', userId)
           .eq('role', 'admin');
@@ -174,8 +172,7 @@ const AdminUserManagement = () => {
         if (error) throw error;
       } else {
         // Add admin role
-        const { error } = await (supabase
-          .from('user_roles') as any)
+        const { error } = await supabaseTyped.user_roles
           .insert({ user_id: userId, role: 'admin' });
 
         if (error) throw error;

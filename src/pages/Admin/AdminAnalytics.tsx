@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -40,8 +40,8 @@ const AdminAnalytics = () => {
     setLoading(true);
     try {
       // Fetch plan distribution
-      const { data: profileData, error: profileError } = await (supabase
-        .from('profiles') as any)
+      const { data: profileData, error: profileError } = await supabaseTyped.profiles
+        .select()
         .select('plan');
         
       if (profileError) throw profileError;
@@ -61,8 +61,8 @@ const AdminAnalytics = () => {
       setPlanDistribution(planData);
       
       // Fetch language distribution
-      const { data: audioData, error: audioError } = await (supabase
-        .from('audio_files') as any)
+      const { data: audioData, error: audioError } = await supabaseTyped.audio_files
+        .select()
         .select('language');
         
       if (audioError) throw audioError;

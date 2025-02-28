@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -92,8 +92,8 @@ const AdminAudioFiles = () => {
   const fetchAudioFiles = async () => {
     setLoading(true);
     try {
-      let query = (supabase
-        .from('audio_files') as any)
+      let query = supabaseTyped.audio_files
+        .select()
         .select('*, profiles:user_id(email)')
         .order('created_at', { ascending: false });
 
@@ -164,8 +164,7 @@ const AdminAudioFiles = () => {
     if (!deleteAudioId) return;
     
     try {
-      const { error } = await (supabase
-        .from('audio_files') as any)
+      const { error } = await supabaseTyped.audio_files
         .delete()
         .eq('id', deleteAudioId);
         
