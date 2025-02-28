@@ -43,42 +43,42 @@ const AdminDashboard = () => {
       
       try {
         // Fetch total users
-        const { count: totalUsers, error: usersError } = await supabase
-          .from('profiles')
+        const { count: totalUsers, error: usersError } = await (supabase
+          .from('profiles') as any)
           .select('*', { count: 'exact', head: true });
 
         if (usersError) throw usersError;
 
         // Fetch plan distribution
-        const { data: premiumData, error: premiumError } = await supabase
-          .from('profiles')
+        const { data: premiumData, error: premiumError } = await (supabase
+          .from('profiles') as any)
           .select('*')
           .eq('plan', 'premium');
 
         if (premiumError) throw premiumError;
 
-        const { data: basicData, error: basicError } = await supabase
-          .from('profiles')
+        const { data: basicData, error: basicError } = await (supabase
+          .from('profiles') as any)
           .select('*')
           .eq('plan', 'basic');
 
         if (basicError) throw basicError;
 
         // Fetch total audio files
-        const { count: totalAudioFiles, error: audioError } = await supabase
-          .from('audio_files')
+        const { count: totalAudioFiles, error: audioError } = await (supabase
+          .from('audio_files') as any)
           .select('*', { count: 'exact', head: true });
 
         if (audioError) throw audioError;
 
         // Fetch total generations
-        const { data: genData, error: genError } = await supabase
-          .from('generation_counts')
+        const { data: genData, error: genError } = await (supabase
+          .from('generation_counts') as any)
           .select('count');
 
         if (genError) throw genError;
 
-        const totalGenerations = genData?.reduce((acc, item) => acc + (item.count || 0), 0) || 0;
+        const totalGenerations = genData?.reduce((acc: number, item: any) => acc + (item.count || 0), 0) || 0;
 
         setDashboardData({
           totalUsers: totalUsers || 0,

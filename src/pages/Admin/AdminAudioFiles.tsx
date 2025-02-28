@@ -92,8 +92,8 @@ const AdminAudioFiles = () => {
   const fetchAudioFiles = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('audio_files')
+      let query = (supabase
+        .from('audio_files') as any)
         .select('*, profiles:user_id(email)')
         .order('created_at', { ascending: false });
 
@@ -107,7 +107,7 @@ const AdminAudioFiles = () => {
       }
 
       // Get count for pagination
-      const { count } = await query.select('id', { count: 'exact', head: true });
+      const { count } = await query.select('id', { count: 'exact' });
       
       setTotalFiles(count || 0);
       setTotalPages(Math.ceil((count || 0) / filesPerPage));
@@ -119,7 +119,7 @@ const AdminAudioFiles = () => {
       if (error) throw error;
 
       // Transform data to include user email
-      const transformedData = data.map(item => ({
+      const transformedData = data.map((item: any) => ({
         ...item,
         user_email: item.profiles?.email
       }));
@@ -164,8 +164,8 @@ const AdminAudioFiles = () => {
     if (!deleteAudioId) return;
     
     try {
-      const { error } = await supabase
-        .from('audio_files')
+      const { error } = await (supabase
+        .from('audio_files') as any)
         .delete()
         .eq('id', deleteAudioId);
         

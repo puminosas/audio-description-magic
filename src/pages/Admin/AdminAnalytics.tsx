@@ -40,15 +40,15 @@ const AdminAnalytics = () => {
     setLoading(true);
     try {
       // Fetch plan distribution
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+      const { data: profileData, error: profileError } = await (supabase
+        .from('profiles') as any)
         .select('plan');
         
       if (profileError) throw profileError;
       
       // Process plan distribution
       const planCounts: Record<string, number> = {};
-      profileData?.forEach(profile => {
+      profileData?.forEach((profile: any) => {
         const plan = profile.plan || 'unknown';
         planCounts[plan] = (planCounts[plan] || 0) + 1;
       });
@@ -61,15 +61,15 @@ const AdminAnalytics = () => {
       setPlanDistribution(planData);
       
       // Fetch language distribution
-      const { data: audioData, error: audioError } = await supabase
-        .from('audio_files')
+      const { data: audioData, error: audioError } = await (supabase
+        .from('audio_files') as any)
         .select('language');
         
       if (audioError) throw audioError;
       
       // Process language distribution
       const languageCounts: Record<string, number> = {};
-      audioData?.forEach(audio => {
+      audioData?.forEach((audio: any) => {
         const language = audio.language || 'unknown';
         languageCounts[language] = (languageCounts[language] || 0) + 1;
       });

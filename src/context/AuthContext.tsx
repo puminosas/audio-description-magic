@@ -67,18 +67,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Fetch user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+      // Fetch user profile with type assertion
+      const { data: profileData, error: profileError } = await (supabase
+        .from('profiles') as any)
         .select('*')
         .eq('id', userId)
         .single();
 
       if (profileError) throw profileError;
 
-      // Fetch user roles to check if admin
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
+      // Fetch user roles to check if admin with type assertion
+      const { data: roleData, error: roleError } = await (supabase
+        .from('user_roles') as any)
         .select('role')
         .eq('user_id', userId)
         .eq('role', 'admin')
