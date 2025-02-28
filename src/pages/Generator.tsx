@@ -1,159 +1,121 @@
+
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  LanguageOption, 
-  VoiceOption, 
-  generateAudio,
-  saveAudioToHistory
-} from '@/utils/audioGenerationService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
 import GeneratorForm from '@/components/generator/GeneratorForm';
-import AudioOutput from '@/components/generator/AudioOutput';
 import HistoryTab from '@/components/generator/HistoryTab';
 import TipsCard from '@/components/generator/TipsCard';
+import PlanStatus from '@/components/generator/PlanStatus';
+import AudioOutput from '@/components/generator/AudioOutput';
+import { generateAudioDescription, saveAudioToHistory } from '@/utils/audioGenerationService';
+import { useToast } from '@/hooks/use-toast';
+import { updateGenerationCount } from '@/utils/audioGenerationService';
 
 const Generator = () => {
-  const [text, setText] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>({ 
-    code: 'en', 
-    name: 'English', 
-    nativeName: 'English',
-    flag: '🇺🇸'
-  });
-  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>({ 
-    id: 'alloy', 
-    name: 'Alloy', 
-    gender: 'neutral' 
-  });
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [audioData, setAudioData] = useState<string | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [generatedText, setGeneratedText] = useState<string | null>(null);
-  const [remainingGenerations, setRemainingGenerations] = useState(3); // For free tier
-  const { toast } = useToast();
   const { user, profile } = useAuth();
-  
-  const handleGenerate = async () => {
-    if (!text.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a product description.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsGenerating(true);
-    setAudioData(null);
-    setAudioUrl(null);
-    setGeneratedText(null);
-    
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('generate');
+  const [loading, setLoading] = useState(false);
+  const [generatedAudio, setGeneratedAudio] = useState<{
+    audioUrl: string;
+    text: string;
+  } | null>(null);
+
+  const handleGenerate = async (formData: {
+    text: string;
+    language: { code: string; name: string; nativeName: string; flag?: string };
+    voice: { id: string; name: string; gender: 'male' | 'female' | 'neutral'; premium?: boolean };
+  }) => {
     try {
-      console.log('Generating audio with:', {
-        text: text.trim(),
-        language: selectedLanguage,
-        voice: selectedVoice
-      });
+      setLoading(true);
       
-      const result = await generateAudio({
-        text: text.trim(),
-        language: selectedLanguage,
-        voice: selectedVoice
-      });
+      const result = await generateAudioDescription(
+        formData.text,
+        formData.language,
+        formData.voice
+      );
       
-      setAudioData(result.audioData);
-      setAudioUrl(result.audioUrl);
-      setGeneratedText(result.generatedText);
-      
-      if (!user || (profile?.plan === 'free')) {
-        setRemainingGenerations(prev => Math.max(0, prev - 1));
+      if (result.error || !result.audioUrl || !result.text) {
+        throw new Error(result.error || 'Failed to generate audio');
       }
       
-      if (user) {
-        await saveAudioToHistory({
-          audioUrl: result.audioUrl,
-          audioData: result.audioData,
-          text: text.trim(),
-          generatedText: result.generatedText,
-          language: selectedLanguage,
-          voice: selectedVoice,
-          user
-        });
+      // Save to history
+      if (result.audioUrl) {
+        await saveAudioToHistory(
+          result.audioUrl,
+          result.text,
+          formData.language.name,
+          formData.voice.name,
+          user?.id
+        );
+        
+        // Update generation count for authenticated users
+        if (user?.id) {
+          await updateGenerationCount(user.id);
+        }
       }
       
-      toast({
-        title: "Success",
-        description: "Audio generated successfully!",
+      setGeneratedAudio({
+        audioUrl: result.audioUrl,
+        text: result.text
       });
+      
     } catch (error) {
       console.error('Error generating audio:', error);
       toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Failed to generate audio.",
-        variant: "destructive",
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to generate audio',
+        variant: 'destructive',
       });
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
-  };
-
-  const handleSelectLanguage = (language: LanguageOption) => {
-    setSelectedLanguage(language);
-  };
-
-  const handleSelectVoice = (voice: VoiceOption) => {
-    setSelectedVoice(voice);
-  };
-
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">Audio Description Generator</h1>
-          <p className="text-lg text-muted-foreground">
-            Transform your product descriptions into engaging audio content.
-          </p>
-        </div>
+    <div className="container max-w-6xl mx-auto px-4 py-8 md:py-12">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Audio Description Generator</h1>
+        <p className="text-muted-foreground">
+          Create audio descriptions for your e-commerce products
+        </p>
+      </div>
 
-        <Tabs defaultValue="generator" className="glassmorphism rounded-xl overflow-hidden shadow-lg">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="generator">Generator</TabsTrigger>
-            <TabsTrigger value="history">Your Audios</TabsTrigger>
-          </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card className="overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="w-full rounded-none bg-muted/50">
+                <TabsTrigger value="generate" className="flex-1">Generate</TabsTrigger>
+                <TabsTrigger value="history" className="flex-1">History</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="generate" className="p-6">
+                <GeneratorForm 
+                  onGenerate={handleGenerate} 
+                  loading={loading} 
+                />
+              </TabsContent>
+              
+              <TabsContent value="history" className="p-6">
+                <HistoryTab user={user} />
+              </TabsContent>
+            </Tabs>
+          </Card>
           
-          <TabsContent value="generator" className="p-0">
-            <GeneratorForm 
-              text={text}
-              selectedLanguage={selectedLanguage}
-              selectedVoice={selectedVoice}
-              isGenerating={isGenerating}
-              remainingGenerations={remainingGenerations}
-              user={user}
-              profile={profile}
-              onTextChange={handleTextChange}
-              onSelectLanguage={handleSelectLanguage}
-              onSelectVoice={handleSelectVoice}
-              onGenerate={handleGenerate}
-            />
-            
-            <AudioOutput 
-              isGenerating={isGenerating}
-              audioUrl={audioUrl}
-              generatedText={generatedText}
-            />
-          </TabsContent>
-          
-          <TabsContent value="history" className="p-6">
-            <HistoryTab user={user} />
-          </TabsContent>
-        </Tabs>
+          {generatedAudio && (
+            <div className="mt-6">
+              <AudioOutput 
+                audioUrl={generatedAudio.audioUrl} 
+                text={generatedAudio.text} 
+              />
+            </div>
+          )}
+        </div>
         
-        <div className="mt-12 space-y-6">
+        <div className="space-y-6">
+          <PlanStatus user={user} profile={profile} />
           <TipsCard />
         </div>
       </div>

@@ -4,6 +4,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseTyped } from '@/utils/supabaseHelper';
 import { useToast } from '@/hooks/use-toast';
+import { getOrCreateGuestSessionId, convertTemporaryFilesToUserFiles } from '@/utils/fileStorageService';
 
 type AuthContextType = {
   session: Session | null;
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [prevAuthState, setPrevAuthState] = useState<'authenticated' | 'unauthenticated' | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,9 +73,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      setPrevAuthState(session ? 'authenticated' : 'unauthenticated');
       
       if (session?.user) {
         fetchUserProfile(session.user.id);
+        
+        // Convert any temporary files for this newly authenticated user
+        const sessionId = getOrCreateGuestSessionId();
+        convertTemporaryFilesToUserFiles(session.user.id, sessionId)
+          .then(success => {
+            if (success) {
+              console.log('Temporary files converted to user files on init');
+            }
+          });
       } else {
         setLoading(false);
       }
@@ -83,9 +95,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state change event:", event);
+        
+        const currentAuthState = session ? 'authenticated' : 'unauthenticated';
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(session ? true : false);
+        
+        // Handle newly authenticated user
+        if (prevAuthState === 'unauthenticated' && currentAuthState === 'authenticated' && session?.user) {
+          // Convert any temporary files for this newly authenticated user
+          const sessionId = getOrCreateGuestSessionId();
+          convertTemporaryFilesToUserFiles(session.user.id, sessionId)
+            .then(success => {
+              if (success) {
+                console.log('Temporary files converted to user files on login');
+              }
+            });
+        }
+        
+        setPrevAuthState(currentAuthState);
         
         if (session?.user) {
           fetchUserProfile(session.user.id);
@@ -101,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, []);
+  }, [prevAuthState]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
