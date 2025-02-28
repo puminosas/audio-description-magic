@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface VoiceOption {
+export interface VoiceOption {
   id: string;
   name: string;
   gender: 'male' | 'female' | 'neutral';
@@ -32,21 +32,43 @@ interface VoiceSelectorProps {
   language?: string;
 }
 
-// This uses OpenAI's voice names directly
+// This uses modern TTS voice options, expanded from OpenAI's set
 const VOICES: Record<string, VoiceOption[]> = {
   all: [
+    // OpenAI voices
     { id: 'alloy', name: 'Alloy', gender: 'neutral' },
     { id: 'echo', name: 'Echo', gender: 'male' },
     { id: 'fable', name: 'Fable', gender: 'female' },
     { id: 'onyx', name: 'Onyx', gender: 'male' },
     { id: 'nova', name: 'Nova', gender: 'female' },
     { id: 'shimmer', name: 'Shimmer', gender: 'female', premium: true },
+    // ElevenLabs voices
+    { id: '9BWtsMINqrJLrRacOk9x', name: 'Aria', gender: 'female', premium: true },
+    { id: 'CwhRBWXzGAHq8TQ4Fs17', name: 'Roger', gender: 'male', premium: true },
+    { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', gender: 'female', premium: true },
+    { id: 'FGY2WhTYpPnrIDTdsKH5', name: 'Laura', gender: 'female', premium: true },
+    { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie', gender: 'male', premium: true },
+    { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George', gender: 'male', premium: true },
+    { id: 'N2lVS1w4EtoT3dr4eOWO', name: 'Callum', gender: 'male', premium: true },
+    { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', gender: 'neutral', premium: true },
+    { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', gender: 'male', premium: true },
+    { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte', gender: 'female', premium: true },
+    { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', gender: 'female', premium: true },
+    { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', gender: 'female', premium: true },
+    { id: 'bIHbv24MWmeRgasZH58o', name: 'Will', gender: 'male', premium: true },
+    { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', gender: 'female', premium: true },
+    { id: 'cjVigY5qzO86Huf0OWal', name: 'Eric', gender: 'male', premium: true },
+    { id: 'iP95p4xoKVk53GoZ742B', name: 'Chris', gender: 'male', premium: true },
+    { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', gender: 'male', premium: true },
+    { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', gender: 'male', premium: true },
+    { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', gender: 'female', premium: true },
+    { id: 'pqHfZKP75CvOlQylNhV4', name: 'Bill', gender: 'male', premium: true },
   ]
 };
 
-// Default to English voices if language not found
+// Use all voices for all languages since modern TTS systems handle multiple languages
 const getVoicesForLanguage = (languageCode: string): VoiceOption[] => {
-  return VOICES.all; // OpenAI voices work for all languages
+  return VOICES.all;
 };
 
 const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelectorProps) => {
@@ -75,7 +97,7 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelect
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[200px]">
+      <DropdownMenuContent className="w-[240px]">
         <DropdownMenuLabel>Select Voice</DropdownMenuLabel>
         <div className="flex p-1 bg-secondary/50 rounded-md m-2 text-xs">
           <button 

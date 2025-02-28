@@ -1,8 +1,7 @@
 
 import React from 'react';
-import LanguageSelector from '@/components/ui/LanguageSelector';
-import VoiceSelector from '@/components/ui/VoiceSelector';
-import { LanguageOption, VoiceOption } from '@/utils/audioGenerationService';
+import LanguageSelector, { LanguageOption } from '@/components/ui/LanguageSelector';
+import VoiceSelector, { VoiceOption } from '@/components/ui/VoiceSelector';
 
 interface LanguageVoiceSelectorProps {
   selectedLanguage: LanguageOption;

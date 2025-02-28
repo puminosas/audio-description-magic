@@ -1,156 +1,79 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseTyped } from '@/utils/supabaseHelper';
-import { User } from '@supabase/supabase-js';
 
-export interface LanguageOption {
-  code: string;
-  name: string;
-  nativeName: string;
-  flag?: string;
+// Reuse the types from the components
+import { LanguageOption } from '@/components/ui/LanguageSelector';
+import { VoiceOption } from '@/components/ui/VoiceSelector';
+
+export type { LanguageOption, VoiceOption };
+
+export interface AudioGenerationResult {
+  audioUrl?: string;
+  error?: string;
+  text?: string;
+  id?: string;
 }
 
-export interface VoiceOption {
-  id: string;
-  name: string;
-  gender: 'male' | 'female' | 'neutral';
-  sample?: string;
-  premium?: boolean;
-}
-
-export interface GenerateAudioParams {
-  text: string;
-  language: LanguageOption;
-  voice: VoiceOption;
-}
-
-export interface SaveAudioParams {
-  audioUrl: string;
-  audioData: string;
-  text: string;
-  generatedText: string;
-  language: LanguageOption;
-  voice: VoiceOption;
-  user: User;
-}
-
-// Base64 to Blob conversion for creating audio URL
-export const base64ToBlob = (base64: string, mimeType: string) => {
-  const byteCharacters = atob(base64);
-  const byteArrays = [];
-  
-  for (let i = 0; i < byteCharacters.length; i += 512) {
-    const slice = byteCharacters.slice(i, i + 512);
-    
-    const byteNumbers = new Array(slice.length);
-    for (let j = 0; j < slice.length; j++) {
-      byteNumbers[j] = slice.charCodeAt(j);
-    }
-    
-    const byteArray = new Uint8Array(byteNumbers);
-    byteArrays.push(byteArray);
-  }
-  
-  return new Blob(byteArrays, { type: mimeType });
-};
-
-// Generate audio via Supabase Edge Function
-export const generateAudio = async ({ text, language, voice }: GenerateAudioParams) => {
-  // Log the parameters first to see what's being sent
-  console.log('Generating audio with:', {
-    text, 
-    language, 
-    voice
-  });
-  
-  // Then simplify to just the values we're sending to the API
-  const params = {
-    text: text.trim(),
-    language: language.code,
-    voice: voice.id
-  };
-  
-  console.log('Calling generate-audio function with:', params);
-  
+export const generateAudioDescription = async (
+  productName: string,
+  language: LanguageOption,
+  voice: VoiceOption
+): Promise<AudioGenerationResult> => {
   try {
-    // Call the Supabase Edge Function
+    console.log(`Generating audio for: ${productName} in ${language.name} with voice ${voice.name}`);
+    
     const { data, error } = await supabase.functions.invoke('generate-audio', {
-      body: params,
+      body: {
+        text: productName,
+        language: language.code,
+        voiceId: voice.id
+      },
     });
-    
+
     if (error) {
-      console.error('Error from Supabase function:', error);
-      throw new Error(`Edge Function error: ${error.message}`);
+      console.error('Error invoking generate-audio function:', error);
+      return { error: error.message };
     }
-    
-    console.log('Response received from generate-audio:', data);
-    
+
     if (!data || !data.success) {
-      console.error('Invalid response from generate-audio:', data);
-      throw new Error(data?.error || 'Failed to generate audio');
+      console.error('Generation failed:', data?.error || 'Unknown error');
+      return { error: data?.error || 'Failed to generate audio' };
     }
-    
-    if (!data.audio_content) {
-      console.error('No audio content returned:', data);
-      throw new Error('No audio content returned from the service');
-    }
-    
-    // Create a blob from the base64 audio data
-    const audioBlob = base64ToBlob(data.audio_content, 'audio/mpeg');
-    const url = URL.createObjectURL(audioBlob);
+
+    console.log('Audio generated successfully:', data);
     
     return {
-      audioUrl: url,
-      audioData: data.audio_content,
-      generatedText: data.generated_text
+      audioUrl: data.audioUrl,
+      text: data.text,
+      id: data.id
     };
   } catch (error) {
-    console.error('Error in generateAudio function:', error);
-    throw error; // Re-throw to be handled by the UI
+    console.error('Error in generateAudioDescription:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Unknown error generating audio'
+    };
   }
 };
 
-// Save audio to user's history in Supabase
-export const saveAudioToHistory = async ({
-  audioUrl,
-  audioData,
-  text,
-  generatedText,
-  language,
-  voice,
-  user
-}: SaveAudioParams) => {
-  try {
-    // Generate filename based on first few words of text and timestamp
-    const firstWords = text.trim().split(' ').slice(0, 5).join('-');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `${firstWords.toLowerCase()}-${timestamp}.mp3`;
-    
-    // Get audio duration - this is a dummy calculation since we don't have actual duration
-    // In a production app, you'd want to properly calculate this
-    const approximateDuration = Math.max(10, Math.ceil(generatedText.length / 20));
-    
-    // Insert record into audio_files table
-    const { error } = await supabaseTyped.audio_files
-      .insert({
-        user_id: user?.id,
-        title: text.trim().substring(0, 50) + (text.length > 50 ? '...' : ''),
-        description: generatedText, // Save the generated description here
-        language: language.code,
-        voice_name: voice.name,
-        audio_url: audioUrl, // Note: this URL will expire when the page refreshes
-        audio_data: audioData, // Store the base64 data
-        duration: approximateDuration,
-      });
-      
-    if (error) throw error;
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error saving audio to history:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
+export const getAvailableLanguages = (): LanguageOption[] => {
+  return [
+    { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
+    { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸' },
+    { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
+    { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪' },
+    { code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹' },
+    { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹' },
+  ];
+};
+
+export const getAvailableVoices = (languageCode: string): VoiceOption[] => {
+  // Default voices that work for all languages
+  return [
+    { id: 'alloy', name: 'Alloy', gender: 'neutral' },
+    { id: 'echo', name: 'Echo', gender: 'male' },
+    { id: 'fable', name: 'Fable', gender: 'female' },
+    { id: 'onyx', name: 'Onyx', gender: 'male' },
+    { id: 'nova', name: 'Nova', gender: 'female' },
+    { id: 'shimmer', name: 'Shimmer', gender: 'female', premium: true },
+  ];
 };

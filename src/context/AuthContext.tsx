@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseTyped } from '@/utils/supabaseHelper';
+import { useToast } from '@/hooks/use-toast';
 
 type AuthContextType = {
   session: Session | null;
@@ -37,18 +38,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Handle redirect from email confirmation
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        // The user has been redirected back from email confirmation
+        // Refresh the session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+            setSession(session);
+            setUser(session.user);
+            fetchUserProfile(session.user.id);
+            toast({
+              title: "Email confirmed",
+              description: "Your email has been confirmed successfully.",
+            });
+          }
+        });
+      }
+    };
+
+    // Call it once on mount to handle initial URL
+    handleHashChange();
+
+    // Add listener for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        console.log("Auth state change event:", event);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(session ? true : false);
@@ -65,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
 
@@ -115,12 +150,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = (email: string, password: string, metadata?: any) => {
+    const currentOrigin = window.location.origin;
+    console.log("Signup with redirect to:", `${currentOrigin}/auth`);
+    
     return supabase.auth.signUp({ 
       email, 
       password,
       options: {
         data: metadata,
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${currentOrigin}/auth`,
       }
     });
   };
