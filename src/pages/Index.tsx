@@ -15,8 +15,8 @@ const Index = () => {
       {/* Add scroll reveal animation */}
       <ScrollReveal />
       
-      {/* Add Matrix effect for dark mode */}
-      {theme === 'dark' && <MatrixEffect />}
+      {/* Add audio waveform effect for both themes */}
+      <MatrixEffect />
       
       <HeroSection />
       <HowItWorksSection />

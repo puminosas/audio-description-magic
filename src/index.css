@@ -16,7 +16,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
 
-    --primary: 210 100% 50%; /* Changed from purple to blue */
+    --primary: 215 80% 30%; /* Darker blue for light mode */
     --primary-foreground: 210 20% 98%;
 
     --secondary: 220 14.3% 95.9%;
@@ -25,7 +25,7 @@
     --muted: 220 14.3% 95.9%;
     --muted-foreground: 220 8.9% 46.1%;
 
-    --accent: 210 100% 50%; /* Changed from purple to blue */
+    --accent: 215 80% 30%; /* Darker blue for light mode */
     --accent-foreground: 210 20% 98%;
 
     --destructive: 0 84.2% 60.2%;
@@ -33,7 +33,7 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 210 100% 50%; /* Changed from purple to blue */
+    --ring: 215 80% 30%; /* Darker blue for light mode */
 
     --radius: 0.5rem;
   }
@@ -48,24 +48,24 @@
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 135 100% 45%; /* Matrix green */
+    --primary: 150 80% 40%; /* Softer matrix green */
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 135 50% 15%; /* Darker Matrix green */
+    --secondary: 150 30% 15%; /* Darker Matrix green */
     --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 135 100% 45%; /* Matrix green */
+    --accent: 150 80% 40%; /* Softer matrix green */
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 135 50% 20%; /* Matrix green border */
-    --input: 135 50% 20%;
-    --ring: 135 100% 45%; /* Matrix green */
+    --border: 150 30% 20%; /* Matrix green border */
+    --input: 150 30% 20%;
+    --ring: 150 80% 40%; /* Softer matrix green */
   }
 }
 
@@ -126,4 +126,18 @@
 
 .dark .matrix-text {
   animation: matrix-glow 2s ease-in-out infinite;
+}
+
+/* Audio wave animation for light theme */
+@keyframes audio-pulse {
+  0%, 100% {
+    text-shadow: 0 0 6px hsl(var(--primary) / 0.5);
+  }
+  50% {
+    text-shadow: 0 0 10px hsl(var(--primary) / 0.8);
+  }
+}
+
+.light .matrix-text {
+  animation: audio-pulse 2s ease-in-out infinite;
 }
