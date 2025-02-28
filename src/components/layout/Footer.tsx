@@ -16,7 +16,7 @@ const Footer = () => {
                 <div className="bar animate-pulse-sound-3"></div>
                 <div className="bar animate-pulse-sound-4"></div>
               </div>
-              <span className="text-xl font-bold">AudioDesc</span>
+              <span className="text-xl font-bold">AudioDescriptions</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
               Transform your e-commerce product descriptions into engaging audio content with our AI-powered platform.
@@ -54,7 +54,7 @@ const Footer = () => {
 
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-muted-foreground">
-            &copy; {currentYear} AudioDesc. All rights reserved.
+            &copy; {currentYear} AudioDescriptions. All rights reserved.
           </p>
           <div className="mt-4 md:mt-0 flex space-x-6">
             <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
