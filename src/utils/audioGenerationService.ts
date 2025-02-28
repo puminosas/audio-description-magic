@@ -58,34 +58,44 @@ export const base64ToBlob = (base64: string, mimeType: string) => {
 export const generateAudio = async ({ text, language, voice }: GenerateAudioParams) => {
   console.log('Calling generate-audio function with:', { text, language: language.code, voice: voice.id });
   
-  // Call the Supabase Edge Function
-  const { data, error } = await supabase.functions.invoke('generate-audio', {
-    body: {
-      text: text.trim(),
-      language: language.code,
-      voice: voice.id,
-    },
-  });
-  
-  if (error) {
-    console.error('Error from Supabase function:', error);
-    throw error;
+  try {
+    // Call the Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('generate-audio', {
+      body: {
+        text: text.trim(),
+        language: language.code,
+        voice: voice.id,
+      },
+    });
+    
+    if (error) {
+      console.error('Error from Supabase function:', error);
+      throw error;
+    }
+    
+    if (!data || !data.success) {
+      console.error('Invalid response from generate-audio:', data);
+      throw new Error(data?.error || 'Failed to generate audio');
+    }
+    
+    if (!data.audio_content) {
+      console.error('No audio content returned:', data);
+      throw new Error('No audio content returned from the service');
+    }
+    
+    // Create a blob from the base64 audio data
+    const audioBlob = base64ToBlob(data.audio_content, 'audio/mpeg');
+    const url = URL.createObjectURL(audioBlob);
+    
+    return {
+      audioUrl: url,
+      audioData: data.audio_content,
+      generatedText: data.generated_text
+    };
+  } catch (error) {
+    console.error('Error in generateAudio function:', error);
+    throw error; // Re-throw to be handled by the UI
   }
-  
-  if (!data || !data.success || !data.audio_content) {
-    console.error('Invalid response from generate-audio:', data);
-    throw new Error(data?.error || 'Failed to generate audio');
-  }
-  
-  // Create a blob from the base64 audio data
-  const audioBlob = base64ToBlob(data.audio_content, 'audio/mpeg');
-  const url = URL.createObjectURL(audioBlob);
-  
-  return {
-    audioUrl: url,
-    audioData: data.audio_content,
-    generatedText: data.generated_text
-  };
 };
 
 // Save audio to user's history in Supabase
