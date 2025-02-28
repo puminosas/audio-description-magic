@@ -1,13 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Type cast function to help with TypeScript errors
+// The issue is that our Database type in types.ts doesn't have our tables defined
+// This helper works around TypeScript type checking to allow us to use tables
+// that aren't yet defined in the types.ts file
 function castTable(tableName: string) {
-  // Using a different approach to fix the type error
-  return supabase.from(tableName) as unknown as any;
+  // We need to use the any type to bypass TypeScript's type checking
+  // This allows us to work with tables before they're defined in the types.ts file
+  return (supabase as any).from(tableName);
 }
 
-// This helper provides a type-safe way to interact with Supabase tables
+// This helper provides a way to interact with Supabase tables
 // without modifying the original types.ts file
 export const supabaseTyped = {
   // Profiles table operations
