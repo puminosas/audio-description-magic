@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -23,9 +22,9 @@ const Generator = () => {
     flag: '🇺🇸'
   });
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>({ 
-    id: 'en-US-1', 
-    name: 'Matthew', 
-    gender: 'male' 
+    id: 'alloy', 
+    name: 'Alloy', 
+    gender: 'neutral' 
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioData, setAudioData] = useState<string | null>(null);
@@ -51,24 +50,26 @@ const Generator = () => {
     setGeneratedText(null);
     
     try {
-      // Generate the audio
+      console.log('Generating audio with:', {
+        text: text.trim(),
+        language: selectedLanguage,
+        voice: selectedVoice
+      });
+      
       const result = await generateAudio({
         text: text.trim(),
         language: selectedLanguage,
         voice: selectedVoice
       });
       
-      // Set the audio URL, data and generated text
       setAudioData(result.audioData);
       setAudioUrl(result.audioUrl);
       setGeneratedText(result.generatedText);
       
-      // Only decrement remaining generations if user isn't logged in or is on free tier
       if (!user || (profile?.plan === 'free')) {
         setRemainingGenerations(prev => Math.max(0, prev - 1));
       }
       
-      // If user is logged in, save the audio file to their history
       if (user) {
         await saveAudioToHistory({
           audioUrl: result.audioUrl,
@@ -103,14 +104,6 @@ const Generator = () => {
 
   const handleSelectLanguage = (language: LanguageOption) => {
     setSelectedLanguage(language);
-    // Reset voice when language changes to match the language
-    const languagePrefix = language.code;
-    const defaultVoice: VoiceOption = { 
-      id: `${languagePrefix}-${languagePrefix === 'en' ? 'US-1' : 'ES-1'}`, 
-      name: languagePrefix === 'en' ? 'Matthew' : 'Default', 
-      gender: 'male' 
-    };
-    setSelectedVoice(defaultVoice);
   };
 
   const handleSelectVoice = (voice: VoiceOption) => {

@@ -56,7 +56,11 @@ export const base64ToBlob = (base64: string, mimeType: string) => {
 
 // Generate audio via Supabase Edge Function
 export const generateAudio = async ({ text, language, voice }: GenerateAudioParams) => {
-  console.log('Calling generate-audio function with:', { text, language: language.code, voice: voice.id });
+  console.log('Calling generate-audio function with:', { 
+    text, 
+    language: language.code, 
+    voice: voice.id 
+  });
   
   try {
     // Call the Supabase Edge Function
@@ -64,7 +68,7 @@ export const generateAudio = async ({ text, language, voice }: GenerateAudioPara
       body: {
         text: text.trim(),
         language: language.code,
-        voice: voice.id,
+        voice: voice.id, // Send OpenAI voice ID directly
       },
     });
     

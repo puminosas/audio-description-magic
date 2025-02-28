@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, language, voice } = await req.json();
+    const { text, language = 'en', voice = 'alloy' } = await req.json();
     
     if (!text) {
       throw new Error('Text is required');
@@ -54,6 +54,7 @@ serve(async (req) => {
     const descriptionData = await descriptionResponse.json();
     
     if (!descriptionData.choices || !descriptionData.choices[0]) {
+      console.error('Failed to generate description:', descriptionData);
       throw new Error('Failed to generate product description');
     }
 
@@ -76,7 +77,8 @@ serve(async (req) => {
     });
 
     if (!ttsResponse.ok) {
-      const errorData = await ttsResponse.json();
+      const errorData = await ttsResponse.json().catch(() => ({}));
+      console.error('TTS API error:', errorData);
       throw new Error(`TTS API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 

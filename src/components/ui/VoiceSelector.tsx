@@ -6,6 +6,7 @@ import {
   Check,
   User,
   UserRound,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,41 +32,21 @@ interface VoiceSelectorProps {
   language?: string;
 }
 
-// This is a simulated dataset - in a real application, this would come from an API
+// This uses OpenAI's voice names directly
 const VOICES: Record<string, VoiceOption[]> = {
-  en: [
-    { id: 'en-US-1', name: 'Matthew', gender: 'male' },
-    { id: 'en-US-2', name: 'Joanna', gender: 'female' },
-    { id: 'en-US-3', name: 'Salli', gender: 'female' },
-    { id: 'en-US-4', name: 'Joey', gender: 'male' },
-    { id: 'en-US-5', name: 'Kimberly', gender: 'female' },
-    { id: 'en-US-6', name: 'Amy', gender: 'female', premium: true },
-    { id: 'en-US-7', name: 'Brian', gender: 'male', premium: true },
-    { id: 'en-US-8', name: 'Emma', gender: 'female', premium: true },
-    { id: 'en-US-9', name: 'Russell', gender: 'male', premium: true },
-  ],
-  es: [
-    { id: 'es-ES-1', name: 'Miguel', gender: 'male' },
-    { id: 'es-ES-2', name: 'Penélope', gender: 'female' },
-    { id: 'es-ES-3', name: 'Lupe', gender: 'female', premium: true },
-  ],
-  fr: [
-    { id: 'fr-FR-1', name: 'Mathieu', gender: 'male' },
-    { id: 'fr-FR-2', name: 'Céline', gender: 'female' },
-    { id: 'fr-FR-3', name: 'Léa', gender: 'female', premium: true },
-  ],
-  de: [
-    { id: 'de-DE-1', name: 'Hans', gender: 'male' },
-    { id: 'de-DE-2', name: 'Marlene', gender: 'female' },
-    { id: 'de-DE-3', name: 'Vicki', gender: 'female', premium: true },
-  ],
-  // Add more languages as needed
+  all: [
+    { id: 'alloy', name: 'Alloy', gender: 'neutral' },
+    { id: 'echo', name: 'Echo', gender: 'male' },
+    { id: 'fable', name: 'Fable', gender: 'female' },
+    { id: 'onyx', name: 'Onyx', gender: 'male' },
+    { id: 'nova', name: 'Nova', gender: 'female' },
+    { id: 'shimmer', name: 'Shimmer', gender: 'female', premium: true },
+  ]
 };
 
 // Default to English voices if language not found
 const getVoicesForLanguage = (languageCode: string): VoiceOption[] => {
-  const code = languageCode.split('-')[0];
-  return VOICES[code] || VOICES.en;
+  return VOICES.all; // OpenAI voices work for all languages
 };
 
 const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelectorProps) => {
@@ -73,7 +54,7 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelect
   const defaultVoice = voices[0];
   const effectiveSelectedVoice = selectedVoice || defaultVoice;
   
-  const [filter, setFilter] = useState<'all' | 'male' | 'female'>('all');
+  const [filter, setFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
   
   const filteredVoices = voices.filter(voice => {
     if (filter === 'all') return true;
@@ -121,6 +102,15 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelect
               Female
             </span>
           </button>
+          <button 
+            className={`flex-1 px-2 py-1 rounded ${filter === 'neutral' ? 'bg-background shadow-sm' : ''}`}
+            onClick={() => setFilter('neutral')}
+          >
+            <span className="flex items-center justify-center">
+              <Users className="h-3 w-3 mr-1" />
+              Neutral
+            </span>
+          </button>
         </div>
         <DropdownMenuSeparator />
         <div className="max-h-64 overflow-y-auto">
@@ -134,7 +124,9 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelect
                 <div className="flex items-center">
                   {voice.gender === 'male' ? 
                     <User className="h-4 w-4 mr-2 text-blue-500" /> : 
-                    <UserRound className="h-4 w-4 mr-2 text-pink-500" />
+                    voice.gender === 'female' ?
+                    <UserRound className="h-4 w-4 mr-2 text-pink-500" /> :
+                    <Users className="h-4 w-4 mr-2 text-purple-500" />
                   }
                   <span>{voice.name}</span>
                   {voice.premium && (
