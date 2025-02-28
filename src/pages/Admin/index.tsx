@@ -15,7 +15,7 @@ import {
   Search
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import AdminUserManagement from './AdminUserManagement';
 import AdminAudioFiles from './AdminAudioFiles';
@@ -36,14 +36,11 @@ const AdminDashboard = () => {
   });
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // If not admin, redirect to home
-  if (!loading && !isAdmin) {
-    return <Navigate to="/" />;
-  }
-
   // Fetch dashboard statistics
   useEffect(() => {
     const fetchDashboardStats = async () => {
+      if (!isAdmin || loading) return;
+      
       try {
         // Fetch total users
         const { count: totalUsers, error: usersError } = await supabase
@@ -53,17 +50,19 @@ const AdminDashboard = () => {
         if (usersError) throw usersError;
 
         // Fetch plan distribution
-        const { data: planData, error: planError } = await supabase
+        const { data: premiumData, error: premiumError } = await supabase
           .from('profiles')
-          .select('plan')
-          .is('plan', 'premium');
+          .select('*')
+          .eq('plan', 'premium');
+
+        if (premiumError) throw premiumError;
 
         const { data: basicData, error: basicError } = await supabase
           .from('profiles')
-          .select('plan')
-          .is('plan', 'basic');
+          .select('*')
+          .eq('plan', 'basic');
 
-        if (planError || basicError) throw planError || basicError;
+        if (basicError) throw basicError;
 
         // Fetch total audio files
         const { count: totalAudioFiles, error: audioError } = await supabase
@@ -79,14 +78,14 @@ const AdminDashboard = () => {
 
         if (genError) throw genError;
 
-        const totalGenerations = genData?.reduce((acc, item) => acc + item.count, 0) || 0;
+        const totalGenerations = genData?.reduce((acc, item) => acc + (item.count || 0), 0) || 0;
 
         setDashboardData({
           totalUsers: totalUsers || 0,
           totalAudioFiles: totalAudioFiles || 0,
-          premiumUsers: planData?.length || 0,
+          premiumUsers: premiumData?.length || 0,
           basicUsers: basicData?.length || 0,
-          freeUsers: (totalUsers || 0) - (planData?.length || 0) - (basicData?.length || 0),
+          freeUsers: (totalUsers || 0) - (premiumData?.length || 0) - (basicData?.length || 0),
           totalGenerations,
         });
       } catch (error) {
@@ -102,7 +101,12 @@ const AdminDashboard = () => {
     };
 
     fetchDashboardStats();
-  }, []);
+  }, [isAdmin, loading, toast]);
+
+  // If not admin, redirect to home
+  if (!loading && !isAdmin) {
+    return <Navigate to="/" />;
+  }
 
   if (loading) {
     return (

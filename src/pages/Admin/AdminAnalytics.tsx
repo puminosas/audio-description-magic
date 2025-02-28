@@ -47,13 +47,13 @@ const AdminAnalytics = () => {
       if (profileError) throw profileError;
       
       // Process plan distribution
-      const planCounts = profileData?.reduce((acc: Record<string, number>, profile) => {
+      const planCounts: Record<string, number> = {};
+      profileData?.forEach(profile => {
         const plan = profile.plan || 'unknown';
-        acc[plan] = (acc[plan] || 0) + 1;
-        return acc;
-      }, {});
+        planCounts[plan] = (planCounts[plan] || 0) + 1;
+      });
       
-      const planData = Object.entries(planCounts || {}).map(([name, value]) => ({
+      const planData = Object.entries(planCounts).map(([name, value]) => ({
         name: name.charAt(0).toUpperCase() + name.slice(1),
         value
       }));
@@ -68,13 +68,13 @@ const AdminAnalytics = () => {
       if (audioError) throw audioError;
       
       // Process language distribution
-      const languageCounts = audioData?.reduce((acc: Record<string, number>, audio) => {
+      const languageCounts: Record<string, number> = {};
+      audioData?.forEach(audio => {
         const language = audio.language || 'unknown';
-        acc[language] = (acc[language] || 0) + 1;
-        return acc;
-      }, {});
+        languageCounts[language] = (languageCounts[language] || 0) + 1;
+      });
       
-      const languageData = Object.entries(languageCounts || {}).map(([name, value]) => ({
+      const languageData = Object.entries(languageCounts).map(([name, value]) => ({
         name: name.toUpperCase(),
         value
       }));

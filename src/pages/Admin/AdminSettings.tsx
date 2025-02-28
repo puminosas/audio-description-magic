@@ -163,7 +163,7 @@ const AdminSettings = () => {
               disabled={!emailEnabled}
             />
             <p className="text-sm text-muted-foreground">
-              Use {{apiKey}} as a placeholder for the API key
+              Use {"{{apiKey}}"} as a placeholder for the API key
             </p>
           </div>
         </CardContent>

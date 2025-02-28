@@ -19,8 +19,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Search,
-  Filter
+  Search
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -50,8 +49,11 @@ type AudioFile = {
   language: string;
   voice_name: string;
   audio_url: string;
-  duration: number;
+  duration: number | null;
   created_at: string;
+  profiles?: {
+    email: string;
+  };
   user_email?: string;
 };
 
@@ -191,7 +193,8 @@ const AdminAudioFiles = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const formatDuration = (seconds: number) => {
+  const formatDuration = (seconds: number | null) => {
+    if (seconds == null) return 'N/A';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -272,7 +275,7 @@ const AdminAudioFiles = () => {
                       {file.language}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {file.duration ? formatDuration(file.duration) : 'N/A'}
+                      {formatDuration(file.duration)}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {formatDate(file.created_at)}

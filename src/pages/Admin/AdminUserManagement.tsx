@@ -17,14 +17,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { 
   PenSquare, 
-  Trash2, 
   Shield, 
   User, 
   Loader2,
@@ -310,7 +308,7 @@ const AdminUserManagement = () => {
                         <Button
                           variant={user.isAdmin ? 'ghost' : 'ghost'}
                           size="icon"
-                          onClick={() => toggleAdminStatus(user.id, user.isAdmin || false)}
+                          onClick={() => toggleAdminStatus(user.id, !!user.isAdmin)}
                           disabled={user.id === currentUser?.id} // Prevent changing own admin status
                         >
                           {user.isAdmin ? (
