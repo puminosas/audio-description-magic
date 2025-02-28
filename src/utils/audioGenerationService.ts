@@ -56,6 +56,8 @@ export const base64ToBlob = (base64: string, mimeType: string) => {
 
 // Generate audio via Supabase Edge Function
 export const generateAudio = async ({ text, language, voice }: GenerateAudioParams) => {
+  console.log('Calling generate-audio function with:', { text, language: language.code, voice: voice.id });
+  
   // Call the Supabase Edge Function
   const { data, error } = await supabase.functions.invoke('generate-audio', {
     body: {
@@ -65,10 +67,14 @@ export const generateAudio = async ({ text, language, voice }: GenerateAudioPara
     },
   });
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error from Supabase function:', error);
+    throw error;
+  }
   
-  if (!data.success || !data.audio_content) {
-    throw new Error(data.error || 'Failed to generate audio');
+  if (!data || !data.success || !data.audio_content) {
+    console.error('Invalid response from generate-audio:', data);
+    throw new Error(data?.error || 'Failed to generate audio');
   }
   
   // Create a blob from the base64 audio data
