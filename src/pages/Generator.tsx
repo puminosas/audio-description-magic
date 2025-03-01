@@ -65,6 +65,11 @@ const Generator = () => {
       
       console.log("Generating audio with data:", formData);
       
+      // Check if user is logged in
+      if (!user && activeTab !== 'text-to-audio') {
+        throw new Error('Please sign in to generate audio descriptions.');
+      }
+      
       // Start audio generation
       const result = await generateAudioDescription(
         formData.text,
@@ -74,13 +79,24 @@ const Generator = () => {
       
       if (result.error || !result.audioUrl) {
         const errorMessage = result.error || 'Failed to generate audio. Please try again.';
-        console.error("Audio generation error:", errorMessage);
-        setError(errorMessage);
-        toast({
-          title: 'Generation Failed',
-          description: errorMessage,
-          variant: 'destructive',
-        });
+        
+        // Check for authentication errors
+        if (errorMessage.includes('Authentication required') || errorMessage.includes('authentication')) {
+          setError('You need to be signed in to generate audio. Please sign in and try again.');
+          toast({
+            title: 'Authentication Required',
+            description: 'Please sign in to generate audio descriptions.',
+            variant: 'destructive',
+          });
+        } else {
+          console.error("Audio generation error:", errorMessage);
+          setError(errorMessage);
+          toast({
+            title: 'Generation Failed',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+        }
         return;
       }
       

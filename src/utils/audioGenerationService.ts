@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { supabaseTyped } from './supabaseHelper';
@@ -85,6 +86,9 @@ export const generateAudioDescription = async (
     
     console.log(`Generating description for: ${productText} in language: ${languageId} with voice: ${voiceId}`);
 
+    // Check if we have an active session
+    const { data: { session } } = await supabase.auth.getSession();
+    
     // We'll use Supabase Edge Function for this since it has access to OPENAI_API_KEY
     // and we don't want to expose the key in the client-side code
     const { data, error } = await supabase.functions.invoke('generate-audio', {
@@ -92,7 +96,12 @@ export const generateAudioDescription = async (
         text: productText,
         language: languageId,
         voice: voiceId
-      }
+      },
+      // Using public invocation for better accessibility for guest users
+      // If authentication is strictly required, the Edge Function will handle it
+      headers: session ? {
+        Authorization: `Bearer ${session.access_token}`
+      } : undefined
     });
 
     // Log detailed error information
