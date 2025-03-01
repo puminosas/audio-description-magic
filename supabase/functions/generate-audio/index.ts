@@ -1,141 +1,128 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
 import OpenAI from "https://esm.sh/openai@4.8.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
 
-// Generate a random ID without external dependencies
-function generateRandomId(length = 12) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  const randomValues = new Uint8Array(length);
-  crypto.getRandomValues(randomValues);
-  
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(randomValues[i] % chars.length);
-  }
-  return result;
+// Helper function to generate a random ID instead of using a dependency
+function generateRandomId(length = 10) {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('').slice(0, length);
 }
 
-// Configure CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
   try {
-    // Get request data
-    const { text, language, voice } = await req.json();
+    // Create a Supabase client with the Admin key
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
 
-    console.log(`Processing request: language=${language}, voice=${voice}`);
-    console.log(`Text content: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
-
-    if (!text) {
-      throw new Error('Text content is required');
-    }
-
-    // Initialize OpenAI
+    // Create an OpenAI client
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
+      apiKey: Deno.env.get("OPENAI_API_KEY") ?? "",
     });
 
-    if (!Deno.env.get('OPENAI_API_KEY')) {
-      console.error('OPENAI_API_KEY is not set');
-      throw new Error('OpenAI API key is not configured');
+    // Parse the request body
+    const { text, language, voice } = await req.json();
+
+    if (!text) {
+      return new Response(
+        JSON.stringify({ error: "Missing required text parameter" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase credentials are not configured');
+    console.log(`Generating audio for: "${text}" in ${language} with voice ${voice}`);
+
+    // First, ensure the storage bucket exists
+    const { data: buckets, error: bucketsError } = await supabaseAdmin
+      .storage
+      .listBuckets();
+
+    const bucketName = 'user_files';
+    
+    if (bucketsError) {
+      console.error("Error checking buckets:", bucketsError);
+      return new Response(
+        JSON.stringify({ error: "Error checking storage buckets" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Create storage bucket if it doesn't exist
-    try {
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'user_files');
-      
-      if (!bucketExists) {
-        console.log('Creating user_files bucket');
-        await supabase.storage.createBucket('user_files', {
-          public: true,
-          fileSizeLimit: 10485760, // 10MB
-        });
+    const bucketExists = buckets.some(b => b.name === bucketName);
+    
+    if (!bucketExists) {
+      console.log("Creating bucket:", bucketName);
+      const { error: createBucketError } = await supabaseAdmin
+        .storage
+        .createBucket(bucketName, { public: true });
+        
+      if (createBucketError) {
+        console.error("Error creating bucket:", createBucketError);
+        return new Response(
+          JSON.stringify({ error: "Error creating storage bucket" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
       }
-    } catch (error) {
-      console.error('Error creating or checking bucket:', error);
-      // Continue anyway, might be permission issue or bucket already exists
     }
 
-    // Generate speech from text using OpenAI
-    console.log('Generating audio with OpenAI...');
-    const response = await openai.audio.speech.create({
+    // Generate audio with OpenAI
+    const mp3 = await openai.audio.speech.create({
       model: "tts-1",
-      voice: voice || "alloy",
+      voice: voice, // Use the voice parameter
       input: text,
     });
 
-    if (!response) {
-      throw new Error('Failed to generate audio from OpenAI');
-    }
+    // Convert to buffer
+    const buffer = await mp3.arrayBuffer();
 
-    // Convert the response to an ArrayBuffer
-    const audioBuffer = await response.arrayBuffer();
-    
-    // Generate a unique filename
-    const fileName = `audio_${generateRandomId()}.mp3`;
-    const filePath = `public/${fileName}`;
-    
-    console.log(`Uploading file: ${filePath}`);
+    // Generate a filename and path
+    const fileId = generateRandomId();
+    const fileName = `audio_${fileId}.mp3`;
+    const filePath = `audio/${fileName}`;
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('user_files')
-      .upload(filePath, audioBuffer, {
-        contentType: 'audio/mpeg',
-        upsert: true,
+    const { data, error } = await supabaseAdmin
+      .storage
+      .from(bucketName)
+      .upload(filePath, buffer, {
+        contentType: "audio/mpeg",
+        upsert: false
       });
 
     if (error) {
-      console.error('Storage upload error:', error);
-      throw new Error(`Failed to upload audio file: ${error.message}`);
+      console.error("Error uploading audio:", error);
+      return new Response(
+        JSON.stringify({ error: "Error uploading audio file" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // Get the public URL
-    const { data: urlData } = supabase.storage
-      .from('user_files')
+    const { data: { publicUrl } } = supabaseAdmin
+      .storage
+      .from(bucketName)
       .getPublicUrl(filePath);
 
-    console.log('Audio generation completed successfully');
+    console.log("Audio generated successfully:", publicUrl);
 
+    // Return the audio URL and data
     return new Response(
       JSON.stringify({
-        id: fileName,
-        audioUrl: filePath,
+        success: true,
+        audioUrl: publicUrl,
         text: text,
+        id: fileId
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error('Function error:', error);
+    console.error("Error in generate-audio function:", error);
     return new Response(
-      JSON.stringify({
-        error: error.message || 'An unknown error occurred',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ error: error.message || "Unknown error occurred" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 });

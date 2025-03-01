@@ -9,6 +9,111 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audio_files: {
+        Row: {
+          audio_url: string
+          created_at: string | null
+          description: string | null
+          duration: number | null
+          id: string
+          is_temporary: boolean | null
+          language: string
+          session_id: string | null
+          title: string
+          updated_at: string | null
+          user_id: string | null
+          voice_name: string
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string | null
+          description?: string | null
+          duration?: number | null
+          id?: string
+          is_temporary?: boolean | null
+          language: string
+          session_id?: string | null
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+          voice_name: string
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string | null
+          description?: string | null
+          duration?: number | null
+          id?: string
+          is_temporary?: boolean | null
+          language?: string
+          session_id?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+          voice_name?: string
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          admin_notes: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          message: string
+          status: string | null
+          type: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          message: string
+          status?: string | null
+          type: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          message?: string
+          status?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      generation_counts: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          date: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          date: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

@@ -1,115 +1,99 @@
 
-import { useState, useEffect } from 'react';
-import { supabaseTyped } from '@/utils/supabaseHelper';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from 'react';
 import { 
-  PenSquare, 
-  Shield, 
-  User, 
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  Download
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped, assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabaseHelper';
+import { Badge } from "@/components/ui/badge";
+import { 
+  Loader2, 
+  RefreshCw, 
+  Search, 
+  ShieldCheck, 
+  ShieldX, 
+  Crown, 
+  UserCog 
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/context/AuthContext';
-
-type UserProfile = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  plan: string;
-  daily_limit: number;
-  remaining_generations: number;
-  created_at: string;
-  isAdmin?: boolean;
-};
 
 const AdminUserManagement = () => {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState([]);
+  const [userRoles, setUserRoles] = useState({});
   const [loading, setLoading] = useState(true);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [newPlan, setNewPlan] = useState('');
-  const [newDailyLimit, setNewDailyLimit] = useState('');
-  const [newRemainingGenerations, setNewRemainingGenerations] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPlan, setFilterPlan] = useState('');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const usersPerPage = 10;
-  const { toast } = useToast();
-  const { user: currentUser } = useAuth();
-
-  useEffect(() => {
-    fetchUsers();
-  }, [page]);
-
-  const fetchUsers = async () => {
-    setLoading(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 10;
+  
+  const loadUsers = async () => {
     try {
-      // Get total count for pagination
-      const { count, error: countError } = await supabaseTyped.profiles
-        .select()
-        .select('*', { count: 'exact', head: true });
-
+      setLoading(true);
+      
+      // Get users from auth
+      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers({
+        page: page,
+        perPage: itemsPerPage
+      });
+      
+      if (authError) throw authError;
+      
+      // Get total user count
+      const { data: { count }, error: countError } = await supabase.auth.admin.listUsers();
+      
       if (countError) throw countError;
       
-      setTotalUsers(count || 0);
-      setTotalPages(Math.ceil((count || 0) / usersPerPage));
-
-      // Fetch users for current page
-      const { data: userData, error: userError } = await supabaseTyped.profiles
-        .select()
-        .select('*')
-        .range((page - 1) * usersPerPage, page * usersPerPage - 1)
-        .order('created_at', { ascending: false });
-
-      if (userError) throw userError;
-
-      // Fetch admin roles
-      const { data: adminData, error: adminError } = await supabaseTyped.user_roles
-        .select()
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (adminError) throw adminError;
-
-      // Combine user data with admin status
-      const adminIds = adminData?.map((admin: any) => admin.user_id) || [];
-      const usersWithAdminStatus = userData?.map((user: any) => ({
+      setTotalCount(count || 0);
+      
+      // Get user roles
+      const { data: roles, error: rolesError } = await supabaseTyped.user_roles.select();
+      
+      if (rolesError) throw rolesError;
+      
+      // Create a map of user_id to roles
+      const roleMap = {};
+      roles?.forEach(role => {
+        roleMap[role.user_id] = role.role;
+      });
+      
+      setUserRoles(roleMap);
+      
+      // Get user profiles
+      const { data: profiles, error: profilesError } = await supabaseTyped.profiles.select();
+      
+      if (profilesError) throw profilesError;
+      
+      // Create a map of user_id to profile
+      const profileMap = {};
+      profiles?.forEach(profile => {
+        profileMap[profile.id] = profile;
+      });
+      
+      // Combine user data with roles and profiles
+      const enrichedUsers = authUsers.map(user => ({
         ...user,
-        isAdmin: adminIds.includes(user.id)
-      })) || [];
-
-      setUsers(usersWithAdminStatus);
+        role: roleMap[user.id] || null,
+        plan: profileMap[user.id]?.plan || 'free'
+      }));
+      
+      setUsers(enrichedUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error loading users:', error);
       toast({
         title: 'Error',
         description: 'Failed to load users.',
@@ -120,311 +104,231 @@ const AdminUserManagement = () => {
     }
   };
 
-  const handleEditUser = (user: UserProfile) => {
-    setSelectedUser(user);
-    setNewPlan(user.plan);
-    setNewDailyLimit(user.daily_limit.toString());
-    setNewRemainingGenerations(user.remaining_generations.toString());
-    setEditDialogOpen(true);
-  };
+  useEffect(() => {
+    loadUsers();
+  }, [page]);
 
-  const saveUserChanges = async () => {
-    if (!selectedUser) return;
-
+  const handleToggleAdmin = async (userId, isAdmin) => {
     try {
-      const { error } = await supabaseTyped.profiles
-        .update({
-          plan: newPlan,
-          daily_limit: parseInt(newDailyLimit),
-          remaining_generations: parseInt(newRemainingGenerations)
-        })
-        .eq('id', selectedUser.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'User updated successfully.',
-      });
-
-      // Refresh user list
-      fetchUsers();
-      setEditDialogOpen(false);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update user.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const toggleAdminStatus = async (userId: string, isCurrentlyAdmin: boolean) => {
-    try {
-      if (isCurrentlyAdmin) {
+      setLoading(true);
+      
+      if (isAdmin) {
         // Remove admin role
-        const { error } = await supabaseTyped.user_roles
-          .delete()
-          .eq('user_id', userId)
-          .eq('role', 'admin');
-
-        if (error) throw error;
+        await removeAdminRole(userId);
       } else {
         // Add admin role
-        const { error } = await supabaseTyped.user_roles
-          .insert({ user_id: userId, role: 'admin' });
-
-        if (error) throw error;
+        await assignAdminRole(userId);
       }
-
+      
+      // Update the user list
+      await loadUsers();
+      
       toast({
         title: 'Success',
-        description: `Admin status ${isCurrentlyAdmin ? 'removed' : 'granted'}.`,
+        description: `User ${isAdmin ? 'removed from' : 'added to'} admin role.`,
       });
-
-      // Refresh user list
-      fetchUsers();
     } catch (error) {
-      console.error('Error toggling admin status:', error);
+      console.error('Error toggling admin role:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update admin status.',
+        description: 'Failed to update user role.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+  const handleUpdatePlan = async (userId, plan) => {
+    try {
+      setLoading(true);
+      
+      await updateUserPlan(userId, plan);
+      
+      // Update the user list
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, plan } : user
+      ));
+      
+      toast({
+        title: 'Success',
+        description: `User plan updated to ${plan}.`,
+      });
+    } catch (error) {
+      console.error('Error updating user plan:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user plan.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const exportUsers = () => {
-    // Create CSV content
-    const headers = ['ID', 'Email', 'Name', 'Plan', 'Daily Limit', 'Remaining', 'Created', 'Admin'];
-    const csvRows = [headers.join(',')];
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = 
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.id?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    users.forEach(user => {
-      const row = [
-        user.id,
-        user.email,
-        user.full_name || '',
-        user.plan,
-        user.daily_limit,
-        user.remaining_generations,
-        formatDate(user.created_at),
-        user.isAdmin ? 'Yes' : 'No'
-      ];
-      
-      // Escape values that contain commas
-      const escapedRow = row.map(value => {
-        if (typeof value === 'string' && value.includes(',')) {
-          return `"${value}"`;
-        }
-        return value;
-      });
-      
-      csvRows.push(escapedRow.join(','));
-    });
+    const matchesPlan = !filterPlan || user.plan === filterPlan;
     
-    const csvContent = csvRows.join('\n');
-    
-    // Create a Blob and download link
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'users.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    return matchesSearch && matchesPlan;
+  });
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">User Management</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportUsers}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by email or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
+        
+        <div className="w-full md:w-[200px]">
+          <Select value={filterPlan} onValueChange={setFilterPlan}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by plan" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Plans</SelectItem>
+              <SelectItem value="free">Free</SelectItem>
+              <SelectItem value="basic">Basic</SelectItem>
+              <SelectItem value="premium">Premium</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Button variant="outline" onClick={loadUsers}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
-      
+
+      {/* Users Table */}
       {loading ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
         <>
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Plan</TableHead>
-                  <TableHead className="hidden md:table-cell">Limit</TableHead>
-                  <TableHead className="hidden md:table-cell">Created</TableHead>
-                  <TableHead className="hidden md:table-cell">Role</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Admin</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
+              
               <TableBody>
-                {users.map(user => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{user.full_name || 'N/A'}</div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.plan === 'premium' ? 'default' : user.plan === 'basic' ? 'secondary' : 'outline'}>
-                        {user.plan.charAt(0).toUpperCase() + user.plan.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {user.remaining_generations} / {user.daily_limit}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {formatDate(user.created_at)}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {user.isAdmin ? 'Admin' : 'User'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <PenSquare className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={user.isAdmin ? 'ghost' : 'ghost'}
-                          size="icon"
-                          onClick={() => toggleAdminStatus(user.id, !!user.isAdmin)}
-                          disabled={user.id === currentUser?.id} // Prevent changing own admin status
-                        >
-                          {user.isAdmin ? (
-                            <User className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Shield className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                
-                {users.length === 0 && (
+                {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
+                ) : (
+                  filteredUsers.map((user) => {
+                    const isAdmin = user.role === 'admin';
+                    
+                    return (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">
+                          {user.email}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs truncate max-w-[120px]">
+                          {user.id}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={user.plan}
+                            onValueChange={(value) => handleUpdatePlan(user.id, value)}
+                          >
+                            <SelectTrigger className="w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="free">Free</SelectItem>
+                              <SelectItem value="basic">Basic</SelectItem>
+                              <SelectItem value="premium">Premium</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={isAdmin ? 'default' : 'outline'}>
+                            {isAdmin ? 'Admin' : 'User'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {isAdmin ? (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleToggleAdmin(user.id, true)}
+                              >
+                                <ShieldX className="h-4 w-4 text-destructive" />
+                              </Button>
+                            ) : (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleToggleAdmin(user.id, false)}
+                              >
+                                <ShieldCheck className="h-4 w-4 text-green-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           </div>
           
           {/* Pagination */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-4">
             <div className="text-sm text-muted-foreground">
-              Showing {(page - 1) * usersPerPage + 1}-{Math.min(page * usersPerPage, totalUsers)} of {totalUsers} users
+              Showing {Math.min((page - 1) * itemsPerPage + 1, totalCount)} to {Math.min(page * itemsPerPage, totalCount)} of {totalCount} users
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="sm"
-                onClick={() => setPage(page - 1)}
                 disabled={page === 1}
+                onClick={() => setPage(page => Math.max(1, page - 1))}
               >
-                <ChevronLeft className="h-4 w-4" />
+                Previous
               </Button>
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="sm"
-                onClick={() => setPage(page + 1)}
-                disabled={page === totalPages}
+                disabled={page * itemsPerPage >= totalCount}
+                onClick={() => setPage(page => page + 1)}
               >
-                <ChevronRight className="h-4 w-4" />
+                Next
               </Button>
             </div>
           </div>
         </>
       )}
-      
-      {/* Edit User Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user settings and permissions
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedUser && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label className="text-right">Email</Label>
-                <div className="col-span-3 font-medium">{selectedUser.email}</div>
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label htmlFor="plan" className="text-right">Plan</Label>
-                <Select
-                  value={newPlan}
-                  onValueChange={setNewPlan}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label htmlFor="daily-limit" className="text-right">Daily Limit</Label>
-                <Input
-                  id="daily-limit"
-                  className="col-span-3"
-                  type="number"
-                  value={newDailyLimit}
-                  onChange={(e) => setNewDailyLimit(e.target.value)}
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label htmlFor="remaining" className="text-right">Remaining</Label>
-                <Input
-                  id="remaining"
-                  className="col-span-3"
-                  type="number"
-                  value={newRemainingGenerations}
-                  onChange={(e) => setNewRemainingGenerations(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={saveUserChanges}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

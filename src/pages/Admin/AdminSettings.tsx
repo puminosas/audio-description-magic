@@ -1,218 +1,176 @@
 
-import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { toast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const AdminSettings = () => {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  
-  // System settings
-  const [freeLimit, setFreeLimit] = useState('3');
-  const [basicLimit, setBasicLimit] = useState('10');
-  const [premiumLimit, setPremiumLimit] = useState('100');
-  const [defaultLanguage, setDefaultLanguage] = useState('en');
-  
-  // Email settings
-  const [emailEnabled, setEmailEnabled] = useState(true);
-  const [welcomeEmailTemplate, setWelcomeEmailTemplate] = useState('Welcome to AudioDesc!\n\nThank you for creating an account. We\'re excited to help you create amazing audio descriptions for your products.');
-  const [apiKeyEmailTemplate, setApiKeyEmailTemplate] = useState('Your new API key has been generated.\n\nAPI Key: {{apiKey}}\n\nKeep this key secure and do not share it with others.');
-  
-  // Security settings
-  const [inactivityDays, setInactivityDays] = useState('90');
-  const [autoDisableInactive, setAutoDisableInactive] = useState(false);
-  const [logRetentionDays, setLogRetentionDays] = useState('30');
+  const [settings, setSettings] = useState({
+    freeGenerationsLimit: 5,
+    basicGenerationsLimit: 50,
+    premiumGenerationsLimit: 500,
+    allowGuestGeneration: true,
+    enableNewUserRegistration: true,
+    requireEmailVerification: false,
+    storageRetentionDays: 30,
+    enableFeedback: true
+  });
   
   const handleSaveSettings = () => {
     setLoading(true);
     
-    // Simulate saving settings
+    // For now, this is a mock save since we haven't implemented a settings table yet
     setTimeout(() => {
-      setLoading(false);
       toast({
         title: 'Settings Saved',
-        description: 'Your settings have been updated successfully.',
+        description: 'Your system settings have been updated successfully.',
       });
+      setLoading(false);
     }, 1000);
   };
-  
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
+          <CardTitle>Generation Limits</CardTitle>
+          <CardDescription>
+            Configure the number of generations allowed for each plan
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="freeLimit">Free Plan Limit</Label>
+              <Input
+                id="freeLimit"
+                type="number"
+                value={settings.freeGenerationsLimit}
+                onChange={(e) => setSettings({ ...settings, freeGenerationsLimit: parseInt(e.target.value) })}
+              />
+              <span className="text-xs text-muted-foreground">
+                Generations per day
+              </span>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="basicLimit">Basic Plan Limit</Label>
+              <Input
+                id="basicLimit"
+                type="number"
+                value={settings.basicGenerationsLimit}
+                onChange={(e) => setSettings({ ...settings, basicGenerationsLimit: parseInt(e.target.value) })}
+              />
+              <span className="text-xs text-muted-foreground">
+                Generations per day
+              </span>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="premiumLimit">Premium Plan Limit</Label>
+              <Input
+                id="premiumLimit"
+                type="number"
+                value={settings.premiumGenerationsLimit}
+                onChange={(e) => setSettings({ ...settings, premiumGenerationsLimit: parseInt(e.target.value) })}
+              />
+              <span className="text-xs text-muted-foreground">
+                Generations per day
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
           <CardTitle>System Settings</CardTitle>
           <CardDescription>
-            Configure the core settings for your AudioDesc application
+            Configure global system behavior
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="free-limit">Free Plan Daily Limit</Label>
-              <Input
-                id="free-limit"
-                type="number"
-                value={freeLimit}
-                onChange={(e) => setFreeLimit(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Maximum daily generations for free users
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="basic-limit">Basic Plan Daily Limit</Label>
-              <Input
-                id="basic-limit"
-                type="number"
-                value={basicLimit}
-                onChange={(e) => setBasicLimit(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Maximum daily generations for basic users
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="premium-limit">Premium Plan Daily Limit</Label>
-              <Input
-                id="premium-limit"
-                type="number"
-                value={premiumLimit}
-                onChange={(e) => setPremiumLimit(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Maximum daily generations for premium users
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="default-language">Default Language</Label>
-            <Select 
-              value={defaultLanguage} 
-              onValueChange={setDefaultLanguage}
-            >
-              <SelectTrigger id="default-language">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="es">Spanish</SelectItem>
-                <SelectItem value="fr">French</SelectItem>
-                <SelectItem value="de">German</SelectItem>
-                <SelectItem value="it">Italian</SelectItem>
-                <SelectItem value="zh">Chinese</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Default language for new audio generations
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Email Templates</CardTitle>
-          <CardDescription>
-            Configure the email templates used for system notifications
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="email-enabled" 
-              checked={emailEnabled}
-              onCheckedChange={setEmailEnabled}
-            />
-            <Label htmlFor="email-enabled">Enable email notifications</Label>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="welcome-email">Welcome Email Template</Label>
-            <Textarea
-              id="welcome-email"
-              value={welcomeEmailTemplate}
-              onChange={(e) => setWelcomeEmailTemplate(e.target.value)}
-              rows={5}
-              disabled={!emailEnabled}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="api-key-email">API Key Email Template</Label>
-            <Textarea
-              id="api-key-email"
-              value={apiKeyEmailTemplate}
-              onChange={(e) => setApiKeyEmailTemplate(e.target.value)}
-              rows={5}
-              disabled={!emailEnabled}
-            />
-            <p className="text-sm text-muted-foreground">
-              Use {"{{apiKey}}"} as a placeholder for the API key
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Security & Maintenance</CardTitle>
-          <CardDescription>
-            Configure security and maintenance settings
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="auto-disable">Auto-disable inactive users</Label>
+              <Label htmlFor="guestGeneration">Allow Guest Generation</Label>
               <p className="text-sm text-muted-foreground">
-                Automatically disable users who have been inactive
+                Allow non-logged-in users to generate audio
               </p>
             </div>
-            <Switch 
-              id="auto-disable" 
-              checked={autoDisableInactive}
-              onCheckedChange={setAutoDisableInactive}
+            <Switch
+              id="guestGeneration"
+              checked={settings.allowGuestGeneration}
+              onCheckedChange={(checked) => setSettings({ ...settings, allowGuestGeneration: checked })}
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="inactivity-days">Inactivity Period (days)</Label>
-            <Input
-              id="inactivity-days"
-              type="number"
-              value={inactivityDays}
-              onChange={(e) => setInactivityDays(e.target.value)}
-              disabled={!autoDisableInactive}
+          <Separator />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="newUserRegistration">Enable New User Registration</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow new users to register for accounts
+              </p>
+            </div>
+            <Switch
+              id="newUserRegistration"
+              checked={settings.enableNewUserRegistration}
+              onCheckedChange={(checked) => setSettings({ ...settings, enableNewUserRegistration: checked })}
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="log-retention">Audit Log Retention (days)</Label>
-            <Input
-              id="log-retention"
-              type="number"
-              value={logRetentionDays}
-              onChange={(e) => setLogRetentionDays(e.target.value)}
+          <Separator />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="emailVerification">Require Email Verification</Label>
+              <p className="text-sm text-muted-foreground">
+                Require users to verify their email before using the system
+              </p>
+            </div>
+            <Switch
+              id="emailVerification"
+              checked={settings.requireEmailVerification}
+              onCheckedChange={(checked) => setSettings({ ...settings, requireEmailVerification: checked })}
             />
-            <p className="text-sm text-muted-foreground">
-              Number of days to keep audit logs before automatic deletion
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-2">
+            <Label htmlFor="storageRetention">Storage Retention Period (Days)</Label>
+            <Input
+              id="storageRetention"
+              type="number"
+              value={settings.storageRetentionDays}
+              onChange={(e) => setSettings({ ...settings, storageRetentionDays: parseInt(e.target.value) })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Number of days to retain temporary files for guest users
             </p>
+          </div>
+          
+          <Separator />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="enableFeedback">Enable Feedback System</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow users to submit feedback and bug reports
+              </p>
+            </div>
+            <Switch
+              id="enableFeedback"
+              checked={settings.enableFeedback}
+              onCheckedChange={(checked) => setSettings({ ...settings, enableFeedback: checked })}
+            />
           </div>
         </CardContent>
       </Card>
@@ -221,12 +179,12 @@ const AdminSettings = () => {
         <Button onClick={handleSaveSettings} disabled={loading}>
           {loading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Saving...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="h-4 w-4 mr-2" />
               Save Settings
             </>
           )}

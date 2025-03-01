@@ -1,101 +1,75 @@
 
-import { useState, useEffect } from 'react';
-import { supabaseTyped, getFeedbackStats } from '@/utils/supabaseHelper';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useEffect } from 'react';
 import { 
-  Loader2, 
-  ChevronLeft, 
-  ChevronRight,
-  CheckCircle,
-  Clock,
-  XCircle,
-  MessageSquare
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-
-type FeedbackStatus = 'new' | 'in_progress' | 'resolved' | 'dismissed';
-
-interface Feedback {
-  id: string;
-  user_id: string | null;
-  email: string | null;
-  type: 'suggestion' | 'bug' | 'other';
-  message: string;
-  status: FeedbackStatus;
-  admin_notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from '@/hooks/use-toast';
+import { supabaseTyped } from '@/utils/supabaseHelper';
+import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Loader2, RefreshCw, MessageSquare, CheckCircle2, XCircle } from 'lucide-react';
 
 const AdminFeedback = () => {
-  const [feedbackItems, setFeedbackItems] = useState<Feedback[]>([]);
+  const [feedback, setFeedback] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const itemsPerPage = 10;
-  const { toast } = useToast();
-  
-  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState<FeedbackStatus>('new');
+  const [totalCount, setTotalCount] = useState(0);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
-
-  useEffect(() => {
-    fetchFeedback();
-  }, [page]);
-
-  const fetchFeedback = async () => {
-    setLoading(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const itemsPerPage = 10;
+  
+  const loadFeedback = async () => {
     try {
-      // Get total count for pagination using the count method
-      const { count, error: countError } = await supabaseTyped.feedback
-        .count({ exact: true });
-
-      if (countError) throw countError;
+      setLoading(true);
       
-      setTotalItems(count || 0);
-      setTotalPages(Math.ceil((count || 0) / itemsPerPage));
-
-      // Fetch feedback for current page
-      const { data, error } = await supabaseTyped.feedback
+      // First get the count
+      const { count } = await supabaseTyped.feedback
+        .count({ exact: true });
+      
+      setTotalCount(count || 0);
+      
+      // Then get the paginated data
+      let query = supabaseTyped.feedback
         .select()
-        .range((page - 1) * itemsPerPage, page * itemsPerPage - 1)
-        .order('created_at', { ascending: false });
-
+        .order('created_at', { ascending: false })
+        .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
+      
+      const { data, error } = await query;
+      
       if (error) throw error;
-
-      setFeedbackItems(data as Feedback[] || []);
+      
+      setFeedback(data || []);
     } catch (error) {
-      console.error('Error fetching feedback:', error);
+      console.error('Error loading feedback:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load feedback items.',
+        description: 'Failed to load feedback.',
         variant: 'destructive',
       });
     } finally {
@@ -103,225 +77,314 @@ const AdminFeedback = () => {
     }
   };
 
-  const handleOpenDetail = (feedback: Feedback) => {
-    setSelectedFeedback(feedback);
-    setNewStatus(feedback.status);
-    setAdminNotes(feedback.admin_notes || '');
-    setDetailDialogOpen(true);
-  };
+  useEffect(() => {
+    loadFeedback();
+  }, [page]);
 
-  const updateFeedbackStatus = async () => {
-    if (!selectedFeedback) return;
-
+  const handleStatusChange = async (id, status) => {
     try {
-      const { error } = await supabaseTyped.feedback.update({
-        status: newStatus,
-        admin_notes: adminNotes,
-        updated_at: new Date().toISOString()
-      }).eq('id', selectedFeedback.id);
-
+      const { error } = await supabaseTyped.feedback
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      
       if (error) throw error;
-
+      
+      setFeedback(feedback.map(item => 
+        item.id === id ? { ...item, status } : item
+      ));
+      
       toast({
         title: 'Success',
-        description: 'Feedback updated successfully.',
+        description: `Feedback status updated to ${status}.`,
       });
-
-      // Refresh feedback list
-      fetchFeedback();
-      setDetailDialogOpen(false);
     } catch (error) {
-      console.error('Error updating feedback:', error);
+      console.error('Error updating feedback status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update feedback.',
+        description: 'Failed to update feedback status.',
         variant: 'destructive',
       });
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const getStatusBadge = (status: FeedbackStatus) => {
-    switch (status) {
-      case 'new':
-        return <Badge variant="default">New</Badge>;
-      case 'in_progress':
-        return <Badge variant="secondary">In Progress</Badge>;
-      case 'resolved':
-        return <Badge variant="outline" className="text-green-500 border-green-500">Resolved</Badge>;
-      case 'dismissed':
-        return <Badge variant="outline" className="text-muted-foreground">Dismissed</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const handleSaveNotes = async () => {
+    if (!selectedFeedback) return;
+    
+    try {
+      const { error } = await supabaseTyped.feedback
+        .update({ 
+          admin_notes: adminNotes,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', selectedFeedback.id);
+      
+      if (error) throw error;
+      
+      setFeedback(feedback.map(item => 
+        item.id === selectedFeedback.id ? { ...item, admin_notes: adminNotes } : item
+      ));
+      
+      setDialogOpen(false);
+      
+      toast({
+        title: 'Success',
+        description: 'Admin notes saved successfully.',
+      });
+    } catch (error) {
+      console.error('Error saving admin notes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save admin notes.',
+        variant: 'destructive',
+      });
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'suggestion':
-        return <MessageSquare className="h-4 w-4 text-blue-500" />;
-      case 'bug':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <MessageSquare className="h-4 w-4 text-muted-foreground" />;
-    }
+  const openFeedbackDetails = (item) => {
+    setSelectedFeedback(item);
+    setAdminNotes(item.admin_notes || '');
+    setDialogOpen(true);
   };
+
+  const filteredFeedback = feedback.filter(item => {
+    const matchesSearch = 
+      item.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = !filterType || item.type === filterType;
+    const matchesStatus = !filterStatus || item.status === filterStatus;
+    
+    return matchesSearch && matchesType && matchesStatus;
+  });
+
+  // Get unique types and statuses for filters
+  const types = [...new Set(feedback.map(item => item.type))];
+  const statuses = [...new Set(feedback.map(item => item.status))];
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Feedback Management</h2>
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search by message or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        
+        <div className="w-full md:w-[200px]">
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Types</SelectItem>
+              {types.map(type => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="w-full md:w-[200px]">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Statuses</SelectItem>
+              {statuses.map(status => (
+                <SelectItem key={status} value={status}>{status}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Button variant="outline" onClick={loadFeedback}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
-      
+
+      {/* Feedback Table */}
       {loading ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
         <>
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Type</TableHead>
                   <TableHead>Message</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead className="hidden md:table-cell">Created</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
+              
               <TableBody>
-                {feedbackItems.map(item => (
-                  <TableRow 
-                    key={item.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleOpenDetail(item)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center">
-                        {getTypeIcon(item.type)}
-                        <span className="ml-2 capitalize">{item.type}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium line-clamp-1">{item.message}</div>
-                    </TableCell>
-                    <TableCell>
-                      {item.email || 'Anonymous'}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {formatDate(item.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(item.status)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                
-                {feedbackItems.length === 0 && (
+                {filteredFeedback.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No feedback items found
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                      No feedback found
                     </TableCell>
                   </TableRow>
+                ) : (
+                  filteredFeedback.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <Badge variant={item.type === 'bug' ? 'destructive' : 'default'}>
+                          {item.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[300px] truncate">
+                        {item.message}
+                      </TableCell>
+                      <TableCell>{item.email}</TableCell>
+                      <TableCell>
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          item.status === 'new' ? 'outline' : 
+                          item.status === 'resolved' ? 'success' : 
+                          'secondary'
+                        }>
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => openFeedbackDetails(item)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                          
+                          {item.status !== 'resolved' && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleStatusChange(item.id, 'resolved')}
+                            >
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            </Button>
+                          )}
+                          
+                          {item.status !== 'new' && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleStatusChange(item.id, 'new')}
+                            >
+                              <XCircle className="h-4 w-4 text-orange-500" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           </div>
           
           {/* Pagination */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-4">
             <div className="text-sm text-muted-foreground">
-              Showing {(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, totalItems)} of {totalItems} items
+              Showing {Math.min((page - 1) * itemsPerPage + 1, totalCount)} to {Math.min(page * itemsPerPage, totalCount)} of {totalCount} entries
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="sm"
-                onClick={() => setPage(page - 1)}
                 disabled={page === 1}
+                onClick={() => setPage(page => Math.max(1, page - 1))}
               >
-                <ChevronLeft className="h-4 w-4" />
+                Previous
               </Button>
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="sm"
-                onClick={() => setPage(page + 1)}
-                disabled={page === totalPages}
+                disabled={page * itemsPerPage >= totalCount}
+                onClick={() => setPage(page => page + 1)}
               >
-                <ChevronRight className="h-4 w-4" />
+                Next
               </Button>
             </div>
           </div>
         </>
       )}
-      
-      {/* Feedback Detail Dialog */}
-      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+
+      {/* Feedback Details Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Feedback Details</DialogTitle>
-            <DialogDescription>
-              View and manage feedback from users
-            </DialogDescription>
           </DialogHeader>
           
           {selectedFeedback && (
-            <div className="space-y-4 py-2">
-              <div className="bg-muted p-4 rounded-md">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center">
-                    {getTypeIcon(selectedFeedback.type)}
-                    <span className="ml-2 font-medium capitalize">{selectedFeedback.type}</span>
-                  </div>
-                  {getStatusBadge(selectedFeedback.status)}
-                </div>
-                <p className="text-sm whitespace-pre-wrap">{selectedFeedback.message}</p>
-                <div className="mt-4 text-xs text-muted-foreground">
-                  From: {selectedFeedback.email || 'Anonymous'} • 
-                  {formatDate(selectedFeedback.created_at)}
-                </div>
+            <div className="space-y-4 py-4">
+              <div>
+                <h4 className="font-medium mb-1">Type</h4>
+                <Badge variant={selectedFeedback.type === 'bug' ? 'destructive' : 'default'}>
+                  {selectedFeedback.type}
+                </Badge>
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Select
-                  value={newStatus}
-                  onValueChange={(value) => setNewStatus(value as FeedbackStatus)}
+              <div>
+                <h4 className="font-medium mb-1">From</h4>
+                <p>{selectedFeedback.email || 'Anonymous'}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-1">Message</h4>
+                <p className="whitespace-pre-wrap">{selectedFeedback.message}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-1">Status</h4>
+                <Select 
+                  value={selectedFeedback.status} 
+                  onValueChange={(value) => handleStatusChange(selectedFeedback.id, value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="new">New</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="dismissed">Dismissed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Admin Notes</label>
+              <div>
+                <h4 className="font-medium mb-1">Admin Notes</h4>
                 <Textarea
-                  placeholder="Add internal notes about this feedback..."
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  rows={4}
+                  placeholder="Add notes about this feedback..."
+                  rows={5}
                 />
               </div>
             </div>
           )}
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={updateFeedbackStatus}>
-              Save Changes
+            <Button onClick={handleSaveNotes}>
+              Save Notes
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,133 +1,60 @@
 
-import { useState, useEffect } from 'react';
-import { supabaseTyped } from '@/utils/supabaseHelper';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from 'react';
 import { 
-  Play,
-  Pause,
-  Download,
-  Trash2,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  Search
-} from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-
-type AudioFile = {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string;
-  language: string;
-  voice_name: string;
-  audio_url: string;
-  duration: number | null;
-  created_at: string;
-  profiles?: {
-    email: string;
-  };
-  user_email?: string;
-};
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { AudioPlayer } from "@/components/ui/AudioPlayer";
+import { toast } from '@/hooks/use-toast';
+import { supabaseTyped } from '@/utils/supabaseHelper';
+import { Loader2, Trash2, X, RefreshCw, Download } from 'lucide-react';
 
 const AdminAudioFiles = () => {
-  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
+  const [audioFiles, setAudioFiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterLanguage, setFilterLanguage] = useState('');
+  const [filterVoice, setFilterVoice] = useState('');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalFiles, setTotalFiles] = useState(0);
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [languageFilter, setLanguageFilter] = useState('all');
-  const [deleteAudioId, setDeleteAudioId] = useState<string | null>(null);
-  const filesPerPage = 10;
-  const { toast } = useToast();
-  const audioRef = useState<HTMLAudioElement>(new Audio())[0];
-
-  useEffect(() => {
-    fetchAudioFiles();
-  }, [page, searchQuery, languageFilter]);
-
-  useEffect(() => {
-    // Audio event listeners
-    const handleEnded = () => {
-      setPlayingAudio(null);
-    };
-
-    audioRef.addEventListener('ended', handleEnded);
-
-    return () => {
-      audioRef.removeEventListener('ended', handleEnded);
-      audioRef.pause();
-    };
-  }, []);
-
-  const fetchAudioFiles = async () => {
-    setLoading(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 10;
+  
+  const loadAudioFiles = async () => {
     try {
+      setLoading(true);
+      
+      // First get the count
+      const { count } = await supabaseTyped.audio_files
+        .count({ exact: true });
+      
+      setTotalCount(count || 0);
+      
+      // Then get the paginated data
       let query = supabaseTyped.audio_files
         .select()
-        .select('*, profiles:user_id(email)')
-        .order('created_at', { ascending: false });
-
-      // Apply filters
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-      }
-
-      if (languageFilter !== 'all') {
-        query = query.eq('language', languageFilter);
-      }
-
-      // Get count for pagination
-      // Fix for the count argument issue - use head: true
-      const { count } = await query.select('id', { count: 'exact' });
+        .order('created_at', { ascending: false })
+        .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
       
-      setTotalFiles(count || 0);
-      setTotalPages(Math.ceil((count || 0) / filesPerPage));
-
-      // Get data for current page
-      const { data, error } = await query
-        .range((page - 1) * filesPerPage, page * filesPerPage - 1);
-
+      const { data, error } = await query;
+      
       if (error) throw error;
-
-      // Transform data to include user email
-      const transformedData = data.map((item: any) => ({
-        ...item,
-        user_email: item.profiles?.email
-      }));
-
-      setAudioFiles(transformedData);
+      
+      setAudioFiles(data || []);
     } catch (error) {
-      console.error('Error fetching audio files:', error);
+      console.error('Error loading audio files:', error);
       toast({
         title: 'Error',
         description: 'Failed to load audio files.',
@@ -138,47 +65,28 @@ const AdminAudioFiles = () => {
     }
   };
 
-  const handlePlayPause = (audioUrl: string) => {
-    if (playingAudio === audioUrl) {
-      // Pause currently playing audio
-      audioRef.pause();
-      setPlayingAudio(null);
-    } else {
-      // Stop any currently playing audio
-      audioRef.pause();
-      
-      // Play new audio
-      audioRef.src = audioUrl;
-      audioRef.play().catch(error => {
-        console.error('Error playing audio:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to play audio file.',
-          variant: 'destructive',
-        });
-      });
-      setPlayingAudio(audioUrl);
-    }
-  };
+  useEffect(() => {
+    loadAudioFiles();
+  }, [page]);
 
-  const handleDeleteAudio = async () => {
-    if (!deleteAudioId) return;
+  const handleDeleteAudio = async (id) => {
+    if (!confirm('Are you sure you want to delete this audio file?')) return;
     
     try {
+      setLoading(true);
+      
       const { error } = await supabaseTyped.audio_files
         .delete()
-        .eq('id', deleteAudioId);
-        
+        .eq('id', id);
+      
       if (error) throw error;
+      
+      setAudioFiles(audioFiles.filter(file => file.id !== id));
       
       toast({
         title: 'Success',
         description: 'Audio file deleted successfully.',
       });
-      
-      // Refresh audio files list
-      fetchAudioFiles();
-      setDeleteAudioId(null);
     } catch (error) {
       console.error('Error deleting audio file:', error);
       toast({
@@ -186,187 +94,172 @@ const AdminAudioFiles = () => {
         description: 'Failed to delete audio file.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
+  const filteredAudioFiles = audioFiles.filter(file => {
+    const matchesSearch = 
+      file.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      file.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesLanguage = !filterLanguage || file.language === filterLanguage;
+    const matchesVoice = !filterVoice || file.voice_name === filterVoice;
+    
+    return matchesSearch && matchesLanguage && matchesVoice;
+  });
 
-  const formatDuration = (seconds: number | null) => {
-    if (seconds == null) return 'N/A';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  // Get unique languages and voices for filters
+  const languages = [...new Set(audioFiles.map(file => file.language))];
+  const voices = [...new Set(audioFiles.map(file => file.voice_name))];
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Audio Files</h2>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by title or description..." 
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search by title or description..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
           />
         </div>
         
-        <div className="w-full sm:w-52">
-          <Select 
-            value={languageFilter} 
-            onValueChange={setLanguageFilter}
-          >
+        <div className="w-full md:w-[200px]">
+          <Select value={filterLanguage} onValueChange={setFilterLanguage}>
             <SelectTrigger>
               <SelectValue placeholder="Filter by language" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Languages</SelectItem>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="es">Spanish</SelectItem>
-              <SelectItem value="fr">French</SelectItem>
-              <SelectItem value="de">German</SelectItem>
-              <SelectItem value="it">Italian</SelectItem>
-              <SelectItem value="zh">Chinese</SelectItem>
-              <SelectItem value="ja">Japanese</SelectItem>
+              <SelectItem value="">All Languages</SelectItem>
+              {languages.map(lang => (
+                <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+        
+        <div className="w-full md:w-[200px]">
+          <Select value={filterVoice} onValueChange={setFilterVoice}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by voice" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Voices</SelectItem>
+              {voices.map(voice => (
+                <SelectItem key={voice} value={voice}>{voice}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Button variant="outline" onClick={() => {
+          setSearchTerm('');
+          setFilterLanguage('');
+          setFilterVoice('');
+        }}>
+          <X className="h-4 w-4 mr-2" />
+          Clear
+        </Button>
+        
+        <Button variant="outline" onClick={loadAudioFiles}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
-      
+
+      {/* Audio Files Table */}
       {loading ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
         <>
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
-                  <TableHead className="hidden md:table-cell">User</TableHead>
-                  <TableHead className="hidden md:table-cell">Language</TableHead>
-                  <TableHead className="hidden md:table-cell">Duration</TableHead>
-                  <TableHead className="hidden md:table-cell">Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Language</TableHead>
+                  <TableHead>Voice</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Audio</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
+              
               <TableBody>
-                {audioFiles.map(file => (
-                  <TableRow key={file.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{file.title}</div>
-                        <div className="text-sm text-muted-foreground line-clamp-1">
-                          {file.description}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {file.user_email || 'Unknown'}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {file.language}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {formatDuration(file.duration)}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {formatDate(file.created_at)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handlePlayPause(file.audio_url)}
-                        >
-                          {playingAudio === file.audio_url ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          asChild
-                        >
-                          <a href={file.audio_url} download={`${file.title}.mp3`}>
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeleteAudioId(file.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Audio File</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this audio file? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel onClick={() => setDeleteAudioId(null)}>
-                                Cancel
-                              </AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDeleteAudio}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                
-                {audioFiles.length === 0 && (
+                {filteredAudioFiles.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                       No audio files found
                     </TableCell>
                   </TableRow>
+                ) : (
+                  filteredAudioFiles.map((file) => (
+                    <TableRow key={file.id}>
+                      <TableCell className="font-medium">
+                        {file.title}
+                      </TableCell>
+                      <TableCell>{file.language}</TableCell>
+                      <TableCell>{file.voice_name}</TableCell>
+                      <TableCell>
+                        {new Date(file.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <AudioPlayer
+                          src={file.audio_url}
+                          small
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleDeleteAudio(file.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => window.open(file.audio_url, '_blank')}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           </div>
           
           {/* Pagination */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-4">
             <div className="text-sm text-muted-foreground">
-              Showing {audioFiles.length > 0 ? (page - 1) * filesPerPage + 1 : 0}-
-              {Math.min(page * filesPerPage, totalFiles)} of {totalFiles} files
+              Showing {Math.min((page - 1) * itemsPerPage + 1, totalCount)} to {Math.min(page * itemsPerPage, totalCount)} of {totalCount} entries
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="sm"
-                onClick={() => setPage(page - 1)}
                 disabled={page === 1}
+                onClick={() => setPage(page => Math.max(1, page - 1))}
               >
-                <ChevronLeft className="h-4 w-4" />
+                Previous
               </Button>
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="sm"
-                onClick={() => setPage(page + 1)}
-                disabled={page === totalPages || totalPages === 0}
+                disabled={page * itemsPerPage >= totalCount}
+                onClick={() => setPage(page => page + 1)}
               >
-                <ChevronRight className="h-4 w-4" />
+                Next
               </Button>
             </div>
           </div>
