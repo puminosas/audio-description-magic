@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AudioPlayerProvider } from './audio-player/AudioPlayerContext';
+import AudioPlayerProvider from './audio-player/AudioPlayerProvider';
 import AudioWaveform from './audio-player/AudioWaveform';
 import AudioStatus from './audio-player/AudioStatus';
 import PlayerControls from './audio-player/PlayerControls';
