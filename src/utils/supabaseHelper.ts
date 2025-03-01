@@ -58,4 +58,11 @@ export const supabaseTyped = {
     update: (data: any) => castTable('api_keys').update(data),
     delete: () => castTable('api_keys').delete(),
   },
+  // Feedback table operations
+  feedback: {
+    select: () => castTable('feedback'),
+    insert: (data: any) => castTable('feedback').insert(data),
+    update: (data: any) => castTable('feedback').update(data),
+    delete: () => castTable('feedback').delete(),
+  },
 };

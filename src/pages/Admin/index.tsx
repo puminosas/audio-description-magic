@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { supabaseTyped } from '@/utils/supabaseHelper';
+import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { 
@@ -12,7 +12,8 @@ import {
   FileAudio, 
   Settings,
   Loader2,
-  Search
+  Search,
+  MessageSquare
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import AdminUserManagement from './AdminUserManagement';
 import AdminAudioFiles from './AdminAudioFiles';
 import AdminAnalytics from './AdminAnalytics';
 import AdminSettings from './AdminSettings';
+import AdminFeedback from './AdminFeedback';
 
 const AdminDashboard = () => {
   const { isAdmin, loading } = useAuth();
@@ -33,6 +35,7 @@ const AdminDashboard = () => {
     basicUsers: 0,
     freeUsers: 0,
     totalGenerations: 0,
+    feedbackCount: 0
   });
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -43,42 +46,41 @@ const AdminDashboard = () => {
       
       try {
         // Fetch total users
-        const { count: totalUsers, error: usersError } = await supabaseTyped.profiles
-          .select()
+        const { count: totalUsers, error: usersError } = await supabase
+          .from('profiles')
           .select('*', { count: 'exact', head: true });
 
         if (usersError) throw usersError;
 
         // Fetch plan distribution
-        const { data: premiumData, error: premiumError } = await supabaseTyped.profiles
-          .select()
+        const { data: premiumData, error: premiumError } = await supabase
+          .from('profiles')
           .select('*')
           .eq('plan', 'premium');
 
         if (premiumError) throw premiumError;
 
-        const { data: basicData, error: basicError } = await supabaseTyped.profiles
-          .select()
+        const { data: basicData, error: basicError } = await supabase
+          .from('profiles')
           .select('*')
           .eq('plan', 'basic');
 
         if (basicError) throw basicError;
 
         // Fetch total audio files
-        const { count: totalAudioFiles, error: audioError } = await supabaseTyped.audio_files
-          .select()
+        const { count: totalAudioFiles, error: audioError } = await supabase
+          .from('audio_files')
           .select('*', { count: 'exact', head: true });
 
-        if (audioError) throw audioError;
+        // Fetch feedback count
+        const { count: feedbackCount, error: feedbackError } = await supabase
+          .from('feedback')
+          .select('*', { count: 'exact', head: true });
 
         // Fetch total generations
-        const { data: genData, error: genError } = await supabaseTyped.generation_counts
-          .select()
+        const { data: genData, error: genError } = await supabase
+          .from('generation_counts')
           .select('count');
-
-        if (genError) throw genError;
-
-        const totalGenerations = genData?.reduce((acc: number, item: any) => acc + (item.count || 0), 0) || 0;
 
         setDashboardData({
           totalUsers: totalUsers || 0,
@@ -86,7 +88,8 @@ const AdminDashboard = () => {
           premiumUsers: premiumData?.length || 0,
           basicUsers: basicData?.length || 0,
           freeUsers: (totalUsers || 0) - (premiumData?.length || 0) - (basicData?.length || 0),
-          totalGenerations,
+          totalGenerations: genData?.reduce((acc: number, item: any) => acc + (item.count || 0), 0) || 0,
+          feedbackCount: feedbackCount || 0
         });
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -163,13 +166,13 @@ const AdminDashboard = () => {
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Generations</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Feedback Items</CardTitle>
             </CardHeader>
             <CardContent>
               {loadingStats ? (
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               ) : (
-                <div className="text-2xl font-bold">{dashboardData.totalGenerations}</div>
+                <div className="text-2xl font-bold">{dashboardData.feedbackCount}</div>
               )}
             </CardContent>
           </Card>
@@ -177,7 +180,7 @@ const AdminDashboard = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <div className="flex justify-between items-center">
-            <TabsList className="grid md:w-auto w-full grid-cols-2 md:grid-cols-4 gap-1">
+            <TabsList className="grid md:w-auto w-full grid-cols-2 md:grid-cols-5 gap-1">
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 <span className="hidden md:inline">Users</span>
@@ -189,6 +192,10 @@ const AdminDashboard = () => {
               <TabsTrigger value="analytics" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden md:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="feedback" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden md:inline">Feedback</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
@@ -215,6 +222,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="analytics" className="space-y-4">
             <AdminAnalytics />
+          </TabsContent>
+
+          <TabsContent value="feedback" className="space-y-4">
+            <AdminFeedback />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">

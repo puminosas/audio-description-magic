@@ -1,11 +1,84 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PricingCard from '@/components/ui/PricingCard';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import FeedbackDialog from '@/components/feedback/FeedbackDialog';
+
+declare global {
+  interface Window {
+    Paddle: any;
+  }
+}
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    // Initialize Paddle
+    const loadPaddleJs = () => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.paddle.com/paddle/paddle.js';
+      script.async = true;
+      script.onload = initializePaddle;
+      document.body.appendChild(script);
+    };
+
+    const initializePaddle = () => {
+      if (window.Paddle) {
+        window.Paddle.Setup({ 
+          vendor: 123456, // Replace with your Paddle vendor ID
+          debug: true // Set to false in production
+        });
+      }
+    };
+
+    loadPaddleJs();
+  }, []);
+
+  const handleCheckout = (planId: string) => {
+    // Don't proceed if user is not logged in
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in before subscribing to a plan.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (window.Paddle) {
+      window.Paddle.Checkout.open({
+        product: planId,
+        email: user.email,
+        successCallback: (data: any) => {
+          console.log('Checkout success:', data);
+          // You would typically call your API endpoint to update the user's plan
+          // after successful payment verification on the server side
+          toast({
+            title: "Subscription Successful",
+            description: "Your subscription has been activated. Refreshing your account...",
+          });
+          
+          // In a real implementation, you would update the user's profile with the new plan
+          // For now we'll just show a toast
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
+        }
+      });
+    } else {
+      toast({
+        title: "Payment System Unavailable",
+        description: "Our payment system is currently unavailable. Please try again later.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const freePlanFeatures = [
     { name: '3 audio generations per day', included: true },
@@ -37,6 +110,50 @@ const Pricing = () => {
     { name: 'API access with 1000 requests', included: true },
     { name: 'Priority support', included: true },
   ];
+
+  const getPlanButtonText = (planType: string) => {
+    if (!user) return "Sign Up";
+    
+    if (profile?.plan === planType) {
+      return "Current Plan";
+    }
+    
+    return "Subscribe";
+  };
+
+  const handlePlanAction = (planType: string) => {
+    if (!user) {
+      // Redirect to signup
+      window.location.href = '/auth?signup=true';
+      return;
+    }
+    
+    if (profile?.plan === planType) {
+      // Already on this plan
+      toast({
+        title: "Current Plan",
+        description: `You're already subscribed to the ${planType} plan.`,
+      });
+      return;
+    }
+    
+    // Start checkout process
+    const productIds: Record<string, string> = {
+      basic: billingCycle === 'monthly' ? 'basic_monthly_id' : 'basic_annual_id',
+      premium: billingCycle === 'monthly' ? 'premium_monthly_id' : 'premium_annual_id'
+    };
+    
+    // For demo purposes, we'll use placeholder IDs
+    if (planType === 'free') {
+      // Handle downgrade to free
+      toast({
+        title: "Plan Downgraded",
+        description: "Your plan has been downgraded to Free.",
+      });
+    } else {
+      handleCheckout(productIds[planType]);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -75,8 +192,10 @@ const Pricing = () => {
                 price="Free"
                 description="Perfect for trying out the service."
                 features={freePlanFeatures}
-                buttonText="Get Started"
+                buttonText={getPlanButtonText('free')}
                 buttonVariant="outline"
+                onSubscribe={() => handlePlanAction('free')}
+                isCurrentPlan={profile?.plan === 'free'}
               />
               
               <PricingCard
@@ -85,6 +204,9 @@ const Pricing = () => {
                 description="For small businesses with moderate needs."
                 features={basicPlanFeatures}
                 popular={true}
+                buttonText={getPlanButtonText('basic')}
+                onSubscribe={() => handlePlanAction('basic')}
+                isCurrentPlan={profile?.plan === 'basic'}
               />
               
               <PricingCard
@@ -92,6 +214,9 @@ const Pricing = () => {
                 price="$49"
                 description="For businesses with high-volume needs."
                 features={premiumPlanFeatures}
+                buttonText={getPlanButtonText('premium')}
+                onSubscribe={() => handlePlanAction('premium')}
+                isCurrentPlan={profile?.plan === 'premium'}
               />
             </div>
           </TabsContent>
@@ -103,8 +228,10 @@ const Pricing = () => {
                 price="Free"
                 description="Perfect for trying out the service."
                 features={freePlanFeatures}
-                buttonText="Get Started"
+                buttonText={getPlanButtonText('free')}
                 buttonVariant="outline"
+                onSubscribe={() => handlePlanAction('free')}
+                isCurrentPlan={profile?.plan === 'free'}
               />
               
               <PricingCard
@@ -113,6 +240,9 @@ const Pricing = () => {
                 description="For small businesses with moderate needs."
                 features={basicPlanFeatures}
                 popular={true}
+                buttonText={getPlanButtonText('basic')}
+                onSubscribe={() => handlePlanAction('basic')}
+                isCurrentPlan={profile?.plan === 'basic'}
               />
               
               <PricingCard
@@ -120,6 +250,9 @@ const Pricing = () => {
                 price="$39"
                 description="For businesses with high-volume needs."
                 features={premiumPlanFeatures}
+                buttonText={getPlanButtonText('premium')}
+                onSubscribe={() => handlePlanAction('premium')}
+                isCurrentPlan={profile?.plan === 'premium'}
               />
             </div>
           </TabsContent>
@@ -183,6 +316,13 @@ const Pricing = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-12 text-center">
+          <p className="text-muted-foreground mb-4">
+            Still have questions about our pricing or plans?
+          </p>
+          <FeedbackDialog />
         </div>
       </div>
     </div>

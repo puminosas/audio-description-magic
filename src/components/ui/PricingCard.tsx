@@ -15,6 +15,8 @@ interface PricingCardProps {
   popular?: boolean;
   buttonText?: string;
   buttonVariant?: 'default' | 'outline' | 'secondary';
+  isCurrentPlan?: boolean;
+  onSubscribe?: () => void;
 }
 
 const PricingCard = ({
@@ -24,7 +26,9 @@ const PricingCard = ({
   features,
   popular = false,
   buttonText = 'Get Started',
-  buttonVariant = 'default'
+  buttonVariant = 'default',
+  isCurrentPlan = false,
+  onSubscribe
 }: PricingCardProps) => {
   return (
     <div className={`
@@ -64,8 +68,10 @@ const PricingCard = ({
         <Button 
           variant={buttonVariant}
           className={`w-full ${popular ? 'bg-primary hover:bg-primary/90' : ''}`}
+          disabled={isCurrentPlan}
+          onClick={onSubscribe}
         >
-          {buttonText}
+          {isCurrentPlan ? 'Current Plan' : buttonText}
         </Button>
       </div>
     </div>

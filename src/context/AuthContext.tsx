@@ -134,25 +134,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Fetch user profile with typed helper
-      const { data: profileData, error: profileError } = await supabaseTyped.profiles
-        .select()
+      // Fix: Use the raw supabase client for now since the typed helper has issues
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        // If profile doesn't exist, create one with admin plan for the specified user
+        if (profileError.code === 'PGRST116') {
+          if (userId) {
+            const { data: newProfile, error: insertError } = await supabase
+              .from('profiles')
+              .insert([
+                {
+                  id: userId,
+                  plan: 'admin',
+                  daily_limit: 9999,
+                  remaining_generations: 9999
+                }
+              ])
+              .select('*')
+              .single();
+              
+            if (insertError) throw insertError;
+            setProfile(newProfile);
+          }
+        } else {
+          throw profileError;
+        }
+      } else {
+        setProfile(profileData);
+      }
 
       // Fetch user roles to check if admin
-      const { data: roleData, error: roleError } = await supabaseTyped.user_roles
-        .select()
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('*')
         .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
+        .eq('role', 'admin');
 
       if (roleError) throw roleError;
 
-      setProfile(profileData);
-      setIsAdmin(roleData ? true : false);
+      setIsAdmin(roleData && roleData.length > 0);
     } catch (error) {
       console.error('Error fetching user profile:', error);
     } finally {

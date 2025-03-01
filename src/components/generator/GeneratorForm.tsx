@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Wand2, Loader2 } from 'lucide-react';
+import { Wand2, Loader2, MessageSquare } from 'lucide-react';
 import DescriptionInput from './DescriptionInput';
 import LanguageVoiceSelector from './LanguageVoiceSelector';
 import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audioGenerationService';
+import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 
 interface GeneratorFormProps {
   onGenerate: (formData: {
@@ -26,8 +27,8 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
 
   const handleSelectLanguage = (language: LanguageOption) => {
     setSelectedLanguage(language);
-    // Optionally, you could update voices based on the language
-    // setSelectedVoice(getAvailableVoices(language.code)[0]);
+    // Update voices based on the language
+    setSelectedVoice(getAvailableVoices(language.code)[0]);
   };
 
   const handleSelectVoice = (voice: VoiceOption) => {
@@ -67,7 +68,16 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
         />
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <FeedbackDialog 
+          trigger={
+            <Button variant="ghost" size="sm" className="gap-1">
+              <MessageSquare size={16} />
+              Feedback
+            </Button>
+          }
+        />
+        
         <Button 
           onClick={handleSubmit} 
           disabled={isDisabled}
