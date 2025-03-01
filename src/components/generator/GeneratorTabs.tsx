@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GeneratorForm from '@/components/generator/GeneratorForm';
 import HistoryTab from '@/components/generator/HistoryTab';
 import TextToAudioTab from '@/components/generator/TextToAudioTab';
-import { LanguageOption, VoiceOption } from '@/utils/audioGenerationService';
+import { LanguageOption, VoiceOption } from '@/utils/audio';
 
 interface GeneratorTabsProps {
   activeTab: string;

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Wand2, Loader2, Upload, FileText } from 'lucide-react';
 import DescriptionInput from './DescriptionInput';
 import LanguageVoiceSelector from './LanguageVoiceSelector';
-import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audioGenerationService';
+import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audio';
 import { useToast } from '@/hooks/use-toast';
 
 interface TextToAudioTabProps {

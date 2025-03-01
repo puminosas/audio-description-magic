@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Wand2, Loader2, MessageSquare } from 'lucide-react';
 import DescriptionInput from './DescriptionInput';
 import LanguageVoiceSelector from './LanguageVoiceSelector';
-import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audioGenerationService';
+import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audio';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';

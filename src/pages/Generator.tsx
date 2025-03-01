@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +13,7 @@ import {
   getUserGenerationStats,
   LanguageOption,
   VoiceOption
-} from '@/utils/audioGenerationService';
+} from '@/utils/audio';
 
 const Generator = () => {
   const { user, profile } = useAuth();
@@ -32,7 +31,6 @@ const Generator = () => {
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Memoize the fetchGenerationStats function to avoid unnecessary re-renders
   const fetchGenerationStats = useCallback(async () => {
     if (!user?.id) return;
     
@@ -65,12 +63,10 @@ const Generator = () => {
       
       console.log("Generating audio with data:", formData);
       
-      // Check if user is logged in
       if (!user && activeTab !== 'text-to-audio') {
         throw new Error('Please sign in to generate audio descriptions.');
       }
       
-      // Start audio generation
       const result = await generateAudioDescription(
         formData.text,
         formData.language,
@@ -80,7 +76,6 @@ const Generator = () => {
       if (result.error || !result.audioUrl) {
         const errorMessage = result.error || 'Failed to generate audio. Please try again.';
         
-        // Check for authentication errors
         if (errorMessage.includes('Authentication required') || errorMessage.includes('authentication')) {
           setError('You need to be signed in to generate audio. Please sign in and try again.');
           toast({
@@ -102,13 +97,11 @@ const Generator = () => {
       
       console.log("Audio generation successful:", result);
       
-      // Set audio immediately so user can start listening
       setGeneratedAudio({
         audioUrl: result.audioUrl,
         text: result.text
       });
       
-      // Perform background tasks asynchronously
       if (result.audioUrl && user?.id) {
         Promise.all([
           saveAudioToHistory(
