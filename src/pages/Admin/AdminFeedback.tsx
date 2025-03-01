@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabaseTyped } from '@/utils/supabaseHelper';
+import { supabaseTyped, getFeedbackStats } from '@/utils/supabaseHelper';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -73,9 +73,9 @@ const AdminFeedback = () => {
   const fetchFeedback = async () => {
     setLoading(true);
     try {
-      // Get total count for pagination using raw supabase client
-      const { count, error: countError } = await supabaseTyped.feedback.select()
-        .count('exact', { head: true });
+      // Get total count for pagination using the count method
+      const { count, error: countError } = await supabaseTyped.feedback
+        .count({ exact: true });
 
       if (countError) throw countError;
       
@@ -83,7 +83,8 @@ const AdminFeedback = () => {
       setTotalPages(Math.ceil((count || 0) / itemsPerPage));
 
       // Fetch feedback for current page
-      const { data, error } = await supabaseTyped.feedback.select()
+      const { data, error } = await supabaseTyped.feedback
+        .select()
         .range((page - 1) * itemsPerPage, page * itemsPerPage - 1)
         .order('created_at', { ascending: false });
 

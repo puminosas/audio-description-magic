@@ -16,6 +16,7 @@ import Dashboard from "@/pages/Dashboard";
 import AdminDashboard from "@/pages/Admin";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
+import FeedbackForm from "@/components/feedback/FeedbackForm";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/feedback" element={<FeedbackForm />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
