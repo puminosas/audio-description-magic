@@ -1,12 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import Logo from './navbar/Logo';
-import NavLinks from './navbar/NavLinks';
+import NavLinks, { NavLink } from './navbar/NavLinks';
 import UserMenu from './navbar/UserMenu';
 import MobileMenu from './navbar/MobileMenu';
 
@@ -29,7 +29,7 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
+  const navLinks: NavLink[] = [
     { name: 'Home', path: '/' },
     { name: 'Generate', path: '/generator' },
     { name: 'Pricing', path: '/pricing' },

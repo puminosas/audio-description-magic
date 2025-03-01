@@ -1,5 +1,15 @@
 
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   User, 
   LogOut,
@@ -8,15 +18,6 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from '@/context/AuthContext';
 
 interface UserMenuProps {
   variant?: 'desktop' | 'mobile';
@@ -55,9 +56,11 @@ const UserMenu = ({ variant = 'desktop' }: UserMenuProps) => {
           </Avatar>
           <div>
             <p className="font-medium">{profile?.full_name || user?.email}</p>
-            <p className="text-xs text-muted-foreground">
-              {profile?.plan === 'premium' ? 'Premium' : profile?.plan === 'basic' ? 'Basic' : 'Free'} Plan
-            </p>
+            {profile?.plan && (
+              <p className="text-xs text-muted-foreground">
+                {profile.plan === 'premium' ? 'Premium' : profile.plan === 'basic' ? 'Basic' : 'Free'} Plan
+              </p>
+            )}
           </div>
         </div>
         <button 
@@ -101,15 +104,17 @@ const UserMenu = ({ variant = 'desktop' }: UserMenuProps) => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem className="flex gap-2 items-center cursor-default">
-          <User className="h-4 w-4" />
+        <DropdownMenuItem className="cursor-default">
+          <User className="h-4 w-4 mr-2" />
           <span className="font-medium">{profile?.full_name || user?.email}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="flex gap-2 items-center cursor-default">
-          <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-            {profile?.plan === 'premium' ? 'Premium' : profile?.plan === 'basic' ? 'Basic' : 'Free'} Plan
-          </span>
-        </DropdownMenuItem>
+        {profile?.plan && (
+          <DropdownMenuItem className="cursor-default">
+            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+              {profile.plan === 'premium' ? 'Premium' : profile.plan === 'basic' ? 'Basic' : 'Free'} Plan
+            </span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         
         <DropdownMenuItem onClick={() => navigate('/dashboard')}>

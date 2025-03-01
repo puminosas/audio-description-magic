@@ -1,13 +1,14 @@
 
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import NavLinks from './NavLinks';
+import NavLinks, { NavLink } from './NavLinks';
 import UserMenu from './UserMenu';
 import { useAuth } from '@/context/AuthContext';
 
 interface MobileMenuProps {
   isOpen: boolean;
-  links: { name: string; path: string }[];
+  links: NavLink[];
 }
 
 const MobileMenu = ({ isOpen, links }: MobileMenuProps) => {
