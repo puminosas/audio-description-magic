@@ -6,6 +6,7 @@ import DescriptionInput from './DescriptionInput';
 import LanguageVoiceSelector from './LanguageVoiceSelector';
 import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audioGenerationService';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface GeneratorFormProps {
   onGenerate: (formData: {
@@ -20,6 +21,7 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
   const [text, setText] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(getAvailableLanguages()[0]);
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(getAvailableVoices('en')[0]);
+  const { toast } = useToast();
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -36,13 +38,29 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
   };
 
   const handleSubmit = async () => {
-    if (!text.trim()) return;
+    if (!text.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a product name or description.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    await onGenerate({
-      text: text.trim(),
-      language: selectedLanguage,
-      voice: selectedVoice
-    });
+    try {
+      await onGenerate({
+        text: text.trim(),
+        language: selectedLanguage,
+        voice: selectedVoice
+      });
+    } catch (error) {
+      console.error("Error in generation:", error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Something went wrong during generation.",
+        variant: "destructive"
+      });
+    }
   };
 
   const isDisabled = loading || !text.trim();

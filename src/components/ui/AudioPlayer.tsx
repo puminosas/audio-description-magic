@@ -24,6 +24,7 @@ const AudioPlayer = ({
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [embedCode, setEmbedCode] = useState('');
+  const [audioLoaded, setAudioLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
@@ -53,30 +54,44 @@ const AudioPlayer = ({
       
       const handleLoadMetadata = () => {
         setDuration(audio.duration);
+        setAudioLoaded(true);
       };
       
       const handleEnded = () => {
         setIsPlaying(false);
         setCurrentTime(0);
       };
+
+      const handleError = (e: Event) => {
+        console.error('Audio playback error:', e);
+        toast({
+          title: 'Error',
+          description: 'Failed to play audio file. Please try again.',
+          variant: 'destructive',
+        });
+        setAudioLoaded(false);
+      };
       
       audio.addEventListener('timeupdate', handleTimeUpdate);
       audio.addEventListener('loadedmetadata', handleLoadMetadata);
       audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('error', handleError);
       
       return () => {
         audio.removeEventListener('timeupdate', handleTimeUpdate);
         audio.removeEventListener('loadedmetadata', handleLoadMetadata);
         audio.removeEventListener('ended', handleEnded);
+        audio.removeEventListener('error', handleError);
       };
     }
-  }, [audioRef.current]);
+  }, [audioRef.current, toast]);
 
   // Reset player state when audioUrl changes
   useEffect(() => {
     if (audioUrl) {
       setCurrentTime(0);
       setIsPlaying(false);
+      setAudioLoaded(false);
     }
   }, [audioUrl]);
 
@@ -141,6 +156,13 @@ const AudioPlayer = ({
       )}
       
       <div className="flex flex-col space-y-4">
+        {/* Status message for loading or errors */}
+        {audioUrl && !audioLoaded && !isGenerating && (
+          <div className="text-center text-sm text-muted-foreground py-2">
+            Loading audio file...
+          </div>
+        )}
+        
         {/* Waveform visualization */}
         <AudioWaveform 
           isGenerating={isGenerating} 
