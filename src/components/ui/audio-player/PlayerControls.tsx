@@ -4,8 +4,6 @@ import { useAudioPlayer } from './useAudioPlayer';
 import AudioControls from './AudioControls';
 import AudioSeekBar from './AudioSeekBar';
 import VolumeControl from './VolumeControl';
-import LoopButton from './LoopButton';
-import PlaybackSpeedButton from './PlaybackSpeedButton';
 import ActionButtons from './ActionButtons';
 
 interface PlayerControlsProps {
@@ -74,8 +72,6 @@ const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3', audioUrl
           />
           
           <div className="flex items-center space-x-2">
-            <LoopButton />
-            <PlaybackSpeedButton />
             <VolumeControl 
               volume={volume}
               isMuted={isMuted}

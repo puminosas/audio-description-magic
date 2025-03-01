@@ -27,9 +27,11 @@ export const AudioPlayerProvider = ({
     if (!audio || !audioUrl) return;
     
     setError(null);
+    setIsLoading(true);
     
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
+      setIsLoading(false);
     };
     
     const handleTimeUpdate = () => {
@@ -46,12 +48,17 @@ export const AudioPlayerProvider = ({
       console.error('Audio playback error:', e);
       setError('Failed to play audio file. Please try again.');
       setIsPlaying(false);
+      setIsLoading(false);
     };
+    
+    // Optimize audio loading by preloading
+    audio.preload = "auto";
     
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
+    audio.addEventListener('canplaythrough', () => setIsLoading(false));
     
     // Set initial values
     audio.volume = volume / 100;
@@ -64,6 +71,7 @@ export const AudioPlayerProvider = ({
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
+      audio.removeEventListener('canplaythrough', () => setIsLoading(false));
     };
   }, [audioUrl, isSeeking, volume, playbackSpeed, loop]);
   
@@ -86,6 +94,7 @@ export const AudioPlayerProvider = ({
       audio.pause();
       setIsPlaying(false);
     } else {
+      setError(null);
       audio.play().catch(err => {
         console.error('Error playing audio:', err);
         setError('Failed to play audio. Please try again.');
@@ -100,6 +109,7 @@ export const AudioPlayerProvider = ({
     const audio = audioRef.current;
     if (!audio) return;
     
+    setError(null);
     audio.play().catch(err => {
       console.error('Error playing audio:', err);
       setError('Failed to play audio. Please try again.');
@@ -137,7 +147,7 @@ export const AudioPlayerProvider = ({
     document.body.removeChild(link);
   };
   
-  // New functions to handle loop and playback speed
+  // Functions kept for interface compatibility but no longer exposed in UI
   const toggleLoop = () => {
     setLoop(!loop);
   };
@@ -188,6 +198,7 @@ export const AudioPlayerProvider = ({
           ref={audioRef}
           src={audioUrl}
           preload="metadata"
+          crossOrigin="anonymous"
           style={{ display: 'none' }}
         />
       )}

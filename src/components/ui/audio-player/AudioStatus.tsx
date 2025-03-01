@@ -11,7 +11,7 @@ interface AudioStatusProps {
 }
 
 const AudioStatus = ({ audioUrl, isGenerating = false }: AudioStatusProps) => {
-  const { error } = useAudioPlayer();
+  const { error, isLoading } = useAudioPlayer();
   
   if (isGenerating) {
     return (
@@ -22,12 +22,21 @@ const AudioStatus = ({ audioUrl, isGenerating = false }: AudioStatusProps) => {
     );
   }
   
+  if (isLoading && audioUrl) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+        <span className="text-sm font-medium">Loading audio...</span>
+      </div>
+    );
+  }
+  
   if (error) {
     return (
       <Alert variant="destructive" className="mb-4">
         <XCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>Failed to play audio file. Please try again.</AlertDescription>
+        <AlertDescription>{error}</AlertDescription>
       </Alert>
     );
   }

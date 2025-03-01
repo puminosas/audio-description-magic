@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import AudioOutput from '@/components/generator/AudioOutput';
@@ -32,13 +32,8 @@ const Generator = () => {
   });
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchGenerationStats();
-    }
-  }, [user]);
-
-  const fetchGenerationStats = async () => {
+  // Memoize the fetchGenerationStats function to avoid unnecessary re-renders
+  const fetchGenerationStats = useCallback(async () => {
     if (!user?.id) return;
     
     try {
@@ -51,7 +46,13 @@ const Generator = () => {
     } catch (error) {
       console.error("Error fetching generation stats:", error);
     }
-  };
+  }, [user, profile]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchGenerationStats();
+    }
+  }, [user, fetchGenerationStats]);
 
   const handleGenerate = async (formData: {
     text: string;
@@ -64,6 +65,7 @@ const Generator = () => {
       
       console.log("Generating audio with data:", formData);
       
+      // Start audio generation
       const result = await generateAudioDescription(
         formData.text,
         formData.language,
@@ -77,28 +79,27 @@ const Generator = () => {
       
       console.log("Audio generation successful:", result);
       
-      // Save to history
-      if (result.audioUrl) {
-        await saveAudioToHistory(
-          result.audioUrl,
-          result.text,
-          formData.language.name,
-          formData.voice.name,
-          user?.id
-        );
-        
-        // Update generation count for authenticated users
-        if (user?.id) {
-          await updateGenerationCount(user.id);
-          // Refresh stats
-          fetchGenerationStats();
-        }
-      }
-      
+      // Set audio immediately so user can start listening
       setGeneratedAudio({
         audioUrl: result.audioUrl,
         text: result.text
       });
+      
+      // Perform background tasks asynchronously
+      if (result.audioUrl && user?.id) {
+        Promise.all([
+          saveAudioToHistory(
+            result.audioUrl,
+            result.text,
+            formData.language.name,
+            formData.voice.name,
+            user.id
+          ),
+          updateGenerationCount(user.id)
+        ])
+        .then(() => fetchGenerationStats())
+        .catch(err => console.error("Background tasks error:", err));
+      }
       
       toast({
         title: 'Success!',
