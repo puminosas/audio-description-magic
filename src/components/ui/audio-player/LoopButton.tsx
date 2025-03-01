@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Repeat, Repeat1 } from 'lucide-react';
+import { Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAudioPlayer } from './useAudioPlayer';
 
@@ -10,7 +11,7 @@ interface LoopButtonProps {
 }
 
 const LoopButton = ({ isGenerating, audioUrl }: LoopButtonProps) => {
-  const { isLooping, toggleLoop } = useAudioPlayer();
+  const { loop, toggleLoop } = useAudioPlayer();
   
   return (
     <Button
@@ -19,11 +20,11 @@ const LoopButton = ({ isGenerating, audioUrl }: LoopButtonProps) => {
       onClick={toggleLoop}
       disabled={isGenerating || !audioUrl}
       className="h-8 w-8"
-      title={isLooping ? "Disable loop" : "Enable loop"}
+      title={loop ? "Disable loop" : "Enable loop"}
     >
       <Repeat size={16} className={cn(
         "text-muted-foreground",
-        isLooping && "text-primary"
+        loop && "text-primary"
       )} />
     </Button>
   );

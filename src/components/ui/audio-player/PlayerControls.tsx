@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAudioPlayer } from './useAudioPlayer';
@@ -10,11 +11,12 @@ interface PlayerControlsProps {
   fileName?: string;
 }
 
-const PlayerControls = ({ isGenerating, audioUrl, fileName }: PlayerControlsProps) => {
+const PlayerControls = ({ isGenerating = false, audioUrl, fileName }: PlayerControlsProps) => {
   const {
     isPlaying,
-    isLoading,
-    handlePlayPause,
+    togglePlay,
+    currentTime,
+    duration,
   } = useAudioPlayer();
 
   return (
@@ -23,7 +25,7 @@ const PlayerControls = ({ isGenerating, audioUrl, fileName }: PlayerControlsProp
         <Button
           variant="outline"
           size="icon"
-          onClick={handlePlayPause}
+          onClick={togglePlay}
           disabled={isGenerating || !audioUrl}
         >
           {isPlaying ? (
@@ -55,13 +57,21 @@ const PlayerControls = ({ isGenerating, audioUrl, fileName }: PlayerControlsProp
           )}
         </Button>
 
-        <AudioControls />
+        <AudioControls 
+          isPlaying={isPlaying}
+          isGenerating={isGenerating}
+          audioUrl={audioUrl}
+          currentTime={currentTime}
+          duration={duration}
+          togglePlayPause={togglePlay}
+        />
       </div>
 
       <ActionButtons 
-        isGenerating={isGenerating}
+        isGenerating={!!isGenerating}
         audioUrl={audioUrl}
-        fileName={fileName}
+        fileName={fileName || 'audio.mp3'}
+        embedCode={`<audio controls src="${audioUrl || ''}"></audio>`}
       />
     </div>
   );

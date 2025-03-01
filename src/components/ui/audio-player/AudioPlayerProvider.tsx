@@ -19,6 +19,7 @@ export const AudioPlayerProvider = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Handle audio loading and errors
   useEffect(() => {
@@ -93,6 +94,8 @@ export const AudioPlayerProvider = ({
     }
   };
   
+  const handlePlayPause = togglePlay;
+  
   const handlePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -134,6 +137,19 @@ export const AudioPlayerProvider = ({
     document.body.removeChild(link);
   };
   
+  // New functions to handle loop and playback speed
+  const toggleLoop = () => {
+    setLoop(!loop);
+  };
+  
+  const changePlaybackSpeed = () => {
+    // Cycle through common playback speeds: 0.5 -> 1 -> 1.5 -> 2 -> 0.5
+    const speeds = [0.5, 1, 1.5, 2];
+    const currentIndex = speeds.indexOf(playbackSpeed);
+    const nextIndex = (currentIndex + 1) % speeds.length;
+    setPlaybackSpeed(speeds[nextIndex]);
+  };
+  
   const value = {
     audioRef,
     waveformRef,
@@ -145,6 +161,8 @@ export const AudioPlayerProvider = ({
     currentTime,
     isSeeking,
     error,
+    isLoading,
+    isLooping: loop,
     
     togglePlay,
     handlePlay,
@@ -157,6 +175,9 @@ export const AudioPlayerProvider = ({
     endSeeking,
     handleDownload,
     setError,
+    handlePlayPause,
+    toggleLoop,
+    changePlaybackSpeed,
   };
   
   return (

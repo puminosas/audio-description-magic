@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Gauge } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useAudioPlayer } from './useAudioPlayer';
 
 interface PlaybackSpeedButtonProps {

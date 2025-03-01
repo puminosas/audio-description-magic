@@ -12,6 +12,8 @@ export interface AudioPlayerState {
   currentTime: number;
   isSeeking: boolean;
   error: string | null;
+  isLoading?: boolean;
+  isLooping?: boolean;
   
   togglePlay: () => void;
   handlePlay: () => void;
@@ -24,6 +26,9 @@ export interface AudioPlayerState {
   endSeeking: () => void;
   handleDownload: () => void;
   setError: (error: string | null) => void;
+  handlePlayPause?: () => void;
+  toggleLoop?: () => void;
+  changePlaybackSpeed?: () => void;
 }
 
 export interface AudioPlayerProviderProps {
