@@ -8,6 +8,7 @@ interface AudioPlayerContextProps {
   duration: number;
   volume: number;
   isMuted: boolean;
+  isLooping: boolean;
   embedCode: string;
   audioLoaded: boolean;
   audioRef: React.RefObject<HTMLAudioElement>;
@@ -15,6 +16,7 @@ interface AudioPlayerContextProps {
   handleTimeChange: (value: number[]) => void;
   handleVolumeChange: (value: number[]) => void;
   toggleMute: () => void;
+  toggleLoop: () => void;
 }
 
 interface AudioPlayerProviderProps {
@@ -45,6 +47,7 @@ export const AudioPlayerProvider = ({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
   const [embedCode, setEmbedCode] = useState('');
   const [audioLoaded, setAudioLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -117,6 +120,13 @@ export const AudioPlayerProvider = ({
     }
   }, [audioUrl]);
 
+  // Apply loop setting to audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+  }, [isLooping]);
+
   const togglePlayPause = () => {
     if (!audioRef.current || !audioUrl) return;
     
@@ -170,25 +180,31 @@ export const AudioPlayerProvider = ({
     }
   };
 
+  const toggleLoop = () => {
+    setIsLooping(!isLooping);
+  };
+
   const value = {
     isPlaying,
     currentTime,
     duration,
     volume,
     isMuted,
+    isLooping,
     embedCode,
     audioLoaded,
     audioRef,
     togglePlayPause,
     handleTimeChange,
     handleVolumeChange,
-    toggleMute
+    toggleMute,
+    toggleLoop
   };
 
   return (
     <AudioPlayerContext.Provider value={value}>
       {!isGenerating && audioUrl && (
-        <audio ref={audioRef} src={audioUrl} preload="metadata" />
+        <audio ref={audioRef} src={audioUrl} preload="metadata" loop={isLooping} />
       )}
       {children}
     </AudioPlayerContext.Provider>

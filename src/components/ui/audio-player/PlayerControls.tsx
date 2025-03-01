@@ -5,6 +5,7 @@ import AudioControls from './AudioControls';
 import AudioSeekBar from './AudioSeekBar';
 import VolumeControl from './VolumeControl';
 import ActionButtons from './ActionButtons';
+import LoopButton from './LoopButton';
 
 interface PlayerControlsProps {
   isGenerating: boolean;
@@ -57,6 +58,11 @@ const PlayerControls = ({
           audioUrl={audioUrl}
           toggleMute={toggleMute}
           handleVolumeChange={handleVolumeChange}
+        />
+        
+        <LoopButton
+          isGenerating={isGenerating}
+          audioUrl={audioUrl}
         />
         
         <ActionButtons 
