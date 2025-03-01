@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateGuestSessionId, convertTemporaryFilesToUserFiles } from '@/utils/fileStorageService';
 import { Loader2, FileAudio, Play, Download, Code, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { deleteAudioFile } from '@/utils/audioGenerationService';
+import { deleteAudioFile } from '@/utils/audio/historyService';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -175,8 +175,8 @@ const HistoryTab = ({ user, onRefreshStats }: HistoryTabProps) => {
     try {
       const result = await deleteAudioFile(deleteFileId);
       
-      if (result.error) {
-        throw new Error(result.error);
+      if (!result.success) {
+        throw new Error(result.error || 'Unknown error occurred');
       }
       
       toast({

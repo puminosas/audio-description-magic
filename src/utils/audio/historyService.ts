@@ -145,7 +145,7 @@ export const getUserGenerationStats = async (userId: string) => {
 /**
  * Delete audio file
  * @param audioId The audio ID
- * @returns Whether the deletion was successful
+ * @returns Object with success flag and possible error
  */
 export const deleteAudioFile = async (audioId: string) => {
   const { error } = await supabase
@@ -153,5 +153,8 @@ export const deleteAudioFile = async (audioId: string) => {
     .delete()
     .eq('id', audioId);
   
-  return !error;
+  return { 
+    success: !error,
+    error: error ? error.message : null 
+  };
 };
