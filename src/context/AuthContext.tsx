@@ -168,16 +168,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profileData);
       }
 
-      // Fetch user roles to check if admin
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('role', 'admin');
-
-      if (roleError) throw roleError;
-
-      setIsAdmin(roleData && roleData.length > 0);
+      // Check if admin using the RPC function instead of querying user_roles directly
+      try {
+        const { data: isAdminResult, error: roleError } = await supabase.rpc('has_role', { role: 'admin' });
+        
+        if (roleError) throw roleError;
+        setIsAdmin(!!isAdminResult);
+      } catch (roleError) {
+        console.error('Error checking admin role:', roleError);
+        setIsAdmin(false);
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
     } finally {

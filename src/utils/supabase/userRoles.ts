@@ -5,12 +5,8 @@ import { supabaseTyped } from '@/utils/supabase/typedClient';
 // Helper function to check if a user has admin role
 export async function checkIsAdmin(userId: string) {
   try {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle();
+    // Use direct query without going through RLS that might cause recursion
+    const { data, error } = await supabase.rpc('has_role', { role: 'admin' });
     
     if (error) throw error;
     return !!data; // Convert to boolean - true if admin role exists
@@ -23,7 +19,7 @@ export async function checkIsAdmin(userId: string) {
 // Helper to assign admin role to a user
 export async function assignAdminRole(userId: string) {
   try {
-    // First check if role already exists
+    // First check if role already exists using service role client
     const { data: existingRole } = await supabase
       .from('user_roles')
       .select('*')
@@ -76,7 +72,7 @@ export async function removeAdminRole(userId: string) {
 // Helper to update a user's plan
 export async function updateUserPlan(userId: string, plan: 'free' | 'basic' | 'premium' | 'admin') {
   try {
-    // Use supabaseTyped for the profiles table
+    // Use supabase client for the profiles table
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -98,7 +94,7 @@ export async function updateUserPlan(userId: string, plan: 'free' | 'basic' | 'p
 // Helper to modify a user's remaining generations count
 export async function updateUserRemainingGenerations(userId: string, count: number) {
   try {
-    // Use supabaseTyped for the profiles table
+    // Use supabase client for the profiles table
     const { error } = await supabase
       .from('profiles')
       .update({

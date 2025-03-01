@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseTyped, assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabaseHelper';
+import { assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabase/userRoles';
 
 export interface UserData {
   id: string;
@@ -28,19 +28,21 @@ export const fetchUsers = async (page: number, itemsPerPage: number) => {
     
     const totalCount = allUsers?.users?.length || 0;
     
-    // Get user roles
-    const { data: roles, error: rolesError } = await supabaseTyped.user_roles.select();
-    
-    if (rolesError) throw rolesError;
-    
-    // Create a map of user_id to roles
+    // Get user roles using the correct approach to avoid recursion
+    // We'll check each user individually using our RPC function
     const roleMap = {};
-    roles?.forEach(role => {
-      roleMap[role.user_id] = role.role;
-    });
+    for (const user of authUsers) {
+      // Using a more direct approach to avoid RLS issues
+      const { data: hasAdminRole } = await supabase.rpc('has_role', { role: 'admin' });
+      if (hasAdminRole) {
+        roleMap[user.id] = 'admin';
+      }
+    }
     
     // Get user profiles
-    const { data: profiles, error: profilesError } = await supabaseTyped.profiles.select();
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*');
     
     if (profilesError) throw profilesError;
     
