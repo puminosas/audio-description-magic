@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,41 +40,47 @@ const AdminUserUpdate = () => {
       
       if (!profileData) {
         // If not found in profiles, try to find the user in auth.users
-        const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
-          perPage: 1000
-        });
-        
-        if (authError) {
-          throw new Error(`Error fetching users: ${authError.message}`);
-        }
-        
-        // Find the user with the given email - properly type the users array
-        const user = authData?.users?.find(
-          (u: AuthUser) => u.email === email
-        ) as AuthUser | undefined;
-        
-        if (!user) {
-          throw new Error(`User with email ${email} not found`);
-        }
-        
-        console.log('Found user:', user);
-        
-        // 1. Assign admin role
-        const adminRoleAssigned = await assignAdminRole(user.id);
-        if (!adminRoleAssigned) {
-          throw new Error('Failed to assign admin role');
-        }
-        
-        // 2. Update plan to premium unlimited
-        const planUpdated = await updateUserPlan(user.id, 'premium');
-        if (!planUpdated) {
-          throw new Error('Failed to update user plan');
-        }
-        
-        // 3. Set unlimited remaining generations
-        const generationsUpdated = await updateUserRemainingGenerations(user.id, 9999);
-        if (!generationsUpdated) {
-          throw new Error('Failed to update remaining generations');
+        // Note: This might not work as expected in production without admin access
+        try {
+          const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
+            perPage: 1000
+          });
+          
+          if (authError) {
+            throw new Error(`Error fetching users: ${authError.message}`);
+          }
+          
+          // Find the user with the given email
+          const user = authData?.users?.find(
+            (u: AuthUser) => u.email === email
+          ) as AuthUser | undefined;
+          
+          if (!user) {
+            throw new Error(`User with email ${email} not found`);
+          }
+          
+          console.log('Found user:', user);
+          
+          // 1. Assign admin role
+          const adminRoleAssigned = await assignAdminRole(user.id);
+          if (!adminRoleAssigned) {
+            throw new Error('Failed to assign admin role');
+          }
+          
+          // 2. Update plan to premium unlimited
+          const planUpdated = await updateUserPlan(user.id, 'premium');
+          if (!planUpdated) {
+            throw new Error('Failed to update user plan');
+          }
+          
+          // 3. Set unlimited remaining generations
+          const generationsUpdated = await updateUserRemainingGenerations(user.id, 9999);
+          if (!generationsUpdated) {
+            throw new Error('Failed to update remaining generations');
+          }
+        } catch (error) {
+          console.error('Error processing user:', error);
+          throw new Error(`User with email ${email} not found or could not be processed`);
         }
       } else {
         // User found in profiles, use the id

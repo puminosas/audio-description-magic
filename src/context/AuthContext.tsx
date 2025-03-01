@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Fix: Use the correct supabaseTyped API
+      // Use the normal supabase client directly
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')

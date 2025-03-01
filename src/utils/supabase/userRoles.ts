@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabase/typedClient';
 
 // Helper function to check if a user has admin role
 export async function checkIsAdmin(userId: string) {
@@ -75,6 +76,7 @@ export async function removeAdminRole(userId: string) {
 // Helper to update a user's plan
 export async function updateUserPlan(userId: string, plan: 'free' | 'basic' | 'premium' | 'admin') {
   try {
+    // Use supabaseTyped for the profiles table
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -96,6 +98,7 @@ export async function updateUserPlan(userId: string, plan: 'free' | 'basic' | 'p
 // Helper to modify a user's remaining generations count
 export async function updateUserRemainingGenerations(userId: string, count: number) {
   try {
+    // Use supabaseTyped for the profiles table
     const { error } = await supabase
       .from('profiles')
       .update({

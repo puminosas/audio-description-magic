@@ -114,6 +114,75 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          daily_limit: number | null
+          email: string | null
+          id: string
+          plan: string | null
+          remaining_generations: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_limit?: number | null
+          email?: string | null
+          id: string
+          plan?: string | null
+          remaining_generations?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_limit?: number | null
+          email?: string | null
+          id?: string
+          plan?: string | null
+          remaining_generations?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_files: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_type: string | null
+          id: string
+          is_temporary: boolean | null
+          session_id: string | null
+          size: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_type?: string | null
+          id?: string
+          is_temporary?: boolean | null
+          session_id?: string | null
+          size?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_type?: string | null
+          id?: string
+          is_temporary?: boolean | null
+          session_id?: string | null
+          size?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
