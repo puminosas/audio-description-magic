@@ -7,8 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Copy, RefreshCw, Key, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { supabaseTyped } from '@/utils/supabaseHelper';
+import { fetchUserApiKeys, createApiKey, deleteApiKey } from '@/utils/apiKeyService';
 
 const ApiKeyDisplay = () => {
   const [apiKeys, setApiKeys] = useState<any[]>([]);
@@ -19,18 +18,18 @@ const ApiKeyDisplay = () => {
 
   useEffect(() => {
     if (user) {
-      fetchApiKeys();
+      fetchKeys();
     } else {
       setLoading(false);
     }
   }, [user]);
 
-  const fetchApiKeys = async () => {
+  const fetchKeys = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
-      const { data, error } = await supabaseTyped.api_keys
-        .eq('user_id', user?.id)
-        .select();
+      const { data, error } = await fetchUserApiKeys(user.id);
         
       if (error) throw error;
       setApiKeys(data || []);
@@ -46,7 +45,7 @@ const ApiKeyDisplay = () => {
     }
   };
 
-  const generateApiKey = async () => {
+  const generateNewApiKey = async () => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -58,15 +57,7 @@ const ApiKeyDisplay = () => {
 
     setGeneratingKey(true);
     try {
-      // Generate a random key
-      const apiKey = `ak_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      
-      const { error } = await supabaseTyped.api_keys.insert({
-        user_id: user.id,
-        key: apiKey,
-        created_at: new Date().toISOString(),
-        last_used: null
-      });
+      const { data, error } = await createApiKey(user.id, "API Key");
       
       if (error) throw error;
       
@@ -75,7 +66,7 @@ const ApiKeyDisplay = () => {
         description: "New API key generated successfully!",
       });
       
-      await fetchApiKeys();
+      await fetchKeys();
     } catch (error) {
       console.error('Error generating API key:', error);
       toast({
@@ -96,11 +87,9 @@ const ApiKeyDisplay = () => {
     });
   };
 
-  const revokeApiKey = async (keyId: string) => {
+  const revokeKey = async (keyId: string) => {
     try {
-      const { error } = await supabaseTyped.api_keys
-        .delete()
-        .eq('id', keyId);
+      const { error } = await deleteApiKey(keyId);
       
       if (error) throw error;
       
@@ -109,7 +98,7 @@ const ApiKeyDisplay = () => {
         description: "API key revoked successfully!",
       });
       
-      await fetchApiKeys();
+      await fetchKeys();
     } catch (error) {
       console.error('Error revoking API key:', error);
       toast({
@@ -167,21 +156,21 @@ const ApiKeyDisplay = () => {
             {apiKeys.map((apiKey) => (
               <div key={apiKey.id} className="border rounded-md p-4">
                 <div className="flex justify-between items-center mb-2">
-                  <div className="text-sm font-medium">API Key</div>
+                  <div className="text-sm font-medium">{apiKey.name}</div>
                   <div className="text-xs text-muted-foreground">
                     Created: {new Date(apiKey.created_at).toLocaleDateString()}
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <Input
-                    value={apiKey.key}
+                    value={apiKey.api_key}
                     readOnly
                     className="font-mono text-sm"
                   />
                   <Button 
                     variant="outline" 
                     size="icon"
-                    onClick={() => copyApiKey(apiKey.key)}
+                    onClick={() => copyApiKey(apiKey.api_key)}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -190,7 +179,7 @@ const ApiKeyDisplay = () => {
                   <Button 
                     variant="destructive" 
                     size="sm"
-                    onClick={() => revokeApiKey(apiKey.id)}
+                    onClick={() => revokeKey(apiKey.id)}
                   >
                     Revoke
                   </Button>
@@ -202,7 +191,7 @@ const ApiKeyDisplay = () => {
       </CardContent>
       <CardFooter>
         <Button 
-          onClick={generateApiKey} 
+          onClick={generateNewApiKey} 
           disabled={generatingKey}
           className="w-full"
         >

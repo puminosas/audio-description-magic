@@ -52,13 +52,15 @@ const RecentGenerations: React.FC<RecentGenerationsProps> = ({ user }) => {
           <div className="space-y-4">
             {recentAudios.map((audio) => (
               <AudioHistoryItem 
-                key={audio.id} 
+                key={audio.id}
+                id={audio.id}
                 audioUrl={audio.audio_url}
                 title={audio.title}
                 description={audio.description || ''}
                 voiceName={audio.voice_name}
                 duration={audio.duration || 0}
                 createdAt={audio.created_at}
+                language={audio.language}
                 showControls={true}
               />
             ))}

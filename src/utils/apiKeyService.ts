@@ -1,10 +1,9 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabase/typedClient';
 
 export const fetchUserApiKeys = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('api_keys')
-    .select('id, name, created_at, last_used_at')
+  const { data, error } = await supabaseTyped.api_keys
+    .select()
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   
@@ -15,8 +14,7 @@ export const createApiKey = async (userId: string, name: string) => {
   // Generate a random API key
   const apiKey = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
   
-  const { data, error } = await supabase
-    .from('api_keys')
+  const { data, error } = await supabaseTyped.api_keys
     .insert({
       user_id: userId,
       name: name || 'API Key',
@@ -29,8 +27,7 @@ export const createApiKey = async (userId: string, name: string) => {
 };
 
 export const deleteApiKey = async (keyId: string) => {
-  const { error } = await supabase
-    .from('api_keys')
+  const { error } = await supabaseTyped.api_keys
     .delete()
     .eq('id', keyId);
   

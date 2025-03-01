@@ -1,54 +1,91 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader, Send, Bot, Sparkles } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-interface Message {
+// Mock responses for the AI assistant
+const AI_RESPONSES = {
+  greeting: "Hello! I'm your admin AI assistant. I can help you with managing users, troubleshooting issues, and providing guidance on platform features. How can I assist you today?",
+  userManagement: "To manage users, you can go to the Users tab in the admin panel. There you can view, edit, and delete user accounts. You can also update user roles and permissions from the User Update tab.",
+  troubleshooting: "I can help you troubleshoot common issues. Could you provide more details about the problem you're experiencing? Common issues might include audio generation failures, user authentication problems, or billing issues.",
+  analytics: "The Analytics tab provides insights into platform usage, including total users, generations, and other key metrics. You can filter data by date range to track growth and identify trends.",
+  feedback: "User feedback is available in the Feedback tab. You can sort and filter feedback by date, rating, or status. This helps prioritize improvements based on user suggestions.",
+  settings: "In the Settings tab, you can configure platform-wide settings such as API rate limits, feature toggles, and notification preferences. Make sure to save changes after modifications.",
+  default: "I'm sorry, I don't have specific information about that yet. As your admin AI assistant, my knowledge is primarily focused on helping with platform management tasks. Is there something else I can help with?"
+};
+
+const getAIResponse = (message: string) => {
+  const lowerMsg = message.toLowerCase();
+  
+  if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('hey')) {
+    return AI_RESPONSES.greeting;
+  }
+  
+  if (lowerMsg.includes('user') || lowerMsg.includes('account') || lowerMsg.includes('profile') || lowerMsg.includes('member')) {
+    return AI_RESPONSES.userManagement;
+  }
+  
+  if (lowerMsg.includes('problem') || lowerMsg.includes('issue') || lowerMsg.includes('error') || lowerMsg.includes('bug') || lowerMsg.includes('fix')) {
+    return AI_RESPONSES.troubleshooting;
+  }
+  
+  if (lowerMsg.includes('analytics') || lowerMsg.includes('stats') || lowerMsg.includes('metrics') || lowerMsg.includes('data')) {
+    return AI_RESPONSES.analytics;
+  }
+  
+  if (lowerMsg.includes('feedback') || lowerMsg.includes('review') || lowerMsg.includes('suggestion')) {
+    return AI_RESPONSES.feedback;
+  }
+  
+  if (lowerMsg.includes('setting') || lowerMsg.includes('config') || lowerMsg.includes('preference')) {
+    return AI_RESPONSES.settings;
+  }
+  
+  return AI_RESPONSES.default;
+};
+
+type Message = {
   id: string;
-  content: string;
-  sender: 'user' | 'assistant';
+  text: string;
+  isUser: boolean;
   timestamp: Date;
-}
+};
 
 const AdminAiChat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      text: AI_RESPONSES.greeting,
+      isUser: false,
+      timestamp: new Date()
+    }
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Scroll to bottom whenever messages change
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
-  // Initial welcome message
-  useEffect(() => {
-    setMessages([
-      {
-        id: crypto.randomUUID(),
-        content: "Hello! I'm your admin assistant. I can help you manage your VoiceFlow AI platform. Ask me about users, configurations, or for help with specific tasks.",
-        sender: 'assistant',
-        timestamp: new Date()
-      }
-    ]);
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!input.trim() || isLoading) return;
+  const handleSendMessage = async () => {
+    if (!input.trim()) return;
     
     // Add user message
     const userMessage: Message = {
-      id: crypto.randomUUID(),
-      content: input,
-      sender: 'user',
+      id: Date.now().toString(),
+      text: input.trim(),
+      isUser: true,
       timestamp: new Date()
     };
     
@@ -56,114 +93,90 @@ const AdminAiChat: React.FC = () => {
     setInput('');
     setIsLoading(true);
     
-    try {
-      // Here we would normally call an API endpoint to get a response from an AI
-      // For now, let's simulate a response after a short delay
-      setTimeout(() => {
-        const assistantMessage: Message = {
-          id: crypto.randomUUID(),
-          content: getSimulatedResponse(input),
-          sender: 'assistant',
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-        setIsLoading(false);
-      }, 1000);
+    // Simulate API delay
+    setTimeout(() => {
+      // Add AI response
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: getAIResponse(userMessage.text),
+        isUser: false,
+        timestamp: new Date()
+      };
       
-    } catch (error) {
-      console.error('Error getting AI response:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to get a response. Please try again.',
-        variant: 'destructive',
-      });
+      setMessages(prev => [...prev, aiMessage]);
       setIsLoading(false);
-    }
+    }, 1500);
   };
 
-  const getSimulatedResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes('user') && (lowerQuery.includes('list') || lowerQuery.includes('show'))) {
-      return "To view all users, go to the Users tab in the admin dashboard. You can filter users by plan type, search by email, and manage their roles from there.";
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
-    
-    if (lowerQuery.includes('api key') || lowerQuery.includes('apikey')) {
-      return "API keys can be created by premium and admin users. You can view and manage all API keys from the API Keys section. Each key is associated with a specific user.";
-    }
-    
-    if (lowerQuery.includes('audio') || lowerQuery.includes('generation')) {
-      return "You can view all audio generations in the Audio Files tab. This shows all files created by users, including temporary files. You can filter by user, date, and other properties.";
-    }
-    
-    if (lowerQuery.includes('error') || lowerQuery.includes('fix')) {
-      return "If you're encountering errors, check the console logs first. Common issues include database permissions, missing environment variables, or client-side rendering problems. For specific errors, please provide more details.";
-    }
-    
-    return "I'm here to help with managing your VoiceFlow AI platform. You can ask about users, audio files, configurations, or any administrative tasks. How can I assist you today?";
   };
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bot className="h-5 w-5" />
-          Admin AI Assistant
-        </CardTitle>
-        <CardDescription>
-          Get help with administrative tasks and platform management
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto mb-4 pr-2">
-          {messages.map((message) => (
-            <div 
-              key={message.id}
-              className={`mb-4 ${
-                message.sender === 'assistant' 
-                  ? 'bg-muted p-3 rounded-lg' 
-                  : 'bg-primary/10 p-3 rounded-lg'
+    <div className="flex flex-col rounded-lg border">
+      <div className="h-[500px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                message.isUser
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground'
               }`}
             >
-              <div className="flex items-center gap-2 mb-2">
-                {message.sender === 'assistant' ? (
-                  <Sparkles className="h-4 w-4 text-primary" />
-                ) : (
-                  <div className="h-4 w-4 rounded-full bg-primary" />
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {message.sender === 'assistant' ? 'Assistant' : 'You'}
-                  {' • '}
-                  {new Date(message.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              <p className="whitespace-pre-wrap break-words">{message.text}</p>
+              <p className="text-xs opacity-70 mt-1">
+                {message.timestamp.toLocaleTimeString()}
+              </p>
             </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-        
-        <form onSubmit={handleSubmit} className="flex gap-2">
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-lg px-4 py-2 bg-secondary text-secondary-foreground">
+              <div className="flex items-center">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <p>AI is typing...</p>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+      
+      <div className="p-4 border-t">
+        <div className="flex space-x-2">
           <Textarea
-            placeholder="Ask something about your admin dashboard..."
+            placeholder="Ask me anything about managing your platform..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 min-h-[60px] resize-none"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
+            onKeyDown={handleKeyDown}
+            className="min-h-12 resize-none"
             disabled={isLoading}
           />
-          <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-            {isLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <Button
+            onClick={handleSendMessage}
+            disabled={!input.trim() || isLoading}
+            className="shrink-0"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          The admin AI assistant can help with platform management and user support.
+        </p>
+      </div>
+    </div>
   );
 };
 

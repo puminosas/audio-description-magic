@@ -10,28 +10,33 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 
 interface AudioHistoryItemProps {
-  id: string;
-  title: string;
-  description: string;
-  createdAt: Date;
+  id?: string;
   audioUrl: string;
-  language: string;
+  title: string;
+  description?: string;
+  createdAt: string | Date;
+  language?: string;
   voiceName: string;
-  onDelete: (id: string) => void;
+  duration?: number;
+  showControls?: boolean;
+  onDelete?: (id: string) => void;
 }
 
 const AudioHistoryItem = ({
   id,
   title,
-  description,
+  description = '',
   createdAt,
   audioUrl,
-  language,
+  language = '',
   voiceName,
+  duration = 0,
+  showControls = true,
   onDelete
 }: AudioHistoryItemProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audio] = useState(new Audio(audioUrl));
+  const createdDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
 
   const togglePlayPause = () => {
     if (isPlaying) {
@@ -68,71 +73,79 @@ const AudioHistoryItem = ({
           <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{description}</p>
           <div className="flex items-center mt-2 text-xs text-muted-foreground">
             <Clock size={12} className="mr-1" />
-            <span>{formatDistanceToNow(createdAt, { addSuffix: true })}</span>
-            <span className="mx-2">•</span>
-            <span>{language}</span>
+            <span>{formatDistanceToNow(createdDate, { addSuffix: true })}</span>
+            {language && (
+              <>
+                <span className="mx-2">•</span>
+                <span>{language}</span>
+              </>
+            )}
             <span className="mx-2">•</span>
             <span>Voice: {voiceName}</span>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2 ml-4">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={togglePlayPause}
-          >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            asChild
-          >
-            <a href={audioUrl} download={`${title}.mp3`}>
-              <Download size={16} />
-            </a>
-          </Button>
-          
-          <Popover>
-            <PopoverTrigger asChild>
+        {showControls && (
+          <div className="flex items-center space-x-2 ml-4">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={togglePlayPause}
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              asChild
+            >
+              <a href={audioUrl} download={`${title}.mp3`}>
+                <Download size={16} />
+              </a>
+            </Button>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                >
+                  <Code size={16} />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-2">
+                  <h3 className="font-medium">Embed Code</h3>
+                  <div className="bg-secondary p-2 rounded-md text-xs overflow-x-auto">
+                    <code>{embedCode}</code>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={copyEmbedCode}
+                  >
+                    Copy Code
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            {onDelete && id && (
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => onDelete(id)}
               >
-                <Code size={16} />
+                <Trash2 size={16} />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-2">
-                <h3 className="font-medium">Embed Code</h3>
-                <div className="bg-secondary p-2 rounded-md text-xs overflow-x-auto">
-                  <code>{embedCode}</code>
-                </div>
-                <Button 
-                  size="sm" 
-                  className="w-full mt-2"
-                  onClick={copyEmbedCode}
-                >
-                  Copy Code
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-          
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => onDelete(id)}
-          >
-            <Trash2 size={16} />
-          </Button>
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
