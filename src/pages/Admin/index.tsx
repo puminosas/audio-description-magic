@@ -9,13 +9,13 @@ import AdminAnalytics from "./AdminAnalytics";
 import AdminSettings from "./AdminSettings";
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthContext } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { checkIsAdmin } from '@/utils/supabaseHelper';
 import { Loader2 } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);

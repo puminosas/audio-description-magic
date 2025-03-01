@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -17,8 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AudioPlayer } from "@/components/ui/AudioPlayer";
-import { toast } from '@/hooks/use-toast';
+import AudioPlayer from "@/components/ui/AudioPlayer";
+import { useToast } from '@/hooks/use-toast';
 import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Loader2, Trash2, X, RefreshCw, Download } from 'lucide-react';
 
@@ -31,28 +30,33 @@ const AdminAudioFiles = () => {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 10;
+  const { toast } = useToast();
   
   const loadAudioFiles = async () => {
     try {
       setLoading(true);
       
       // First get the count
-      const { count } = await supabaseTyped.audio_files
-        .count({ exact: true });
+      const { data: audioData, error: countError } = await supabaseTyped.audio_files.select();
       
-      setTotalCount(count || 0);
+      if (countError) throw countError;
+      setTotalCount(audioData?.length || 0);
       
       // Then get the paginated data
       let query = supabaseTyped.audio_files
         .select()
-        .order('created_at', { ascending: false })
-        .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
+        .order('created_at', { ascending: false });
       
       const { data, error } = await query;
       
       if (error) throw error;
       
-      setAudioFiles(data || []);
+      // Apply manual pagination
+      const start = (page - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const paginatedData = data ? data.slice(start, end) : [];
+      
+      setAudioFiles(paginatedData);
     } catch (error) {
       console.error('Error loading audio files:', error);
       toast({
@@ -110,13 +114,11 @@ const AdminAudioFiles = () => {
     return matchesSearch && matchesLanguage && matchesVoice;
   });
 
-  // Get unique languages and voices for filters
   const languages = [...new Set(audioFiles.map(file => file.language))];
   const voices = [...new Set(audioFiles.map(file => file.voice_name))];
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div className="flex-1">
           <Input
@@ -170,7 +172,6 @@ const AdminAudioFiles = () => {
         </Button>
       </div>
 
-      {/* Audio Files Table */}
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -210,8 +211,8 @@ const AdminAudioFiles = () => {
                       </TableCell>
                       <TableCell>
                         <AudioPlayer
-                          src={file.audio_url}
-                          small
+                          audioUrl={file.audio_url}
+                          fileName={file.title}
                         />
                       </TableCell>
                       <TableCell>
@@ -239,7 +240,6 @@ const AdminAudioFiles = () => {
             </Table>
           </div>
           
-          {/* Pagination */}
           <div className="flex justify-between items-center mt-4">
             <div className="text-sm text-muted-foreground">
               Showing {Math.min((page - 1) * itemsPerPage + 1, totalCount)} to {Math.min(page * itemsPerPage, totalCount)} of {totalCount} entries

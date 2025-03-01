@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseTyped } from '@/utils/supabaseHelper';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2, Users, ListMusic, MessageSquare, BarChart } from 'lucide-react';
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -19,30 +19,32 @@ const AdminAnalytics = () => {
   });
   const [timeRange, setTimeRange] = useState('week');
   const [generationData, setGenerationData] = useState([]);
+  const { toast } = useToast();
   
   const loadStats = async () => {
     try {
       setLoading(true);
       
-      // Get user count
-      const { count: userCount } = await supabaseTyped.profiles
-        .count({ exact: true });
+      // Get user count - fix for profiles count
+      const { data: profileData, error: profileError } = await supabaseTyped.profiles.select();
+      if (profileError) throw profileError;
+      const userCount = profileData?.length || 0;
       
-      // Get audio files count
-      const { count: audioCount } = await supabaseTyped.audio_files
-        .count({ exact: true });
+      // Get audio files count - fix for audio_files count
+      const { data: audioData, error: audioError } = await supabaseTyped.audio_files.select();
+      if (audioError) throw audioError;
+      const audioCount = audioData?.length || 0;
       
-      // Get feedback count
-      const { count: feedbackCount, error: feedbackError } = await supabaseTyped.feedback
-        .count({ exact: true });
-      
+      // Get feedback count - fix for feedback count
+      const { data: feedbackData, error: feedbackError } = await supabaseTyped.feedback.select();
       if (feedbackError) throw feedbackError;
+      const feedbackCount = feedbackData?.length || 0;
       
       // Get today's generations
       const today = new Date().toISOString().split('T')[0];
       const { data: todayGenerations, error: todayError } = await supabaseTyped.generation_counts
         .eq('date', today)
-        .select('count');
+        .select();
       
       if (todayError) throw todayError;
       
@@ -50,16 +52,16 @@ const AdminAnalytics = () => {
       
       // Get total generations
       const { data: allGenerations, error: allError } = await supabaseTyped.generation_counts
-        .select('count');
+        .select();
       
       if (allError) throw allError;
       
       const generationsTotal = allGenerations?.reduce((sum, item) => sum + item.count, 0) || 0;
       
       setStats({
-        users: userCount || 0,
-        audioFiles: audioCount || 0,
-        feedback: feedbackCount || 0,
+        users: userCount,
+        audioFiles: audioCount,
+        feedback: feedbackCount,
         generationsToday,
         generationsTotal
       });
@@ -225,7 +227,7 @@ const AdminAnalytics = () => {
             </Card>
           </div>
           
-          {/* Generation Chart */}
+          {/* Generation Chart - fixed BarChart component */}
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -254,7 +256,10 @@ const AdminAnalytics = () => {
               <div className="h-[300px]">
                 {generationData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={generationData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <RechartsBarChart 
+                      data={generationData} 
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="label" />
                       <YAxis />
@@ -263,7 +268,7 @@ const AdminAnalytics = () => {
                         labelFormatter={(label) => `Date: ${label}`}
                       />
                       <Bar dataKey="count" fill="#8884d8" name="Generations" />
-                    </BarChart>
+                    </RechartsBarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">

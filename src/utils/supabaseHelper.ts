@@ -22,6 +22,8 @@ export const supabaseTyped = {
     eq: (column: string, value: any) => castTable('profiles').select().eq(column, value),
     single: () => castTable('profiles').select().single(),
     maybeSingle: () => castTable('profiles').select().maybeSingle(),
+    count: (options: { head?: boolean, exact?: boolean } = {}) => 
+      castTable('profiles').select().count(options),
   },
   // User roles table operations
   user_roles: {
@@ -31,6 +33,8 @@ export const supabaseTyped = {
     eq: (column: string, value: any) => castTable('user_roles').select().eq(column, value),
     single: () => castTable('user_roles').select().single(),
     maybeSingle: () => castTable('user_roles').select().maybeSingle(),
+    count: (options: { head?: boolean, exact?: boolean } = {}) => 
+      castTable('user_roles').select().count(options),
   },
   // Audio files table operations
   audio_files: {
@@ -56,6 +60,8 @@ export const supabaseTyped = {
     eq: (column: string, value: any) => castTable('user_files').select().eq(column, value),
     single: () => castTable('user_files').select().single(),
     maybeSingle: () => castTable('user_files').select().maybeSingle(),
+    count: (options: { head?: boolean, exact?: boolean } = {}) => 
+      castTable('user_files').select().count(options),
   },
   // Generation counts table operations
   generation_counts: {
@@ -75,6 +81,8 @@ export const supabaseTyped = {
     eq: (column: string, value: any) => castTable('audit_logs').select().eq(column, value),
     single: () => castTable('audit_logs').select().single(),
     maybeSingle: () => castTable('audit_logs').select().maybeSingle(),
+    count: (options: { head?: boolean, exact?: boolean } = {}) => 
+      castTable('audit_logs').select().count(options),
   },
   // API keys table operations
   api_keys: {
@@ -85,6 +93,8 @@ export const supabaseTyped = {
     eq: (column: string, value: any) => castTable('api_keys').select().eq(column, value),
     single: () => castTable('api_keys').select().single(),
     maybeSingle: () => castTable('api_keys').select().maybeSingle(),
+    count: (options: { head?: boolean, exact?: boolean } = {}) => 
+      castTable('api_keys').select().count(options),
   },
   // Feedback table operations
   feedback: {

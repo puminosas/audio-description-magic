@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -18,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -43,28 +42,29 @@ const AdminFeedback = () => {
   const [adminNotes, setAdminNotes] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const itemsPerPage = 10;
-  
+  const { toast } = useToast();
+
   const loadFeedback = async () => {
     try {
       setLoading(true);
       
-      // First get the count
-      const { count } = await supabaseTyped.feedback
-        .count({ exact: true });
+      // Get feedback data
+      const { data: feedbackData, error: dataError } = await supabaseTyped.feedback.select();
       
-      setTotalCount(count || 0);
+      if (dataError) throw dataError;
       
-      // Then get the paginated data
-      let query = supabaseTyped.feedback
-        .select()
-        .order('created_at', { ascending: false })
-        .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
+      setTotalCount(feedbackData?.length || 0);
       
-      const { data, error } = await query;
+      // Apply manual pagination
+      const start = (page - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const sortedData = feedbackData ? 
+        [...feedbackData].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ) : [];
+      const paginatedData = sortedData.slice(start, end);
       
-      if (error) throw error;
-      
-      setFeedback(data || []);
+      setFeedback(paginatedData);
     } catch (error) {
       console.error('Error loading feedback:', error);
       toast({
@@ -160,6 +160,18 @@ const AdminFeedback = () => {
   // Get unique types and statuses for filters
   const types = [...new Set(feedback.map(item => item.type))];
   const statuses = [...new Set(feedback.map(item => item.status))];
+  
+  // Get status badge variant - fixed to use only allowed variants
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'new':
+        return 'outline';
+      case 'resolved':
+        return 'default';
+      default:
+        return 'secondary';
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -251,11 +263,7 @@ const AdminFeedback = () => {
                         {new Date(item.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={
-                          item.status === 'new' ? 'outline' : 
-                          item.status === 'resolved' ? 'success' : 
-                          'secondary'
-                        }>
+                        <Badge variant={getStatusBadgeVariant(item.status)}>
                           {item.status}
                         </Badge>
                       </TableCell>

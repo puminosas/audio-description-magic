@@ -17,7 +17,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseTyped, assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabaseHelper';
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +26,7 @@ import {
   RefreshCw, 
   Search, 
   ShieldCheck, 
-  ShieldX, 
-  Crown, 
-  UserCog 
+  ShieldX
 } from 'lucide-react';
 
 const AdminUserManagement = () => {
@@ -40,25 +38,27 @@ const AdminUserManagement = () => {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 10;
+  const { toast } = useToast();
   
   const loadUsers = async () => {
     try {
       setLoading(true);
       
-      // Get users from auth
-      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers({
+      // Get users from auth - Fix for the count property
+      const { data: authResponse, error: authError } = await supabase.auth.admin.listUsers({
         page: page,
         perPage: itemsPerPage
       });
       
       if (authError) throw authError;
       
-      // Get total user count
-      const { data: { count }, error: countError } = await supabase.auth.admin.listUsers();
+      const authUsers = authResponse?.users || [];
       
-      if (countError) throw countError;
+      // Manual method to get total count since it might not be provided directly
+      const { data: allUsers, error: allUsersError } = await supabase.auth.admin.listUsers();
+      if (allUsersError) throw allUsersError;
       
-      setTotalCount(count || 0);
+      setTotalCount(allUsers?.users?.length || 0);
       
       // Get user roles
       const { data: roles, error: rolesError } = await supabaseTyped.user_roles.select();
