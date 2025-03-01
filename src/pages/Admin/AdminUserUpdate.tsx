@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { assignAdminRole, updateUserPlan, updateUserRemainingGenerations } from '@/utils/supabaseHelper';
 import { Loader2, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseTyped } from '@/utils/supabase/typedClient';
 
 // Define the auth user type to address TypeScript errors
 interface AuthUser {
@@ -19,30 +18,27 @@ interface AuthUser {
 
 const AdminUserUpdate = () => {
   const { toast } = useToast();
-  const [email, setEmail] = useState('a.mackeliunas@gmail.com');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  
-  // Effect to automatically update the user when the component mounts
-  useEffect(() => {
-    handleAssignPermissions();
-  }, []);
   
   const handleAssignPermissions = async () => {
     try {
       setLoading(true);
       setSuccess(false);
       
-      // Get the user from Supabase using supabaseTyped helper
-      const { data: users, error: userError } = await supabaseTyped.profiles
+      // Get the user from Supabase using direct query
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
         .eq('email', email)
         .maybeSingle();
       
-      if (userError) {
-        throw new Error(`Error fetching user: ${userError.message}`);
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw new Error(`Error fetching user: ${profileError.message}`);
       }
       
-      if (!users) {
+      if (!profileData) {
         // If not found in profiles, try to find the user in auth.users
         const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
           perPage: 1000
@@ -82,7 +78,7 @@ const AdminUserUpdate = () => {
         }
       } else {
         // User found in profiles, use the id
-        const userId = users.id;
+        const userId = profileData.id;
         
         // 1. Assign admin role
         const adminRoleAssigned = await assignAdminRole(userId);

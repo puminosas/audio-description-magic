@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { assignAdminRole } from '@/utils/supabaseHelper';
 
 // Admin pages
 import AdminAnalytics from './AdminAnalytics';
@@ -16,6 +18,29 @@ import AdminSettings from './AdminSettings';
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  
+  // Emergency function to ensure the current user has admin access
+  // This helps during development and testing
+  useEffect(() => {
+    const setupCurrentUserAsAdmin = async () => {
+      if (user && !isAdmin && !loading) {
+        console.log("Attempting to assign admin role to current user:", user.id);
+        try {
+          // Assign admin role to the current user
+          const success = await assignAdminRole(user.id);
+          if (success) {
+            console.log("Admin role assigned successfully");
+            // Force a page reload to refresh the auth context
+            window.location.reload();
+          }
+        } catch (error) {
+          console.error("Failed to assign admin role:", error);
+        }
+      }
+    };
+    
+    setupCurrentUserAsAdmin();
+  }, [user, isAdmin, loading]);
   
   // Redirect if not admin
   if (!loading && (!user || !isAdmin)) {

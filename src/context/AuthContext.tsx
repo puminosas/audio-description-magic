@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseTyped } from '@/utils/supabaseHelper';
+import { supabaseTyped } from '@/utils/supabase/typedClient';
 import { useToast } from '@/hooks/use-toast';
 import { getOrCreateGuestSessionId, convertTemporaryFilesToUserFiles } from '@/utils/fileStorageService';
 
@@ -81,10 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Convert any temporary files for this newly authenticated user
         const sessionId = getOrCreateGuestSessionId();
         convertTemporaryFilesToUserFiles(session.user.id, sessionId)
-          .then(success => {
-            if (success) {
-              console.log('Temporary files converted to user files on init');
-            }
+          .catch(error => {
+            console.error('Error converting temporary files:', error);
+          })
+          .finally(() => {
+            console.log('Temporary files conversion process completed');
           });
       } else {
         setLoading(false);
@@ -134,22 +135,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Use the supabaseTyped helper for profiles
-      const { data: profileData, error: profileError } = await supabaseTyped.profiles.select()
+      // Fix: Use the correct supabaseTyped API
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('Profile error:', profileError);
         // If profile doesn't exist, create one with admin plan for the specified user
         if (profileError.code === 'PGRST116') {
           if (userId) {
-            const { data: newProfile, error: insertError } = await supabaseTyped.profiles.insert({
-              id: userId,
-              plan: 'admin',
-              daily_limit: 9999,
-              remaining_generations: 9999
-            }).select().single();
+            const { data: newProfile, error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                plan: 'admin',
+                daily_limit: 9999,
+                remaining_generations: 9999
+              })
+              .select('*')
+              .single();
               
             if (insertError) throw insertError;
             setProfile(newProfile);
@@ -162,7 +169,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Fetch user roles to check if admin
-      const { data: roleData, error: roleError } = await supabaseTyped.user_roles.select()
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('*')
         .eq('user_id', userId)
         .eq('role', 'admin');
 

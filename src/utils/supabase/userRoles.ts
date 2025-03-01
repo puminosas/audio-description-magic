@@ -1,10 +1,12 @@
 
-import { supabaseTyped } from './typedClient';
+import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to check if a user has admin role
 export async function checkIsAdmin(userId: string) {
   try {
-    const { data, error } = await supabaseTyped.user_roles
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('*')
       .eq('user_id', userId)
       .eq('role', 'admin')
       .maybeSingle();
@@ -21,7 +23,9 @@ export async function checkIsAdmin(userId: string) {
 export async function assignAdminRole(userId: string) {
   try {
     // First check if role already exists
-    const { data: existingRole } = await supabaseTyped.user_roles
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('*')
       .eq('user_id', userId)
       .eq('role', 'admin')
       .maybeSingle();
@@ -32,10 +36,12 @@ export async function assignAdminRole(userId: string) {
     }
     
     // Insert the admin role
-    const { error } = await supabaseTyped.user_roles.insert({
-      user_id: userId,
-      role: 'admin'
-    });
+    const { error } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role: 'admin'
+      });
     
     if (error) throw error;
     
@@ -52,7 +58,8 @@ export async function assignAdminRole(userId: string) {
 // Helper to remove admin role from a user
 export async function removeAdminRole(userId: string) {
   try {
-    const { error } = await supabaseTyped.user_roles
+    const { error } = await supabase
+      .from('user_roles')
       .delete()
       .eq('user_id', userId)
       .eq('role', 'admin');
@@ -68,12 +75,15 @@ export async function removeAdminRole(userId: string) {
 // Helper to update a user's plan
 export async function updateUserPlan(userId: string, plan: 'free' | 'basic' | 'premium' | 'admin') {
   try {
-    const { error } = await supabaseTyped.profiles.update({
-      plan,
-      updated_at: new Date().toISOString(),
-      daily_limit: plan === 'premium' ? 9999 : (plan === 'basic' ? 100 : 10),
-      remaining_generations: plan === 'premium' ? 9999 : (plan === 'basic' ? 100 : 10)
-    }).eq('id', userId);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        plan,
+        updated_at: new Date().toISOString(),
+        daily_limit: plan === 'premium' ? 9999 : (plan === 'basic' ? 100 : 10),
+        remaining_generations: plan === 'premium' ? 9999 : (plan === 'basic' ? 100 : 10)
+      })
+      .eq('id', userId);
     
     if (error) throw error;
     return true;
@@ -86,10 +96,13 @@ export async function updateUserPlan(userId: string, plan: 'free' | 'basic' | 'p
 // Helper to modify a user's remaining generations count
 export async function updateUserRemainingGenerations(userId: string, count: number) {
   try {
-    const { error } = await supabaseTyped.profiles.update({
-      remaining_generations: count,
-      updated_at: new Date().toISOString()
-    }).eq('id', userId);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        remaining_generations: count,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
     
     if (error) throw error;
     return true;
