@@ -1,72 +1,74 @@
 
-import React, { useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { User } from '@supabase/supabase-js';
 import AudioHistoryItem from '@/components/ui/AudioHistoryItem';
-import { fetchUserAudioHistory } from '@/utils/audio/historyService';
+import { fetchUserAudios } from '@/utils/audio/historyService';
 
 interface RecentGenerationsProps {
   user: User | null;
 }
 
 const RecentGenerations: React.FC<RecentGenerationsProps> = ({ user }) => {
-  const [recentItems, setRecentItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [recentAudios, setRecentAudios] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const loadHistory = async () => {
-      if (!user?.id) return;
-      
+    const fetchAudios = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        setLoading(true);
-        const { audioFiles } = await fetchUserAudioHistory(user.id, 5);
-        setRecentItems(audioFiles || []);
+        const { data } = await fetchUserAudios(user.id, 3);
+        setRecentAudios(data || []);
       } catch (error) {
-        console.error('Error loading recent generations:', error);
+        console.error('Error fetching audio history:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadHistory();
-  }, [user?.id]);
+    fetchAudios();
+  }, [user]);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="bg-muted/50 pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-lg">Recent Generations</CardTitle>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/generator?tab=history">View All</Link>
-          </Button>
-        </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-lg font-semibold">Recent Generations</CardTitle>
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/generator">View All</Link>
+        </Button>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent>
         {loading ? (
-          <div className="flex justify-center p-6">
-            <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
+          <div className="flex justify-center p-4">
+            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-primary"></div>
           </div>
-        ) : recentItems.length === 0 ? (
-          <div className="p-6 text-center">
-            <p className="text-muted-foreground">
-              You haven't generated any audio yet.
-            </p>
-            <Button className="mt-4" asChild>
-              <Link to="/generator">Create Your First Audio</Link>
-            </Button>
+        ) : recentAudios.length > 0 ? (
+          <div className="space-y-4">
+            {recentAudios.map((audio) => (
+              <AudioHistoryItem 
+                key={audio.id} 
+                audioUrl={audio.audio_url}
+                title={audio.title}
+                description={audio.description || ''}
+                voiceName={audio.voice_name}
+                duration={audio.duration || 0}
+                createdAt={audio.created_at}
+                showControls={true}
+              />
+            ))}
           </div>
         ) : (
-          <div className="divide-y">
-            {recentItems.map((item) => (
-              <div key={item.id} className="p-4">
-                <AudioHistoryItem 
-                  item={item} 
-                  showControls={true} 
-                />
-              </div>
-            ))}
+          <div className="py-8 text-center text-muted-foreground">
+            <p>No audio generations yet.</p>
+            <Button variant="outline" className="mt-2" asChild>
+              <Link to="/generator">Create your first audio</Link>
+            </Button>
           </div>
         )}
       </CardContent>

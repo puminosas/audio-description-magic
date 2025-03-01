@@ -12,11 +12,15 @@ export const fetchUserApiKeys = async (userId: string) => {
 };
 
 export const createApiKey = async (userId: string, name: string) => {
+  // Generate a random API key
+  const apiKey = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+  
   const { data, error } = await supabase
     .from('api_keys')
     .insert({
       user_id: userId,
-      name: name || 'API Key'
+      name: name || 'API Key',
+      api_key: apiKey
     })
     .select('id, api_key, name, created_at')
     .single();

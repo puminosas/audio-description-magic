@@ -14,6 +14,7 @@ import AdminUserManagement from './AdminUserManagement';
 import AdminUserUpdate from './AdminUserUpdate';
 import AdminFeedback from './AdminFeedback';
 import AdminSettings from './AdminSettings';
+import AdminAiChatPage from './AdminAiChat';
 
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -84,6 +85,9 @@ const Admin = () => {
               <TabsTrigger value="feedback" onClick={() => navigate('/admin/feedback')} className="flex-shrink-0">
                 Feedback
               </TabsTrigger>
+              <TabsTrigger value="ai-chat" onClick={() => navigate('/admin/ai-chat')} className="flex-shrink-0">
+                AI Chat
+              </TabsTrigger>
               <TabsTrigger value="settings" onClick={() => navigate('/admin/settings')} className="flex-shrink-0">
                 Settings
               </TabsTrigger>
@@ -96,6 +100,7 @@ const Admin = () => {
             <Route path="/users" element={<AdminUserManagement />} />
             <Route path="/user-update" element={<AdminUserUpdate />} />
             <Route path="/feedback" element={<AdminFeedback />} />
+            <Route path="/ai-chat" element={<AdminAiChatPage />} />
             <Route path="/settings" element={<AdminSettings />} />
           </Routes>
         </Tabs>
