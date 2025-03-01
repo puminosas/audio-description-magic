@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { assignAdminRole, updateUserPlan, updateUserRemainingGenerations } from '@/utils/supabaseHelper';
 import { Loader2, Check } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminUserUpdate = () => {
   const { toast } = useToast();

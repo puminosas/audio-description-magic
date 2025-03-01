@@ -54,11 +54,12 @@ export const fetchUsers = async (page: number, itemsPerPage: number) => {
     const enrichedUsers = authUsers.map(user => ({
       ...user,
       role: roleMap[user.id] || null,
-      plan: profileMap[user.id]?.plan || 'free'
+      plan: profileMap[user.id]?.plan || 'free',
+      email: user.email || ''
     }));
 
     return {
-      users: enrichedUsers,
+      users: enrichedUsers as UserData[],
       totalCount
     };
   } catch (error) {
@@ -85,7 +86,12 @@ export const toggleAdminRole = async (userId: string, isAdmin: boolean) => {
 
 export const changeUserPlan = async (userId: string, plan: string) => {
   try {
-    await updateUserPlan(userId, plan);
+    // Ensure plan is one of the allowed values
+    const validPlan = (plan === 'free' || plan === 'basic' || plan === 'premium' || plan === 'admin') 
+      ? plan as 'free' | 'basic' | 'premium' | 'admin' 
+      : 'free';
+      
+    await updateUserPlan(userId, validPlan);
     return true;
   } catch (error) {
     console.error('Error updating user plan:', error);
