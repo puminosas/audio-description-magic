@@ -35,7 +35,7 @@ const AudioStatus = ({ audioUrl, isGenerating = false }: AudioStatusProps) => {
     return (
       <Alert variant="destructive" className="mb-4">
         <XCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
+        <AlertTitle>Audio Playback Error</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
       </Alert>
     );

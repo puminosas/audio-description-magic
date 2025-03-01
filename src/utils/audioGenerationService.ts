@@ -88,7 +88,7 @@ export const generateAudioDescription = async (
 
     // We'll use Supabase Edge Function for this since it has access to OPENAI_API_KEY
     // and we don't want to expose the key in the client-side code
-    const { data, error } = await supabase.functions.invoke('generate-audio', {
+    const { data, error, status } = await supabase.functions.invoke('generate-audio', {
       body: {
         text: productText,
         language: languageId,
@@ -96,12 +96,27 @@ export const generateAudioDescription = async (
       }
     });
 
+    // Log detailed error information
     if (error) {
       console.error('Error invoking generate-audio function:', error);
-      return { error: error.message };
+      console.error('Status code:', status);
+      return { error: `Error (${status}): ${error.message}` };
     }
 
-    if (!data || !data.audioUrl) {
+    // Check response format
+    if (!data) {
+      console.error('No data returned from function');
+      return { error: 'No response data received from server' };
+    }
+
+    // Check for error message in the data
+    if (data.error) {
+      console.error('Error in function response:', data.error);
+      return { error: data.error };
+    }
+
+    // Check for missing audioUrl
+    if (!data.audioUrl) {
       console.error('No audio URL returned from function', data);
       return { error: 'Failed to generate audio. No audio URL returned.' };
     }

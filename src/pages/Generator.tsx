@@ -73,8 +73,15 @@ const Generator = () => {
       );
       
       if (result.error || !result.audioUrl) {
-        setError(result.error || 'Failed to generate audio. Please try again.');
-        throw new Error(result.error || 'Failed to generate audio');
+        const errorMessage = result.error || 'Failed to generate audio. Please try again.';
+        console.error("Audio generation error:", errorMessage);
+        setError(errorMessage);
+        toast({
+          title: 'Generation Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
       }
       
       console.log("Audio generation successful:", result);
@@ -108,9 +115,11 @@ const Generator = () => {
       
     } catch (error) {
       console.error('Error generating audio:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate audio';
+      setError(errorMessage);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to generate audio',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
