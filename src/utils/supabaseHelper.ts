@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// The issue is that our Database type in types.ts doesn't have our tables defined
+// The issue is that our Database type in types.ts doesn't have all our tables defined
 // This helper works around TypeScript type checking to allow us to use tables
 // that aren't yet defined in the types.ts file
 function castTable(tableName: string) {

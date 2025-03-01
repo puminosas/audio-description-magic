@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { 
@@ -46,41 +46,34 @@ const AdminDashboard = () => {
       
       try {
         // Fetch total users
-        const { count: totalUsers, error: usersError } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
+        const { count: totalUsers, error: usersError } = await supabaseTyped.profiles.select()
+          .count('exact', { head: true });
 
         if (usersError) throw usersError;
 
         // Fetch plan distribution
-        const { data: premiumData, error: premiumError } = await supabase
-          .from('profiles')
-          .select('*')
+        const { data: premiumData, error: premiumError } = await supabaseTyped.profiles.select()
           .eq('plan', 'premium');
 
         if (premiumError) throw premiumError;
 
-        const { data: basicData, error: basicError } = await supabase
-          .from('profiles')
-          .select('*')
+        const { data: basicData, error: basicError } = await supabaseTyped.profiles.select()
           .eq('plan', 'basic');
 
         if (basicError) throw basicError;
 
         // Fetch total audio files
-        const { count: totalAudioFiles, error: audioError } = await supabase
-          .from('audio_files')
-          .select('*', { count: 'exact', head: true });
+        const { count: totalAudioFiles, error: audioError } = await supabaseTyped.audio_files.select()
+          .count('exact', { head: true });
 
         // Fetch feedback count
-        const { count: feedbackCount, error: feedbackError } = await supabase
-          .from('feedback')
-          .select('*', { count: 'exact', head: true });
+        const { count: feedbackCount, error: feedbackError } = await supabaseTyped.feedback.select()
+          .count('exact', { head: true });
 
         // Fetch total generations
-        const { data: genData, error: genError } = await supabase
-          .from('generation_counts')
-          .select('count');
+        const { data: genData, error: genError } = await supabaseTyped.generation_counts.select();
+
+        if (genError) throw genError;
 
         setDashboardData({
           totalUsers: totalUsers || 0,

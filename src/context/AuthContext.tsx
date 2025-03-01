@@ -134,10 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Fix: Use the raw supabase client for now since the typed helper has issues
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
+      // Use the supabaseTyped helper for profiles
+      const { data: profileData, error: profileError } = await supabaseTyped.profiles.select()
         .eq('id', userId)
         .single();
 
@@ -146,18 +144,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If profile doesn't exist, create one with admin plan for the specified user
         if (profileError.code === 'PGRST116') {
           if (userId) {
-            const { data: newProfile, error: insertError } = await supabase
-              .from('profiles')
-              .insert([
-                {
-                  id: userId,
-                  plan: 'admin',
-                  daily_limit: 9999,
-                  remaining_generations: 9999
-                }
-              ])
-              .select('*')
-              .single();
+            const { data: newProfile, error: insertError } = await supabaseTyped.profiles.insert({
+              id: userId,
+              plan: 'admin',
+              daily_limit: 9999,
+              remaining_generations: 9999
+            }).select().single();
               
             if (insertError) throw insertError;
             setProfile(newProfile);
@@ -170,9 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Fetch user roles to check if admin
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('*')
+      const { data: roleData, error: roleError } = await supabaseTyped.user_roles.select()
         .eq('user_id', userId)
         .eq('role', 'admin');
 

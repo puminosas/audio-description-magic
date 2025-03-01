@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabaseHelper';
 import { useToast } from '@/hooks/use-toast';
 
 type FeedbackType = 'suggestion' | 'bug' | 'other';
@@ -45,17 +45,13 @@ const FeedbackForm = ({ onSuccess }: FeedbackFormProps) => {
     setLoading(true);
     
     try {
-      const { error } = await supabase
-        .from('feedback')
-        .insert([
-          {
-            user_id: user?.id || null,
-            email: user?.email || email,
-            type: feedbackType,
-            message,
-            status: 'new'
-          }
-        ]);
+      const { error } = await supabaseTyped.feedback.insert({
+        user_id: user?.id || null,
+        email: user?.email || email,
+        type: feedbackType,
+        message,
+        status: 'new'
+      });
       
       if (error) throw error;
       
