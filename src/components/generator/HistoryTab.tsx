@@ -5,8 +5,20 @@ import { Link } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateGuestSessionId, convertTemporaryFilesToUserFiles } from '@/utils/fileStorageService';
-import { Loader2, FileAudio, Play, Download, Code } from 'lucide-react';
+import { Loader2, FileAudio, Play, Download, Code, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { deleteAudioFile } from '@/utils/audioGenerationService';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Cast the Supabase client to any to bypass TypeScript checking
 // This is needed because our Database type doesn't include all tables we're using
@@ -23,12 +35,14 @@ interface FileItem {
 
 interface HistoryTabProps {
   user: User | null;
+  onRefreshStats?: () => Promise<void>;
 }
 
-const HistoryTab = ({ user }: HistoryTabProps) => {
+const HistoryTab = ({ user, onRefreshStats }: HistoryTabProps) => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
+  const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const { toast } = useToast();
   const audioRef = React.useRef(new Audio());
 
@@ -155,6 +169,40 @@ const HistoryTab = ({ user }: HistoryTabProps) => {
     }
   };
 
+  const handleDeleteFile = async () => {
+    if (!deleteFileId) return;
+    
+    try {
+      const result = await deleteAudioFile(deleteFileId);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Audio file deleted successfully',
+      });
+      
+      // Refresh the file list
+      loadUserFiles();
+      
+      // Call the onRefreshStats callback if provided
+      if (onRefreshStats) {
+        await onRefreshStats();
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete audio file',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteFileId(null);
+    }
+  };
+
   const copyEmbedCode = (id: string, audioUrl: string) => {
     const embedCode = `<audio id="audiodesc-${id}" controls><source src="${audioUrl}" type="audio/mpeg">Your browser does not support the audio element.</audio>`;
     
@@ -239,6 +287,29 @@ const HistoryTab = ({ user }: HistoryTabProps) => {
                     <Code className="h-4 w-4" />
                   </Button>
                 )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteFileId(file.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Audio File</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this audio file? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setDeleteFileId(null)}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteFile}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           ))}
@@ -250,7 +321,7 @@ const HistoryTab = ({ user }: HistoryTabProps) => {
           <p className="mb-6">
             {user ? "You haven't generated any audio descriptions yet." : "Generate your first audio description!"}
           </p>
-          <Button>Generate Audio</Button>
+          <Button onClick={() => window.location.href = '/generator'}>Generate Audio</Button>
         </div>
       )}
 
