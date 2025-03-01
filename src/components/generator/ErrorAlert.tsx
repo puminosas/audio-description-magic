@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { XCircle } from 'lucide-react';
 
 interface ErrorAlertProps {
   error: string | null;
@@ -12,7 +12,7 @@ const ErrorAlert = ({ error }: ErrorAlertProps) => {
   
   return (
     <Alert variant="destructive" className="mb-6">
-      <AlertCircle className="h-4 w-4" />
+      <XCircle className="h-4 w-4" />
       <AlertTitle>Error</AlertTitle>
       <AlertDescription>{error}</AlertDescription>
     </Alert>

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // The issue is that our Database type in types.ts doesn't have all our tables defined
@@ -157,13 +156,31 @@ export async function updateUserPlan(userId: string, plan: 'free' | 'basic' | 'p
   try {
     const { error } = await supabaseTyped.profiles.update({
       plan,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      daily_limit: plan === 'premium' ? 9999 : (plan === 'basic' ? 100 : 10),
+      remaining_generations: plan === 'premium' ? 9999 : (plan === 'basic' ? 100 : 10)
     }).eq('id', userId);
     
     if (error) throw error;
     return true;
   } catch (error) {
     console.error('Error updating user plan:', error);
+    return false;
+  }
+}
+
+// Helper to modify a user's remaining generations count
+export async function updateUserRemainingGenerations(userId: string, count: number) {
+  try {
+    const { error } = await supabaseTyped.profiles.update({
+      remaining_generations: count,
+      updated_at: new Date().toISOString()
+    }).eq('id', userId);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error updating user remaining generations:', error);
     return false;
   }
 }

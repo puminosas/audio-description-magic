@@ -1,11 +1,31 @@
 
 import React, { createContext } from 'react';
-import { AudioPlayerContextProps } from './types';
+import { AudioPlayerState } from './types';
 
-const AudioPlayerContext = createContext<AudioPlayerContextProps | undefined>(undefined);
+// Create the context with default values
+export const AudioPlayerContext = createContext<AudioPlayerState>({
+  audioRef: { current: null },
+  waveformRef: { current: null },
+  isPlaying: false,
+  playbackSpeed: 1,
+  volume: 75,
+  loop: false,
+  duration: 0,
+  currentTime: 0,
+  isSeeking: false,
+  error: null,
+  
+  togglePlay: () => {},
+  handlePlay: () => {},
+  handlePause: () => {},
+  setPlaybackSpeed: () => {},
+  setVolume: () => {},
+  setLoop: () => {},
+  seek: () => {},
+  startSeeking: () => {},
+  endSeeking: () => {},
+  handleDownload: () => {},
+  setError: () => {},
+});
 
 export default AudioPlayerContext;
-
-// Re-export the context, provider, and hook
-export { AudioPlayerProvider } from './AudioPlayerProvider';
-export { useAudioPlayer } from './useAudioPlayer';

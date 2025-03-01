@@ -1,161 +1,82 @@
 
-import React, { useState } from 'react';
+import React from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import AdminUserManagement from "./AdminUserManagement";
-import AdminAudioFiles from "./AdminAudioFiles";
-import AdminFeedback from "./AdminFeedback";
-import AdminAnalytics from "./AdminAnalytics";
-import AdminSettings from "./AdminSettings";
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { checkIsAdmin } from '@/utils/supabaseHelper';
-import { Loader2 } from 'lucide-react';
 
-const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("users");
-  const { user } = useAuth();
-  const { toast } = useToast();
+// Admin pages
+import AdminAnalytics from './AdminAnalytics';
+import AdminAudioFiles from './AdminAudioFiles';
+import AdminUserManagement from './AdminUserManagement';
+import AdminUserUpdate from './AdminUserUpdate';
+import AdminFeedback from './AdminFeedback';
+import AdminSettings from './AdminSettings';
+
+const Admin = () => {
+  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  React.useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user) {
-        setLoading(false);
-        toast({
-          title: "Authentication Required",
-          description: "You must be logged in to access the admin dashboard.",
-          variant: "destructive",
-        });
-        navigate('/auth');
-        return;
-      }
-
-      const adminStatus = await checkIsAdmin(user.id);
-      setIsAdmin(adminStatus);
-      setLoading(false);
-
-      if (!adminStatus) {
-        toast({
-          title: "Access Denied",
-          description: "You do not have permission to access the admin dashboard.",
-          variant: "destructive",
-        });
-        navigate('/');
-      }
-    };
-
-    checkAdmin();
-  }, [user, navigate, toast]);
-
+  
+  // Redirect if not admin
+  if (!loading && (!user || !isAdmin)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // Show loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <span className="ml-2 text-lg">Verifying admin access...</span>
+      <div className="container max-w-7xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <p className="text-lg">Loading admin dashboard...</p>
+        </div>
       </div>
     );
   }
-
-  if (!user || !isAdmin) {
-    return null; // Already redirected by the useEffect
-  }
-
+  
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">
-          Manage users, content, and system settings
-        </p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="bg-muted/40 p-1 rounded-lg">
-          <TabsList className="grid grid-cols-5 w-full mb-4">
-            <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="audio">Audio Files</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="feedback">Feedback</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+    <div className="container max-w-7xl mx-auto px-4 py-8">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage your application and users</p>
         </div>
-
-        <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>
-                Manage user accounts, permissions, and roles
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminUserManagement />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="audio" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Audio Files</CardTitle>
-              <CardDescription>
-                View and manage all audio files in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminAudioFiles />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>
-                System analytics and usage statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminAnalytics />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="feedback" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Feedback</CardTitle>
-              <CardDescription>
-                Review and manage user feedback
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminFeedback />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Settings</CardTitle>
-              <CardDescription>
-                Configure system settings and parameters
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminSettings />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <div className="overflow-auto">
+            <TabsList className="flex flex-wrap">
+              <TabsTrigger value="analytics" onClick={() => navigate('/admin')} className="flex-shrink-0">
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="audio-files" onClick={() => navigate('/admin/audio-files')} className="flex-shrink-0">
+                Audio Files
+              </TabsTrigger>
+              <TabsTrigger value="users" onClick={() => navigate('/admin/users')} className="flex-shrink-0">
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="user-update" onClick={() => navigate('/admin/user-update')} className="flex-shrink-0">
+                Update User
+              </TabsTrigger>
+              <TabsTrigger value="feedback" onClick={() => navigate('/admin/feedback')} className="flex-shrink-0">
+                Feedback
+              </TabsTrigger>
+              <TabsTrigger value="settings" onClick={() => navigate('/admin/settings')} className="flex-shrink-0">
+                Settings
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <Routes>
+            <Route path="/" element={<AdminAnalytics />} />
+            <Route path="/audio-files" element={<AdminAudioFiles />} />
+            <Route path="/users" element={<AdminUserManagement />} />
+            <Route path="/user-update" element={<AdminUserUpdate />} />
+            <Route path="/feedback" element={<AdminFeedback />} />
+            <Route path="/settings" element={<AdminSettings />} />
+          </Routes>
+        </Tabs>
+      </div>
     </div>
   );
 };
 
-export default AdminDashboard;
+export default Admin;

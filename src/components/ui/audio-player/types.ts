@@ -1,21 +1,29 @@
 
-export interface AudioPlayerContextProps {
+import { RefObject } from 'react';
+
+export interface AudioPlayerState {
+  audioRef: RefObject<HTMLAudioElement>;
+  waveformRef: RefObject<HTMLCanvasElement>;
   isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  volume: number;
-  isMuted: boolean;
-  isLooping: boolean;
   playbackSpeed: number;
-  embedCode: string;
-  audioLoaded: boolean;
-  audioRef: React.RefObject<HTMLAudioElement>;
-  togglePlayPause: () => void;
-  handleTimeChange: (value: number[]) => void;
-  handleVolumeChange: (value: number[]) => void;
-  toggleMute: () => void;
-  toggleLoop: () => void;
-  changePlaybackSpeed: () => void;
+  volume: number;
+  loop: boolean;
+  duration: number;
+  currentTime: number;
+  isSeeking: boolean;
+  error: string | null;
+  
+  togglePlay: () => void;
+  handlePlay: () => void;
+  handlePause: () => void;
+  setPlaybackSpeed: (speed: number) => void;
+  setVolume: (volume: number) => void;
+  setLoop: (loop: boolean) => void;
+  seek: (time: number) => void;
+  startSeeking: () => void;
+  endSeeking: () => void;
+  handleDownload: () => void;
+  setError: (error: string | null) => void;
 }
 
 export interface AudioPlayerProviderProps {
