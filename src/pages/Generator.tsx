@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
@@ -12,12 +12,13 @@ import {
   generateAudioDescription, 
   saveAudioToHistory, 
   updateGenerationCount,
+  getUserGenerationStats,
   LanguageOption,
   VoiceOption
 } from '@/utils/audioGenerationService';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Crown } from 'lucide-react';
+import { Crown, AlertCircle } from 'lucide-react';
 import FeedbackForm from '@/components/feedback/FeedbackForm';
 import {
   Dialog,
@@ -27,6 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Generator = () => {
   const { user, profile } = useAuth();
@@ -38,6 +40,33 @@ const Generator = () => {
     text: string;
   } | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [generationStats, setGenerationStats] = useState({ 
+    total: 0, 
+    today: 0,
+    remaining: profile?.remaining_generations || 10
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchGenerationStats();
+    }
+  }, [user]);
+
+  const fetchGenerationStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const stats = await getUserGenerationStats(user.id);
+      setGenerationStats({
+        total: stats.total || 0,
+        today: stats.today || 0,
+        remaining: profile?.remaining_generations || 10
+      });
+    } catch (error) {
+      console.error("Error fetching generation stats:", error);
+    }
+  };
 
   const handleGenerate = async (formData: {
     text: string;
@@ -46,6 +75,9 @@ const Generator = () => {
   }) => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log("Generating audio with data:", formData);
       
       const result = await generateAudioDescription(
         formData.text,
@@ -53,9 +85,12 @@ const Generator = () => {
         formData.voice
       );
       
-      if (result.error || !result.audioUrl || !result.text) {
+      if (result.error || !result.audioUrl) {
+        setError(result.error || 'Failed to generate audio. Please try again.');
         throw new Error(result.error || 'Failed to generate audio');
       }
+      
+      console.log("Audio generation successful:", result);
       
       // Save to history
       if (result.audioUrl) {
@@ -70,12 +105,19 @@ const Generator = () => {
         // Update generation count for authenticated users
         if (user?.id) {
           await updateGenerationCount(user.id);
+          // Refresh stats
+          fetchGenerationStats();
         }
       }
       
       setGeneratedAudio({
         audioUrl: result.audioUrl,
         text: result.text
+      });
+      
+      toast({
+        title: 'Success!',
+        description: 'Your audio description has been generated.',
       });
       
     } catch (error) {
@@ -91,29 +133,20 @@ const Generator = () => {
   };
 
   const handleUpgradeToPro = () => {
-    // Replace "YOUR_PADDLE_VENDOR_ID" with your actual Paddle Vendor ID
-    // For development, we'll create a mock Paddle checkout flow
-    const paddleVendorId = "123456"; // Replace with your actual Paddle Vendor ID
+    // Replace with your actual Paddle Vendor ID
+    const paddleVendorId = "123456"; 
     
-    // Initialize Paddle checkout (normally would be done with Paddle.js)
     try {
-      // If this is production code, you'd use something like:
-      // Paddle.Checkout.open({
-      //   product: 'YOUR_PRODUCT_ID',
-      //   email: user?.email || '',
-      //   successCallback: handleSubscriptionSuccess,
-      // });
-      
-      // For now, we'll just open a new tab with the Paddle checkout URL
+      // Open Paddle checkout in a new tab
       const paddleCheckoutUrl = `https://checkout.paddle.com/checkout/product/YOUR_PRODUCT_ID?vendor=${paddleVendorId}&email=${encodeURIComponent(user?.email || '')}`;
       window.open(paddleCheckoutUrl, "_blank");
       
       toast({
-        title: "Opening Paddle Checkout",
+        title: "Opening Checkout",
         description: "You're being redirected to complete your purchase",
       });
     } catch (error) {
-      console.error("Error opening Paddle checkout:", error);
+      console.error("Error opening checkout:", error);
       toast({
         title: "Error",
         description: "Failed to open checkout. Please try again.",
@@ -139,6 +172,14 @@ const Generator = () => {
         </p>
       </div>
 
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="overflow-hidden">
@@ -156,7 +197,10 @@ const Generator = () => {
               </TabsContent>
               
               <TabsContent value="history" className="p-6">
-                <HistoryTab user={user} />
+                <HistoryTab 
+                  user={user} 
+                  onRefreshStats={fetchGenerationStats}
+                />
               </TabsContent>
             </Tabs>
           </Card>
@@ -176,7 +220,9 @@ const Generator = () => {
           <PlanStatus 
             user={user} 
             profile={profile}
-            remainingGenerations={profile?.remaining_generations || 10} 
+            remainingGenerations={generationStats.remaining} 
+            totalGenerations={generationStats.total}
+            todayGenerations={generationStats.today}
           />
           
           {!profile?.plan || profile.plan === 'free' ? (

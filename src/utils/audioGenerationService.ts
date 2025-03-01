@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 // Define types for language and voice options
 export interface LanguageOption {
@@ -27,7 +28,12 @@ const LANGUAGES: LanguageOption[] = [
   { id: 'de', code: 'de', name: 'German', nativeText: 'Deutsch', nativeName: 'Deutsch', flag: '🇩🇪' },
   { id: 'it', code: 'it', name: 'Italian', nativeText: 'Italiano', nativeName: 'Italiano', flag: '🇮🇹' },
   { id: 'pt', code: 'pt', name: 'Portuguese', nativeText: 'Português', nativeName: 'Português', flag: '🇵🇹' },
-  // Add more languages as needed
+  // Additional languages
+  { id: 'zh', code: 'zh', name: 'Chinese', nativeText: '中文', nativeName: '中文', flag: '🇨🇳' },
+  { id: 'ja', code: 'ja', name: 'Japanese', nativeText: '日本語', nativeName: '日本語', flag: '🇯🇵' },
+  { id: 'ko', code: 'ko', name: 'Korean', nativeText: '한국어', nativeName: '한국어', flag: '🇰🇷' },
+  { id: 'ru', code: 'ru', name: 'Russian', nativeText: 'Русский', nativeName: 'Русский', flag: '🇷🇺' },
+  { id: 'ar', code: 'ar', name: 'Arabic', nativeText: 'العربية', nativeName: 'العربية', flag: '🇸🇦' },
 ];
 
 // Available voices with properly typed gender
@@ -40,7 +46,12 @@ const VOICES: Record<string, VoiceOption[]> = {
     { id: 'onyx', name: 'Onyx', gender: 'male' },
     { id: 'nova', name: 'Nova', gender: 'female' },
     { id: 'shimmer', name: 'Shimmer', gender: 'female', premium: true },
-    // Add more voices as needed
+    // Additional premium voices
+    { id: 'aria', name: 'Aria', gender: 'female', premium: true },
+    { id: 'roger', name: 'Roger', gender: 'male', premium: true },
+    { id: 'sarah', name: 'Sarah', gender: 'female', premium: true },
+    { id: 'daniel', name: 'Daniel', gender: 'male', premium: true },
+    { id: 'emma', name: 'Emma', gender: 'female', premium: true },
   ]
 };
 
@@ -72,13 +83,13 @@ export const generateAudioDescription = async (
     const languageId = typeof language === 'string' ? language : language.id;
     const voiceId = typeof voice === 'string' ? voice : voice.id;
     
-    console.log(`Generating description for: ${productText}`);
+    console.log(`Generating description for: ${productText} in language: ${languageId} with voice: ${voiceId}`);
 
     // We'll use Supabase Edge Function for this since it has access to OPENAI_API_KEY
     // and we don't want to expose the key in the client-side code
     const { data, error } = await supabase.functions.invoke('generate-audio', {
       body: {
-        productName: productText,
+        text: productText,
         language: languageId,
         voice: voiceId
       }
@@ -89,9 +100,16 @@ export const generateAudioDescription = async (
       return { error: error.message };
     }
 
+    if (!data || !data.audioUrl) {
+      console.error('No audio URL returned from function', data);
+      return { error: 'Failed to generate audio. No audio URL returned.' };
+    }
+
+    console.log('Successfully generated audio:', data);
+    
     return {
       audioUrl: data.audioUrl,
-      text: data.text,
+      text: data.text || productText,
       id: data.id
     };
   } catch (error) {
@@ -112,6 +130,8 @@ export const saveAudioToHistory = async (
 ) => {
   try {
     const sessionId = !userId ? getSessionId() : null;
+    
+    console.log(`Saving audio to history. User ID: ${userId || 'Guest'}, Session ID: ${sessionId}`);
     
     // Use the any-typed client to bypass TypeScript checking
     const { data, error } = await (supabase as any)
@@ -193,4 +213,57 @@ const getSessionId = (): string => {
   }
   
   return sessionId;
+};
+
+/**
+ * Get user generation statistics
+ */
+export const getUserGenerationStats = async (userId: string) => {
+  try {
+    const { data, error } = await (supabase as any)
+      .from('generation_counts')
+      .select('date, count')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Calculate total and recent stats
+    const total = data.reduce((sum: number, item: any) => sum + item.count, 0);
+    const today = new Date().toISOString().split('T')[0];
+    const todayCount = data.find((item: any) => item.date === today)?.count || 0;
+    
+    return { 
+      total,
+      today: todayCount,
+      history: data
+    };
+  } catch (error) {
+    console.error('Error getting user generation stats:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to load generation statistics.',
+      variant: 'destructive',
+    });
+    return { total: 0, today: 0, history: [] };
+  }
+};
+
+/**
+ * Delete an audio file
+ */
+export const deleteAudioFile = async (audioId: string) => {
+  try {
+    const { error } = await (supabase as any)
+      .from('audio_files')
+      .delete()
+      .eq('id', audioId);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting audio file:', error);
+    return { error: error instanceof Error ? error.message : 'Unknown error deleting audio' };
+  }
 };

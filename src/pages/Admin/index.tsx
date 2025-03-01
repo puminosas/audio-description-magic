@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { supabaseTyped } from '@/utils/supabaseHelper';
+import { supabaseTyped, getFeedbackStats } from '@/utils/supabaseHelper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,7 +13,8 @@ import {
   Settings,
   Loader2,
   Search,
-  MessageSquare
+  MessageSquare,
+  RefreshCw
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +26,7 @@ import AdminSettings from './AdminSettings';
 import AdminFeedback from './AdminFeedback';
 
 const AdminDashboard = () => {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, user } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
   const { toast } = useToast();
   const [dashboardData, setDashboardData] = useState({
@@ -41,66 +42,87 @@ const AdminDashboard = () => {
 
   // Fetch dashboard statistics
   useEffect(() => {
-    const fetchDashboardStats = async () => {
-      if (!isAdmin || loading) return;
-      
-      try {
-        // Fetch total users
-        const { count: totalUsers, error: usersError } = await supabaseTyped.profiles.select()
-          .count('exact', { head: true });
-
-        if (usersError) throw usersError;
-
-        // Fetch plan distribution
-        const { data: premiumData, error: premiumError } = await supabaseTyped.profiles.select()
-          .eq('plan', 'premium');
-
-        if (premiumError) throw premiumError;
-
-        const { data: basicData, error: basicError } = await supabaseTyped.profiles.select()
-          .eq('plan', 'basic');
-
-        if (basicError) throw basicError;
-
-        // Fetch total audio files
-        const { count: totalAudioFiles, error: audioError } = await supabaseTyped.audio_files.select()
-          .count('exact', { head: true });
-
-        // Fetch feedback count
-        const { count: feedbackCount, error: feedbackError } = await supabaseTyped.feedback.select()
-          .count('exact', { head: true });
-
-        // Fetch total generations
-        const { data: genData, error: genError } = await supabaseTyped.generation_counts.select();
-
-        if (genError) throw genError;
-
-        setDashboardData({
-          totalUsers: totalUsers || 0,
-          totalAudioFiles: totalAudioFiles || 0,
-          premiumUsers: premiumData?.length || 0,
-          basicUsers: basicData?.length || 0,
-          freeUsers: (totalUsers || 0) - (premiumData?.length || 0) - (basicData?.length || 0),
-          totalGenerations: genData?.reduce((acc: number, item: any) => acc + (item.count || 0), 0) || 0,
-          feedbackCount: feedbackCount || 0
-        });
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load dashboard statistics.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoadingStats(false);
-      }
-    };
-
     fetchDashboardStats();
-  }, [isAdmin, loading, toast]);
+  }, [isAdmin, loading]);
+
+  const fetchDashboardStats = async () => {
+    if (!isAdmin || loading) return;
+    
+    setLoadingStats(true);
+    try {
+      console.log("Fetching dashboard statistics...");
+      
+      // Fetch total users
+      const { count: totalUsers, error: usersError } = await supabaseTyped.profiles.select()
+        .count('exact', { head: true });
+
+      if (usersError) throw usersError;
+      console.log("Total users:", totalUsers);
+
+      // Fetch plan distribution
+      const { data: premiumData, error: premiumError } = await supabaseTyped.profiles.select()
+        .eq('plan', 'premium');
+
+      if (premiumError) throw premiumError;
+
+      const { data: basicData, error: basicError } = await supabaseTyped.profiles.select()
+        .eq('plan', 'basic');
+
+      if (basicError) throw basicError;
+
+      // Fetch total audio files
+      const { count: totalAudioFiles, error: audioError } = await supabaseTyped.audio_files.select()
+        .count('exact', { head: true });
+      
+      if (audioError) throw audioError;
+      console.log("Total audio files:", totalAudioFiles);
+
+      // Fetch feedback count
+      const { count: feedbackCount, error: feedbackError } = await supabaseTyped.feedback.select()
+        .count('exact', { head: true });
+      
+      if (feedbackError) throw feedbackError;
+      console.log("Feedback count:", feedbackCount);
+
+      // Fetch total generations
+      const { data: genData, error: genError } = await supabaseTyped.generation_counts.select();
+
+      if (genError) throw genError;
+      console.log("Generation data:", genData);
+
+      setDashboardData({
+        totalUsers: totalUsers || 0,
+        totalAudioFiles: totalAudioFiles || 0,
+        premiumUsers: premiumData?.length || 0,
+        basicUsers: basicData?.length || 0,
+        freeUsers: (totalUsers || 0) - (premiumData?.length || 0) - (basicData?.length || 0),
+        totalGenerations: genData?.reduce((acc: number, item: any) => acc + (item.count || 0), 0) || 0,
+        feedbackCount: feedbackCount || 0
+      });
+
+      toast({
+        title: 'Dashboard Updated',
+        description: 'Latest statistics have been loaded.',
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard statistics. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   // If not admin, redirect to home
   if (!loading && !isAdmin) {
+    toast({
+      title: 'Access Denied',
+      description: 'You do not have permission to access the admin dashboard.',
+      variant: 'destructive',
+    });
     return <Navigate to="/" />;
   }
 
@@ -115,7 +137,18 @@ const AdminDashboard = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold mb-8">Admin Dashboard</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold">Admin Dashboard</h1>
+          <Button 
+            onClick={fetchDashboardStats} 
+            variant="outline" 
+            size="sm"
+            disabled={loadingStats}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
