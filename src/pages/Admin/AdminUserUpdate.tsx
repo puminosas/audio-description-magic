@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,11 @@ const AdminUserUpdate = () => {
   const [email, setEmail] = useState('a.mackeliunas@gmail.com');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  
+  // Effect to automatically update the user when the component mounts
+  useEffect(() => {
+    handleAssignPermissions();
+  }, []);
   
   const handleAssignPermissions = async () => {
     try {

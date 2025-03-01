@@ -33,7 +33,7 @@ const PricingCard = ({
   return (
     <div className={`
       h-full flex flex-col glassmorphism rounded-xl overflow-hidden
-      ${popular ? 'scale-105 shadow-xl border-primary' : 'shadow-md'}
+      ${popular ? 'scale-105 shadow-xl border-2 border-primary' : 'shadow-md border border-border'}
       transition-all duration-300 hover:shadow-lg
     `}>
       {popular && (
@@ -67,12 +67,15 @@ const PricingCard = ({
       <div className="p-6 border-t border-border mt-auto">
         <Button 
           variant={buttonVariant}
-          className={`w-full ${popular ? 'bg-primary hover:bg-primary/90' : ''}`}
+          className={`w-full ${popular ? 'bg-primary hover:bg-primary/90 text-white' : ''}`}
           disabled={isCurrentPlan}
           onClick={onSubscribe}
         >
           {isCurrentPlan ? 'Current Plan' : buttonText}
         </Button>
+        {isCurrentPlan && (
+          <p className="text-center text-sm mt-2 text-green-500">You are on this plan</p>
+        )}
       </div>
     </div>
   );

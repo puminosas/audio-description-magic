@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabaseTyped } from '@/utils/supabaseHelper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,9 +19,9 @@ import {
   AlarmClock,
   Crown,
   Gauge,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 
 type AudioFile = {
@@ -36,7 +36,7 @@ type AudioFile = {
 };
 
 const Dashboard = () => {
-  const { user, loading, profile } = useAuth();
+  const { user, loading, profile, isAdmin } = useAuth();
   const [audioHistory, setAudioHistory] = useState<AudioFile[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -230,7 +230,37 @@ const Dashboard = () => {
     <div className="container max-w-6xl mx-auto px-4 py-12">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Your Dashboard</h1>
+        
+        {isAdmin && (
+          <Button variant="outline" asChild className="flex items-center gap-2">
+            <Link to="/admin">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              Admin Dashboard
+            </Link>
+          </Button>
+        )}
       </div>
+
+      {isAdmin && (
+        <div className="mb-8 p-4 border border-primary/20 bg-primary/5 rounded-md">
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Admin Access</h2>
+          </div>
+          <p className="text-sm mb-4">You have admin privileges. Access the admin dashboard to manage users, view analytics, and more.</p>
+          <div className="flex gap-3">
+            <Button asChild size="sm">
+              <Link to="/admin">Go to Admin Dashboard</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/users">Manage Users</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/audio-files">View All Audio Files</Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
