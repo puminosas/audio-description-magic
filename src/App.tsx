@@ -1,56 +1,53 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from "@/components/theme-provider"
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from './context/AuthContext';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/context/AuthContext";
-import { ThemeProvider } from "@/context/ThemeContext";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import Index from "@/pages/Index";
-import Generator from "@/pages/Generator";
-import Pricing from "@/pages/Pricing";
-import ApiDocs from "@/pages/ApiDocs";
-import Dashboard from "@/pages/Dashboard";
-import AdminDashboard from "@/pages/Admin";
-import Auth from "@/pages/Auth";
-import NotFound from "@/pages/NotFound";
-import FeedbackForm from "@/components/feedback/FeedbackForm";
+import Index from './pages/Index';
+import Auth from './pages/Auth';
+import Generator from './pages/Generator';
+import Dashboard from './pages/Dashboard';
+import Pricing from './pages/Pricing';
+import ApiDocs from './pages/ApiDocs';
+import NotFound from './pages/NotFound';
+import Navbar from './components/layout/navbar/Navbar';
+import Footer from './components/layout/Footer';
+import AdminDashboard from './pages/Admin';
+import ApiClient from './pages/ApiClient';
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+function App() {
+  return (
+    <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <div className="flex flex-col min-h-screen">
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <div className="min-h-screen flex flex-col">
               <Navbar />
-              <main className="flex-grow pt-20">
+              <div className="flex-1">
                 <Routes>
                   <Route path="/" element={<Index />} />
-                  <Route path="/index" element={<Index />} />
-                  <Route path="/generator" element={<Generator />} />
-                  <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/api" element={<ApiDocs />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/feedback" element={<FeedbackForm />} />
+                  <Route path="/generate" element={<Generator />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/api-docs" element={<ApiDocs />} />
+                  <Route path="/api-client" element={<ApiClient />} />
+                  <Route path="/admin/*" element={<AdminDashboard />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </main>
+              </div>
               <Footer />
+              <Toaster />
             </div>
-          </BrowserRouter>
-        </AuthProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </BrowserRouter>
+  );
+}
 
 export default App;

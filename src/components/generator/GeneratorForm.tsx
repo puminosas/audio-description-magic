@@ -7,6 +7,7 @@ import LanguageVoiceSelector from './LanguageVoiceSelector';
 import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audioGenerationService';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 interface GeneratorFormProps {
   onGenerate: (formData: {
@@ -22,6 +23,7 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(getAvailableLanguages()[0]);
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(getAvailableVoices('en')[0]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -38,6 +40,15 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
   };
 
   const handleSubmit = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to generate audio descriptions.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!text.trim()) {
       toast({
         title: "Error",
@@ -63,8 +74,9 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
     }
   };
 
-  const isDisabled = loading || !text.trim();
+  const isDisabled = loading || !text.trim() || !user;
   const getButtonText = () => {
+    if (!user) return "Sign in to Generate";
     if (loading) return "Generating...";
     if (!text.trim()) return "Enter a product name";
     return "Generate Audio";

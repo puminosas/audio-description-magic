@@ -1,11 +1,14 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.31.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.8.0";
 
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+// Create Supabase client
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +22,39 @@ serve(async (req) => {
   }
 
   try {
+    // Get user ID from the authorization header
+    const authHeader = req.headers.get('authorization')?.split(' ')[1];
+    let userId = null;
+    
+    if (authHeader) {
+      // Check if it's a session token or API key
+      if (authHeader.startsWith('ak_')) {
+        // It's an API key
+        const { data, error } = await supabase
+          .from('api_keys')
+          .select('user_id')
+          .eq('key', authHeader)
+          .single();
+        
+        if (error) throw new Error('Invalid API key');
+        userId = data.user_id;
+        
+        // Update the last_used timestamp
+        await supabase
+          .from('api_keys')
+          .update({ last_used: new Date().toISOString() })
+          .eq('key', authHeader);
+      } else {
+        // It's a session token
+        const { data: { user }, error } = await supabase.auth.getUser(authHeader);
+        if (error || !user) throw new Error('Authentication required');
+        userId = user.id;
+      }
+    } else {
+      throw new Error('Authentication required');
+    }
+
+    // Parse the request body
     const { text, language = 'en', voice = 'alloy' } = await req.json();
     
     if (!text) {
@@ -29,6 +65,7 @@ serve(async (req) => {
     }
 
     console.log(`Processing request for text: "${text}", language: ${language}, voice: ${voice}`);
+    console.log(`User ID: ${userId}`);
     
     if (!openaiApiKey) {
       console.error('No OpenAI API key found in environment variables');
@@ -47,21 +84,20 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o-mini",  // Updated to recommended model
         messages: [
-          { role: "system", content: `You are a professional e-commerce product description writer. Write in ${language} language.` },
+          { role: "system", content: "You are a professional e-commerce product description writer." },
           { role: "user", content: `Write a high-quality, engaging product description for "${text}" in ${language}. Highlight its main features and benefits. Keep it under 150 words.` }
         ]
       })
     });
 
-    const descriptionData = await descriptionResponse.json();
-    
-    if (!descriptionData.choices || descriptionData.choices.length === 0) {
-      console.error("OpenAI description generation error:", descriptionData);
-      throw new Error("Failed to generate a description");
+    if (!descriptionResponse.ok) {
+      const errorData = await descriptionResponse.json();
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
-    
+
+    const descriptionData = await descriptionResponse.json();
     const generatedDescription = descriptionData.choices[0]?.message?.content?.trim();
 
     if (!generatedDescription) {
@@ -81,76 +117,111 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "tts-1",
         voice: voice,
-        input: generatedDescription,
-        response_format: "mp3"
+        input: generatedDescription
       })
     });
 
     if (!ttsResponse.ok) {
-      const errorData = await ttsResponse.text();
-      console.error("OpenAI TTS error:", errorData);
-      throw new Error(`Failed to generate audio: ${errorData}`);
+      const errorData = await ttsResponse.json();
+      throw new Error(`OpenAI TTS API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 
-    // Get the audio data as a buffer
-    const audioBuffer = await ttsResponse.arrayBuffer();
+    // Get the audio data as ArrayBuffer
+    const audioArrayBuffer = await ttsResponse.arrayBuffer();
     
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
+    // Create a unique file name based on timestamp and some random characters
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 10);
+    const fileName = `${timestamp}-${randomStr}.mp3`;
     
-    // Create a unique filename
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const sanitizedText = text.substring(0, 20).replace(/[^a-z0-9]/gi, '-').toLowerCase();
-    const filename = `audio-${sanitizedText}-${timestamp}.mp3`;
-    const filePath = `audio-files/${filename}`;
+    // Create user's folder if it doesn't exist
+    const folderPath = `audio/${userId}`;
     
-    // Make sure the storage bucket exists
-    try {
-      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('user_files');
-      
-      if (bucketError && bucketError.message.includes('does not exist')) {
-        // Create the bucket if it doesn't exist
-        await supabase.storage.createBucket('user_files', {
-          public: true,
-          fileSizeLimit: 10485760, // 10MB
-        });
-      }
-    } catch (error) {
-      console.log("Bucket check error:", error);
-      // Continue anyway, the bucket might already exist
+    // Check if bucket exists, if not create it
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const audioBucket = buckets?.find(b => b.name === 'audio');
+    
+    if (!audioBucket) {
+      await supabase.storage.createBucket('audio', {
+        public: false,
+        fileSizeLimit: 10485760 // 10MB limit
+      });
     }
     
-    // Upload the file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('user_files')
-      .upload(filePath, audioBuffer, {
+    // Upload the file to storage
+    const { data: fileData, error: uploadError } = await supabase.storage
+      .from('audio')
+      .upload(`${folderPath}/${fileName}`, audioArrayBuffer, {
         contentType: 'audio/mpeg',
-        upsert: true
+        cacheControl: '3600'
       });
-    
+      
     if (uploadError) {
-      console.error("Supabase storage upload error:", uploadError);
+      console.error('Error uploading file:', uploadError);
       throw new Error(`Failed to upload audio file: ${uploadError.message}`);
     }
     
-    // Get the public URL for the uploaded file
-    const { data: publicUrlData } = supabase.storage
-      .from('user_files')
-      .getPublicUrl(filePath);
+    // Get the public URL
+    const { data: publicUrlData } = supabase.storage.from('audio').getPublicUrl(`${folderPath}/${fileName}`);
+    const audioUrl = publicUrlData.publicUrl;
     
-    if (!publicUrlData || !publicUrlData.publicUrl) {
-      throw new Error("Failed to get public URL for the audio file");
+    // Save the audio file reference in the database
+    const { error: dbError } = await supabase
+      .from('audio_files')
+      .insert({
+        user_id: userId,
+        file_path: `${folderPath}/${fileName}`,
+        original_text: text,
+        generated_text: generatedDescription,
+        language: language,
+        voice: voice,
+        created_at: new Date().toISOString(),
+        file_size: audioArrayBuffer.byteLength,
+        public_url: audioUrl
+      });
+      
+    if (dbError) {
+      console.error('Error saving to database:', dbError);
+      // Don't throw here, as we still want to return the audio URL even if DB save fails
     }
     
-    console.log("Generated Audio URL:", publicUrlData.publicUrl);
+    // Update generation count for the user
+    const { data: countData, error: countError } = await supabase
+      .from('generation_counts')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (countError) {
+      console.error('Error checking generation count:', countError);
+    } else if (countData) {
+      // Update existing count
+      await supabase
+        .from('generation_counts')
+        .update({ 
+          count: countData.count + 1,
+          last_generated: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+    } else {
+      // Create new count record
+      await supabase
+        .from('generation_counts')
+        .insert({
+          user_id: userId,
+          count: 1,
+          last_generated: new Date().toISOString()
+        });
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        audioUrl: publicUrlData.publicUrl, 
+        audioUrl, 
         text: generatedDescription,
-        language: language,
-        voice: voice
+        fileName,
+        language,
+        voice
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -159,7 +230,7 @@ serve(async (req) => {
     console.error("Error in generate-audio function:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: error.message.includes('Authentication') ? 401 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
