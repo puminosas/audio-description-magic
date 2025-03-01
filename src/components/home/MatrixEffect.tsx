@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from 'next-themes';
 
 const MatrixEffect = () => {
   const { theme } = useTheme();
