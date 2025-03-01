@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { assignAdminRole, updateUserPlan, updateUserRemainingGenerations } from '@/utils/supabaseHelper';
 import { Loader2, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabase/typedClient';
 
 const AdminUserUpdate = () => {
   const { toast } = useToast();
@@ -25,10 +26,8 @@ const AdminUserUpdate = () => {
       setLoading(true);
       setSuccess(false);
       
-      // Get the user from Supabase
-      const { data: users, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
+      // Get the user from Supabase using supabaseTyped helper
+      const { data: users, error: userError } = await supabaseTyped.profiles
         .eq('email', email)
         .maybeSingle();
       
