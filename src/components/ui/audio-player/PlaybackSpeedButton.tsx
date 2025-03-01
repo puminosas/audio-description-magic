@@ -4,27 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Gauge } from 'lucide-react';
 import { useAudioPlayer } from './useAudioPlayer';
 
-interface PlaybackSpeedButtonProps {
-  isGenerating: boolean;
-  audioUrl?: string;
-}
-
-const PlaybackSpeedButton = ({ isGenerating, audioUrl }: PlaybackSpeedButtonProps) => {
+const PlaybackSpeedButton = () => {
   const { playbackSpeed, changePlaybackSpeed } = useAudioPlayer();
-  
+
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="sm"
+      className="h-7 px-2 text-xs flex items-center gap-1"
       onClick={changePlaybackSpeed}
-      disabled={isGenerating || !audioUrl}
-      className="h-8 w-8 relative"
       title="Change playback speed"
     >
-      <Gauge size={16} className="text-muted-foreground" />
-      <span className="absolute text-[10px] font-bold">
-        {playbackSpeed}x
-      </span>
+      <Gauge className="h-3.5 w-3.5" />
+      <span>{playbackSpeed}x</span>
     </Button>
   );
 };

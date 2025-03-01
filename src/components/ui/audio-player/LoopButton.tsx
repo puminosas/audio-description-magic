@@ -2,30 +2,20 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Repeat } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useAudioPlayer } from './useAudioPlayer';
 
-interface LoopButtonProps {
-  isGenerating: boolean;
-  audioUrl?: string;
-}
+const LoopButton = () => {
+  const { isLooping, toggleLoop } = useAudioPlayer();
 
-const LoopButton = ({ isGenerating, audioUrl }: LoopButtonProps) => {
-  const { loop, toggleLoop } = useAudioPlayer();
-  
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="sm"
+      className={`h-7 w-7 p-0 ${isLooping ? 'text-primary' : ''}`}
       onClick={toggleLoop}
-      disabled={isGenerating || !audioUrl}
-      className="h-8 w-8"
-      title={loop ? "Disable loop" : "Enable loop"}
+      title={isLooping ? 'Disable loop' : 'Enable loop'}
     >
-      <Repeat size={16} className={cn(
-        "text-muted-foreground",
-        loop && "text-primary"
-      )} />
+      <Repeat className="h-4 w-4" />
     </Button>
   );
 };

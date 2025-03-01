@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GeneratorForm from '@/components/generator/GeneratorForm';
 import HistoryTab from '@/components/generator/HistoryTab';
+import TextToAudioTab from '@/components/generator/TextToAudioTab';
 import { LanguageOption, VoiceOption } from '@/utils/audioGenerationService';
 
 interface GeneratorTabsProps {
@@ -32,6 +33,7 @@ const GeneratorTabs = ({
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full rounded-none bg-muted/50">
           <TabsTrigger value="generate" className="flex-1">Generate</TabsTrigger>
+          <TabsTrigger value="text-to-audio" className="flex-1">Text to Audio</TabsTrigger>
           <TabsTrigger value="history" className="flex-1">History</TabsTrigger>
         </TabsList>
         
@@ -39,6 +41,14 @@ const GeneratorTabs = ({
           <GeneratorForm 
             onGenerate={handleGenerate} 
             loading={loading} 
+          />
+        </TabsContent>
+        
+        <TabsContent value="text-to-audio" className="p-6">
+          <TextToAudioTab 
+            onGenerate={handleGenerate} 
+            loading={loading}
+            user={user}
           />
         </TabsContent>
         

@@ -12,8 +12,8 @@ export interface AudioPlayerState {
   currentTime: number;
   isSeeking: boolean;
   error: string | null;
-  isLoading?: boolean;
-  isLooping?: boolean;
+  isLoading: boolean;
+  isLooping: boolean;
   
   togglePlay: () => void;
   handlePlay: () => void;
@@ -26,9 +26,9 @@ export interface AudioPlayerState {
   endSeeking: () => void;
   handleDownload: () => void;
   setError: (error: string | null) => void;
-  handlePlayPause?: () => void;
-  toggleLoop?: () => void;
-  changePlaybackSpeed?: () => void;
+  handlePlayPause: () => void;
+  toggleLoop: () => void;
+  changePlaybackSpeed: () => void;
 }
 
 export interface AudioPlayerProviderProps {
@@ -36,4 +36,19 @@ export interface AudioPlayerProviderProps {
   audioUrl?: string;
   fileName?: string;
   isGenerating?: boolean;
+}
+
+export interface AudioControlsProps {
+  isPlaying: boolean;
+  isGenerating: boolean;
+  currentTime: number;
+  duration: number;
+  togglePlayPause: () => void;
+}
+
+export interface ActionButtonsProps {
+  fileName: string;
+  audioUrl: string;
+  isGenerating: boolean;
+  embedCode?: string;
 }
