@@ -9,6 +9,7 @@ interface AudioPlayerContextProps {
   volume: number;
   isMuted: boolean;
   isLooping: boolean;
+  playbackSpeed: number;
   embedCode: string;
   audioLoaded: boolean;
   audioRef: React.RefObject<HTMLAudioElement>;
@@ -17,6 +18,7 @@ interface AudioPlayerContextProps {
   handleVolumeChange: (value: number[]) => void;
   toggleMute: () => void;
   toggleLoop: () => void;
+  changePlaybackSpeed: () => void;
 }
 
 interface AudioPlayerProviderProps {
@@ -39,7 +41,7 @@ export const useAudioPlayer = () => {
 export const AudioPlayerProvider = ({ 
   children, 
   audioUrl, 
-  fileName = 'audio-description.mp3',
+  fileName = 'audio-description.mp3', 
   isGenerating = false 
 }: AudioPlayerProviderProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -48,6 +50,7 @@ export const AudioPlayerProvider = ({
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [embedCode, setEmbedCode] = useState('');
   const [audioLoaded, setAudioLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -127,6 +130,13 @@ export const AudioPlayerProvider = ({
     }
   }, [isLooping]);
 
+  // Apply playback speed to audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed]);
+
   const togglePlayPause = () => {
     if (!audioRef.current || !audioUrl) return;
     
@@ -184,6 +194,14 @@ export const AudioPlayerProvider = ({
     setIsLooping(!isLooping);
   };
 
+  const changePlaybackSpeed = () => {
+    // Cycle through common playback speeds: 1x -> 1.5x -> 2x -> 0.5x -> 0.75x -> 1x
+    const speeds = [1, 1.5, 2, 0.5, 0.75];
+    const currentIndex = speeds.indexOf(playbackSpeed);
+    const nextIndex = (currentIndex + 1) % speeds.length;
+    setPlaybackSpeed(speeds[nextIndex]);
+  };
+
   const value = {
     isPlaying,
     currentTime,
@@ -191,6 +209,7 @@ export const AudioPlayerProvider = ({
     volume,
     isMuted,
     isLooping,
+    playbackSpeed,
     embedCode,
     audioLoaded,
     audioRef,
@@ -198,7 +217,8 @@ export const AudioPlayerProvider = ({
     handleTimeChange,
     handleVolumeChange,
     toggleMute,
-    toggleLoop
+    toggleLoop,
+    changePlaybackSpeed
   };
 
   return (
