@@ -1,8 +1,7 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.29.0';
-import OpenAI from 'https://esm.sh/openai@4.8.0';
-import { generateRandomString } from 'https://deno.land/x/random_string@1.0.0/mod.ts';
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
+import OpenAI from "https://esm.sh/openai@4.8.0";
 
 // Set up CORS headers for browsers
 const corsHeaders = {
@@ -14,6 +13,18 @@ const corsHeaders = {
 const handleOptionsRequest = () => {
   return new Response(null, { headers: corsHeaders });
 };
+
+// Generate a random string without external dependencies
+function generateRandomString(length = 8) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  const random = new Uint8Array(length);
+  crypto.getRandomValues(random);
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(random[i] % chars.length);
+  }
+  return result;
+}
 
 // Create OpenAI client
 const openai = new OpenAI({
@@ -27,38 +38,39 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Create or ensure storage bucket exists
 async function ensureStorageBucketExists() {
-  const { data: buckets } = await supabase.storage.listBuckets();
-  const audioBucketExists = buckets?.some(bucket => bucket.name === 'audio-files');
-  
-  if (!audioBucketExists) {
-    console.log('Creating audio-files bucket');
-    const { error } = await supabase.storage.createBucket('audio-files', {
-      public: true,
-      fileSizeLimit: 10485760, // 10MB
-    });
+  try {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const audioBucketExists = buckets?.some(bucket => bucket.name === 'audio-files');
     
-    if (error) {
-      console.error('Error creating bucket:', error);
-      throw error;
+    if (!audioBucketExists) {
+      console.log('Creating audio-files bucket');
+      const { error } = await supabase.storage.createBucket('audio-files', {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB
+      });
+      
+      if (error) {
+        console.error('Error creating bucket:', error);
+        throw error;
+      }
     }
     
-    // Set bucket policy to public
-    const { error: policyError } = await supabase.storage.from('audio-files').createSignedUrl('test.txt', 3600);
-    if (policyError) {
-      console.error('Error setting bucket policy:', policyError);
-    }
+    return true;
+  } catch (error) {
+    console.error('Error ensuring bucket exists:', error);
+    throw error;
   }
 }
 
 // Handle the actual request
 const handleRequest = async (req: Request) => {
   try {
-    const { description, language = 'en', voice = 'alloy' } = await req.json();
-    console.log(`Generating audio for: "${description}" in language: ${language} with voice: ${voice}`);
+    const { productName, language = 'en', voice = 'alloy' } = await req.json();
+    console.log(`Generating audio for: "${productName}" in language: ${language} with voice: ${voice}`);
     
-    if (!description || description.trim() === '') {
+    if (!productName || productName.trim() === '') {
       return new Response(
-        JSON.stringify({ error: 'Description is required' }),
+        JSON.stringify({ error: 'Product name is required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
@@ -66,6 +78,9 @@ const handleRequest = async (req: Request) => {
     // Ensure storage bucket exists
     await ensureStorageBucketExists();
     
+    // Generate a product description based on the product name
+    const description = productName; // For now, we're just using the product name as is
+
     // Generate audio with OpenAI
     const audioResponse = await openai.audio.speech.create({
       model: 'tts-1',
@@ -94,7 +109,7 @@ const handleRequest = async (req: Request) => {
     if (uploadError) {
       console.error('Storage upload error:', uploadError);
       return new Response(
-        JSON.stringify({ error: 'Failed to upload audio file' }),
+        JSON.stringify({ error: 'Failed to upload audio file', details: uploadError }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }

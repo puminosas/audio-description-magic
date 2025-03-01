@@ -63,7 +63,7 @@ export const getAvailableVoices = (languageCode: string): VoiceOption[] => {
  * Generate an audio description for a product
  */
 export const generateAudioDescription = async (
-  productName: string,
+  productText: string,
   language: string | LanguageOption,
   voice: string | VoiceOption
 ) => {
@@ -72,13 +72,13 @@ export const generateAudioDescription = async (
     const languageId = typeof language === 'string' ? language : language.id;
     const voiceId = typeof voice === 'string' ? voice : voice.id;
     
-    console.log(`Generating description for: ${productName}`);
+    console.log(`Generating description for: ${productText}`);
 
     // We'll use Supabase Edge Function for this since it has access to OPENAI_API_KEY
     // and we don't want to expose the key in the client-side code
     const { data, error } = await supabase.functions.invoke('generate-audio', {
       body: {
-        productName,
+        productName: productText,
         language: languageId,
         voice: voiceId
       }
@@ -91,7 +91,7 @@ export const generateAudioDescription = async (
 
     return {
       audioUrl: data.audioUrl,
-      text: data.description,
+      text: data.text,
       id: data.id
     };
   } catch (error) {
