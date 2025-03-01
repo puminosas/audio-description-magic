@@ -1,9 +1,8 @@
-
 import React from 'react';
-import { Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAudioPlayer } from './AudioPlayerContext';
+import { Repeat, Repeat1 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAudioPlayer } from './useAudioPlayer';
 
 interface LoopButtonProps {
   isGenerating: boolean;

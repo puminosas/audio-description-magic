@@ -1,6 +1,6 @@
-
-import React from 'react';
-import { useAudioPlayer } from './AudioPlayerContext';
+import React, { useEffect, useRef } from 'react';
+import { useTheme } from '@/context/ThemeContext';
+import { useAudioPlayer } from './useAudioPlayer';
 
 interface AudioWaveformProps {
   isGenerating: boolean;

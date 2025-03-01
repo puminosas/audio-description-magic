@@ -1,83 +1,68 @@
-
 import React from 'react';
-import { useAudioPlayer } from './AudioPlayerContext';
-import AudioControls from './AudioControls';
-import AudioSeekBar from './AudioSeekBar';
-import VolumeControl from './VolumeControl';
+import { Button } from '@/components/ui/button';
+import { useAudioPlayer } from './useAudioPlayer';
 import ActionButtons from './ActionButtons';
-import LoopButton from './LoopButton';
-import PlaybackSpeedButton from './PlaybackSpeedButton';
+import AudioControls from './AudioControls';
 
 interface PlayerControlsProps {
-  isGenerating: boolean;
+  isGenerating?: boolean;
   audioUrl?: string;
   fileName?: string;
 }
 
-const PlayerControls = ({ 
-  isGenerating, 
-  audioUrl,
-  fileName = 'audio-description.mp3'
-}: PlayerControlsProps) => {
+const PlayerControls = ({ isGenerating, audioUrl, fileName }: PlayerControlsProps) => {
   const {
     isPlaying,
-    currentTime,
-    duration,
-    volume,
-    isMuted,
-    embedCode,
-    togglePlayPause,
-    handleTimeChange,
-    handleVolumeChange,
-    toggleMute
+    isLoading,
+    handlePlayPause,
   } = useAudioPlayer();
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0">
-      <AudioControls 
-        isPlaying={isPlaying}
-        isGenerating={isGenerating}
-        audioUrl={audioUrl}
-        currentTime={currentTime}
-        duration={duration}
-        togglePlayPause={togglePlayPause}
-      />
-      
-      <AudioSeekBar 
-        currentTime={currentTime}
-        duration={duration}
-        isGenerating={isGenerating}
-        audioUrl={audioUrl}
-        handleTimeChange={handleTimeChange}
-      />
-      
-      <div className="flex items-center space-x-3">
-        <VolumeControl 
-          volume={volume}
-          isMuted={isMuted}
-          isGenerating={isGenerating}
-          audioUrl={audioUrl}
-          toggleMute={toggleMute}
-          handleVolumeChange={handleVolumeChange}
-        />
-        
-        <LoopButton
-          isGenerating={isGenerating}
-          audioUrl={audioUrl}
-        />
-        
-        <PlaybackSpeedButton
-          isGenerating={isGenerating}
-          audioUrl={audioUrl}
-        />
-        
-        <ActionButtons 
-          isGenerating={isGenerating}
-          audioUrl={audioUrl}
-          fileName={fileName}
-          embedCode={embedCode}
-        />
+    <div className="flex items-center justify-between px-4 py-2">
+      <div className="flex items-center space-x-4">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handlePlayPause}
+          disabled={isGenerating || !audioUrl}
+        >
+          {isPlaying ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                fillRule="evenodd"
+                d="M6.75 5.25a1.5 1.5 0 013 0v13.5a1.5 1.5 0 01-3 0V5.25zm7.5 0a1.5 1.5 0 013 0v13.5a1.5 1.5 0 01-3 0V5.25z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.5 5.653c0-1.426 1.529-2.333 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.689-2.779-.217-2.779-1.643V5.653z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </Button>
+
+        <AudioControls />
       </div>
+
+      <ActionButtons 
+        isGenerating={isGenerating}
+        audioUrl={audioUrl}
+        fileName={fileName}
+      />
     </div>
   );
 };

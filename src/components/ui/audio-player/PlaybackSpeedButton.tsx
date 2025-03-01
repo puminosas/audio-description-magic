@@ -1,9 +1,8 @@
-
-import React from 'react';
-import { Timer } from 'lucide-react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useAudioPlayer } from './AudioPlayerContext';
+import { Gauge } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAudioPlayer } from './useAudioPlayer';
 
 interface PlaybackSpeedButtonProps {
   isGenerating: boolean;
@@ -22,7 +21,7 @@ const PlaybackSpeedButton = ({ isGenerating, audioUrl }: PlaybackSpeedButtonProp
       className="h-8 w-8 relative"
       title="Change playback speed"
     >
-      <Timer size={16} className="text-muted-foreground" />
+      <Gauge size={16} className="text-muted-foreground" />
       <span className="absolute text-[10px] font-bold">
         {playbackSpeed}x
       </span>
