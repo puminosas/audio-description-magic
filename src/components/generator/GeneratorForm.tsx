@@ -26,6 +26,8 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
 
   const handleSelectLanguage = (language: LanguageOption) => {
     setSelectedLanguage(language);
+    // Optionally, you could update voices based on the language
+    // setSelectedVoice(getAvailableVoices(language.code)[0]);
   };
 
   const handleSelectVoice = (voice: VoiceOption) => {

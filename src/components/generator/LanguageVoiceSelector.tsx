@@ -1,7 +1,8 @@
 
 import React from 'react';
-import LanguageSelector, { LanguageOption } from '@/components/ui/LanguageSelector';
-import VoiceSelector, { VoiceOption } from '@/components/ui/VoiceSelector';
+import LanguageSelector from '@/components/ui/LanguageSelector';
+import VoiceSelector from '@/components/ui/VoiceSelector';
+import { LanguageOption, VoiceOption } from '@/utils/audioGenerationService';
 
 interface LanguageVoiceSelectorProps {
   selectedLanguage: LanguageOption;
@@ -23,8 +24,8 @@ const LanguageVoiceSelector = ({
           Language
         </label>
         <LanguageSelector 
-          onSelect={onSelectLanguage} 
-          selectedLanguage={selectedLanguage}
+          onSelect={onSelectLanguage as any} 
+          selectedLanguage={selectedLanguage as any}
         />
       </div>
       
@@ -33,8 +34,8 @@ const LanguageVoiceSelector = ({
           Voice
         </label>
         <VoiceSelector 
-          onSelect={onSelectVoice} 
-          selectedVoice={selectedVoice}
+          onSelect={onSelectVoice as any} 
+          selectedVoice={selectedVoice as any}
           language={selectedLanguage.code}
         />
       </div>

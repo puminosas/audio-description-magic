@@ -1,20 +1,63 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import OpenAI from 'openai';
 
 // Define types for language and voice options
 export interface LanguageOption {
   id: string;
   name: string;
   nativeText: string;
+  code: string;
+  nativeName: string;
+  flag?: string;
 }
 
 export interface VoiceOption {
   id: string;
   name: string;
-  gender: string;
+  gender: "male" | "female" | "neutral";
   preview?: string;
+  premium?: boolean;
 }
+
+// Available languages
+const LANGUAGES: LanguageOption[] = [
+  { id: 'en', code: 'en', name: 'English', nativeText: 'English', nativeName: 'English', flag: '🇺🇸' },
+  { id: 'es', code: 'es', name: 'Spanish', nativeText: 'Español', nativeName: 'Español', flag: '🇪🇸' },
+  { id: 'fr', code: 'fr', name: 'French', nativeText: 'Français', nativeName: 'Français', flag: '🇫🇷' },
+  { id: 'de', code: 'de', name: 'German', nativeText: 'Deutsch', nativeName: 'Deutsch', flag: '🇩🇪' },
+  { id: 'it', code: 'it', name: 'Italian', nativeText: 'Italiano', nativeName: 'Italiano', flag: '🇮🇹' },
+  { id: 'pt', code: 'pt', name: 'Portuguese', nativeText: 'Português', nativeName: 'Português', flag: '🇵🇹' },
+  // Add more languages as needed
+];
+
+// Available voices with properly typed gender
+const VOICES: Record<string, VoiceOption[]> = {
+  all: [
+    // OpenAI voices
+    { id: 'alloy', name: 'Alloy', gender: 'neutral' },
+    { id: 'echo', name: 'Echo', gender: 'male' },
+    { id: 'fable', name: 'Fable', gender: 'female' },
+    { id: 'onyx', name: 'Onyx', gender: 'male' },
+    { id: 'nova', name: 'Nova', gender: 'female' },
+    { id: 'shimmer', name: 'Shimmer', gender: 'female', premium: true },
+    // Add more voices as needed
+  ]
+};
+
+/**
+ * Get available languages
+ */
+export const getAvailableLanguages = (): LanguageOption[] => {
+  return LANGUAGES;
+};
+
+/**
+ * Get available voices for a specific language
+ */
+export const getAvailableVoices = (languageCode: string): VoiceOption[] => {
+  // For now, return all voices for any language as modern TTS can handle multiple languages
+  return VOICES.all;
+};
 
 /**
  * Generate an audio description for a product

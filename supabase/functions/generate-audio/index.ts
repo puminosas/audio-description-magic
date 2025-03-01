@@ -29,7 +29,7 @@ serve(async (req) => {
 
     // Step 1: Generate product description
     const aiResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o-mini', // Using gpt-4o-mini as it's more widely available
       messages: [
         {
           role: 'system',
