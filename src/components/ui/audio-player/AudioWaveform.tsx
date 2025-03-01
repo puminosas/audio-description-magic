@@ -1,13 +1,15 @@
 
 import React from 'react';
+import { useAudioPlayer } from './AudioPlayerContext';
 
 interface AudioWaveformProps {
   isGenerating: boolean;
   audioUrl?: string;
-  isPlaying: boolean;
 }
 
-const AudioWaveform = ({ isGenerating, audioUrl, isPlaying }: AudioWaveformProps) => {
+const AudioWaveform = ({ isGenerating, audioUrl }: AudioWaveformProps) => {
+  const { isPlaying } = useAudioPlayer();
+  
   return (
     <div className="h-20 w-full bg-secondary/50 rounded-lg flex items-center justify-center">
       {isGenerating ? (
