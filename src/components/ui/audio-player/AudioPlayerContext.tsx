@@ -14,6 +14,8 @@ export const AudioPlayerContext = createContext<AudioPlayerState>({
   currentTime: 0,
   isSeeking: false,
   error: null,
+  isLoading: false,
+  isLooping: false,
   
   togglePlay: () => {},
   handlePlay: () => {},
@@ -26,6 +28,9 @@ export const AudioPlayerContext = createContext<AudioPlayerState>({
   endSeeking: () => {},
   handleDownload: () => {},
   setError: () => {},
+  handlePlayPause: () => {},
+  toggleLoop: () => {},
+  changePlaybackSpeed: () => {},
 });
 
 export default AudioPlayerContext;

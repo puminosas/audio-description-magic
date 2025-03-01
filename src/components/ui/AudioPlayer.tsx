@@ -36,8 +36,8 @@ const AudioPlayer = ({
           
           <PlayerControls 
             isGenerating={isGenerating}
-            audioUrl={audioUrl}
             fileName={fileName}
+            audioUrl={audioUrl}
           />
         </div>
       </AudioPlayerProvider>

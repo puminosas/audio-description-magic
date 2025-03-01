@@ -11,9 +11,10 @@ import ActionButtons from './ActionButtons';
 interface PlayerControlsProps {
   isGenerating?: boolean;
   fileName?: string;
+  audioUrl?: string;
 }
 
-const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3' }: PlayerControlsProps) => {
+const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3', audioUrl }: PlayerControlsProps) => {
   const { 
     isPlaying, 
     togglePlay, 
@@ -21,13 +22,47 @@ const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3' }: Player
     currentTime,
     audioRef,
     isLoading,
-    handlePlayPause
+    handlePlayPause,
+    volume,
+    seek,
+    setVolume
   } = useAudioPlayer();
+
+  // For volume control
+  const [isMuted, setIsMuted] = React.useState(false);
+  const prevVolume = React.useRef(volume);
+
+  const toggleMute = () => {
+    if (isMuted) {
+      setVolume(prevVolume.current);
+      setIsMuted(false);
+    } else {
+      prevVolume.current = volume;
+      setVolume(0);
+      setIsMuted(true);
+    }
+  };
+
+  const handleVolumeChange = (values: number[]) => {
+    const newVolume = values[0];
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
+  };
+
+  const handleTimeChange = (values: number[]) => {
+    seek(values[0]);
+  };
 
   return (
     <div className="w-full space-y-3 bg-background p-3 rounded-md shadow-sm border">
       <div className="flex flex-col">
-        <AudioSeekBar />
+        <AudioSeekBar 
+          currentTime={currentTime}
+          duration={duration}
+          isGenerating={isGenerating || false}
+          audioUrl={audioRef.current?.src}
+          handleTimeChange={handleTimeChange}
+        />
         
         <div className="flex items-center justify-between mt-2">
           <AudioControls 
@@ -41,7 +76,14 @@ const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3' }: Player
           <div className="flex items-center space-x-2">
             <LoopButton />
             <PlaybackSpeedButton />
-            <VolumeControl />
+            <VolumeControl 
+              volume={volume}
+              isMuted={isMuted}
+              isGenerating={isGenerating || false}
+              audioUrl={audioRef.current?.src}
+              toggleMute={toggleMute}
+              handleVolumeChange={handleVolumeChange}
+            />
           </div>
         </div>
       </div>
