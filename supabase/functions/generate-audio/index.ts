@@ -27,60 +27,103 @@ serve(async (req) => {
       apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
 
-    // Step 1: Generate product description
-    const aiResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Using gpt-4o-mini as it's more widely available
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert at generating engaging product descriptions for e-commerce. Provide a concise yet informative description based on the product name.'
-        },
-        {
-          role: 'user',
-          content: `Generate a product description for: ${productName}`
-        }
-      ]
-    });
+    console.log(`Starting generation for: ${productName} (Language: ${language?.name || 'English'}, Voice: ${voice?.name || 'Alloy'})`);
 
-    const description = aiResponse.choices[0].message.content.trim();
+    // Step 1: Generate product description
+    let description;
+    try {
+      const aiResponse = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at generating engaging product descriptions for e-commerce. Provide a concise yet informative description based on the product name.'
+          },
+          {
+            role: 'user',
+            content: `Generate a product description for: ${productName}`
+          }
+        ]
+      });
+
+      description = aiResponse.choices[0].message.content.trim();
+      console.log(`Generated description: ${description.substring(0, 100)}...`);
+    } catch (error) {
+      console.error('Error generating description:', error);
+      throw new Error(`Failed to generate description: ${error.message}`);
+    }
 
     // Step 2: Generate audio from description
-    const audioResponse = await openai.audio.speech.create({
-      model: "tts-1",
-      voice: voice || "alloy",
-      input: description,
-    });
+    let audioBuffer;
+    try {
+      const audioResponse = await openai.audio.speech.create({
+        model: "tts-1",
+        voice: voice?.id || "alloy",
+        input: description,
+      });
 
-    // Convert to base64 for response
-    const audioBuffer = await audioResponse.arrayBuffer();
-    const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+      audioBuffer = await audioResponse.arrayBuffer();
+      console.log(`Generated audio of size: ${audioBuffer.byteLength} bytes`);
+    } catch (error) {
+      console.error('Error generating audio:', error);
+      throw new Error(`Failed to generate audio: ${error.message}`);
+    }
 
     // Generate a unique filename
-    const fileName = `${Date.now()}_product_description.mp3`;
+    const timestamp = Date.now();
+    const fileName = `${timestamp}_product_description.mp3`;
 
     // Create a Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Save the audio file to Supabase Storage
-    const { data: storageData, error: storageError } = await supabase.storage
-      .from('audio_files')
-      .upload(fileName, audioBuffer, {
-        contentType: 'audio/mpeg',
-        upsert: false
-      });
-
-    if (storageError) {
-      throw new Error(`Error uploading audio file: ${storageError.message}`);
+    // Ensure the audio_files bucket exists
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets.some(bucket => bucket.name === 'audio_files');
+      
+      if (!bucketExists) {
+        console.log('Creating audio_files bucket...');
+        const { error } = await supabase.storage.createBucket('audio_files', {
+          public: true,
+        });
+        
+        if (error) {
+          console.error('Error creating bucket:', error);
+        } else {
+          console.log('Bucket created successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking/creating bucket:', error);
     }
 
-    // Get the public URL for the file
-    const { data: publicUrlData } = supabase.storage
-      .from('audio_files')
-      .getPublicUrl(fileName);
+    // Save the audio file to Supabase Storage
+    let audioUrl;
+    try {
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('audio_files')
+        .upload(fileName, audioBuffer, {
+          contentType: 'audio/mpeg',
+          upsert: false
+        });
 
-    const audioUrl = publicUrlData.publicUrl;
+      if (storageError) {
+        throw new Error(`Error uploading audio file: ${storageError.message}`);
+      }
+
+      // Get the public URL for the file
+      const { data: publicUrlData } = supabase.storage
+        .from('audio_files')
+        .getPublicUrl(fileName);
+
+      audioUrl = publicUrlData.publicUrl;
+      console.log(`File uploaded and available at: ${audioUrl}`);
+    } catch (error) {
+      console.error('Error saving audio file:', error);
+      throw new Error(`Failed to save audio file: ${error.message}`);
+    }
 
     return new Response(
       JSON.stringify({

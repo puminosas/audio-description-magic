@@ -16,6 +16,8 @@ import {
   VoiceOption
 } from '@/utils/audioGenerationService';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Crown } from 'lucide-react';
 
 const Generator = () => {
   const { user, profile } = useAuth();
@@ -78,6 +80,12 @@ const Generator = () => {
     }
   };
 
+  const handleUpgradeToPro = () => {
+    // Replace with your actual Paddle checkout URL or integration
+    const paddleCheckoutUrl = "https://checkout.paddle.com/checkout/YOUR_PADDLE_VENDOR_ID";
+    window.open(paddleCheckoutUrl, "_blank");
+  };
+
   return (
     <div className="container max-w-6xl mx-auto px-4 py-8 md:py-12">
       <div className="mb-6">
@@ -126,6 +134,24 @@ const Generator = () => {
             profile={profile}
             remainingGenerations={profile?.remaining_generations || 10} 
           />
+          
+          {!profile?.plan || profile.plan === 'free' ? (
+            <Card className="p-4 border border-primary/20 bg-primary/5">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Crown className="h-5 w-5 text-yellow-500" /> Upgrade to Pro
+              </h3>
+              <p className="text-sm mt-2 mb-4">
+                Get unlimited audio descriptions, premium voices, and priority support.
+              </p>
+              <Button 
+                onClick={handleUpgradeToPro} 
+                className="w-full bg-gradient-to-r from-primary to-indigo-600"
+              >
+                <Crown className="mr-2 h-4 w-4" /> Upgrade Now
+              </Button>
+            </Card>
+          ) : null}
+          
           <TipsCard />
         </div>
       </div>

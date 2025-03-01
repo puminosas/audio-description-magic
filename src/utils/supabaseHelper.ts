@@ -19,12 +19,16 @@ export const supabaseTyped = {
     update: (data: any) => castTable('profiles').update(data),
     insert: (data: any) => castTable('profiles').insert(data),
     delete: () => castTable('profiles').delete(),
+    eq: (column: string, value: any) => castTable('profiles').select().eq(column, value),
+    single: () => castTable('profiles').select().single(),
   },
   // User roles table operations
   user_roles: {
     select: () => castTable('user_roles'),
     insert: (data: any) => castTable('user_roles').insert(data),
     delete: () => castTable('user_roles').delete(),
+    eq: (column: string, value: any) => castTable('user_roles').select().eq(column, value),
+    single: () => castTable('user_roles').select().single(),
   },
   // Audio files table operations
   audio_files: {
@@ -32,6 +36,8 @@ export const supabaseTyped = {
     insert: (data: any) => castTable('audio_files').insert(data),
     update: (data: any) => castTable('audio_files').update(data),
     delete: () => castTable('audio_files').delete(),
+    eq: (column: string, value: any) => castTable('audio_files').select().eq(column, value),
+    single: () => castTable('audio_files').select().single(),
   },
   // User files table operations
   user_files: {
@@ -39,17 +45,23 @@ export const supabaseTyped = {
     insert: (data: any) => castTable('user_files').insert(data),
     update: (data: any) => castTable('user_files').update(data),
     delete: () => castTable('user_files').delete(),
+    eq: (column: string, value: any) => castTable('user_files').select().eq(column, value),
+    single: () => castTable('user_files').select().single(),
   },
   // Generation counts table operations
   generation_counts: {
     select: () => castTable('generation_counts'),
     insert: (data: any) => castTable('generation_counts').insert(data),
     update: (data: any) => castTable('generation_counts').update(data),
+    eq: (column: string, value: any) => castTable('generation_counts').select().eq(column, value),
+    single: () => castTable('generation_counts').select().single(),
   },
   // Audit logs table operations
   audit_logs: {
     select: () => castTable('audit_logs'),
     insert: (data: any) => castTable('audit_logs').insert(data),
+    eq: (column: string, value: any) => castTable('audit_logs').select().eq(column, value),
+    single: () => castTable('audit_logs').select().single(),
   },
   // API keys table operations
   api_keys: {
@@ -57,6 +69,8 @@ export const supabaseTyped = {
     insert: (data: any) => castTable('api_keys').insert(data),
     update: (data: any) => castTable('api_keys').update(data),
     delete: () => castTable('api_keys').delete(),
+    eq: (column: string, value: any) => castTable('api_keys').select().eq(column, value),
+    single: () => castTable('api_keys').select().single(),
   },
   // Feedback table operations
   feedback: {
@@ -64,5 +78,7 @@ export const supabaseTyped = {
     insert: (data: any) => castTable('feedback').insert(data),
     update: (data: any) => castTable('feedback').update(data),
     delete: () => castTable('feedback').delete(),
+    eq: (column: string, value: any) => castTable('feedback').select().eq(column, value),
+    single: () => castTable('feedback').select().single(),
   },
 };
