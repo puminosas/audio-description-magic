@@ -10,6 +10,13 @@ import { Loader2, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseTyped } from '@/utils/supabase/typedClient';
 
+// Define the auth user type to address TypeScript errors
+interface AuthUser {
+  id: string;
+  email?: string;
+  // Add other properties as needed
+}
+
 const AdminUserUpdate = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState('a.mackeliunas@gmail.com');
@@ -45,8 +52,10 @@ const AdminUserUpdate = () => {
           throw new Error(`Error fetching users: ${authError.message}`);
         }
         
-        // Find the user with the given email
-        const user = authData?.users?.find(u => u.email === email);
+        // Find the user with the given email - properly type the users array
+        const user = authData?.users?.find(
+          (u: AuthUser) => u.email === email
+        ) as AuthUser | undefined;
         
         if (!user) {
           throw new Error(`User with email ${email} not found`);
