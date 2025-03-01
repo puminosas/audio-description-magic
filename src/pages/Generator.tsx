@@ -130,7 +130,9 @@ const Generator = () => {
             handleGenerate={handleGenerate}
             loading={loading}
             user={user}
-            onRefreshStats={fetchGenerationStats}
+            onRefreshStats={async () => {
+              await fetchGenerationStats();
+            }}
           />
           
           {generatedAudio && (

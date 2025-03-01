@@ -16,7 +16,7 @@ interface GeneratorTabsProps {
   }) => Promise<void>;
   loading: boolean;
   user: any;
-  onRefreshStats: () => void;
+  onRefreshStats: () => Promise<void>;
 }
 
 const GeneratorTabs = ({ 
