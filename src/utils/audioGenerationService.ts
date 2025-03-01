@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { supabaseTyped } from './supabaseHelper';
@@ -88,7 +87,7 @@ export const generateAudioDescription = async (
 
     // We'll use Supabase Edge Function for this since it has access to OPENAI_API_KEY
     // and we don't want to expose the key in the client-side code
-    const { data, error, status } = await supabase.functions.invoke('generate-audio', {
+    const { data, error } = await supabase.functions.invoke('generate-audio', {
       body: {
         text: productText,
         language: languageId,
@@ -99,8 +98,7 @@ export const generateAudioDescription = async (
     // Log detailed error information
     if (error) {
       console.error('Error invoking generate-audio function:', error);
-      console.error('Status code:', status);
-      return { error: `Error (${status}): ${error.message}` };
+      return { error: `Edge Function Error: ${error.message}` };
     }
 
     // Check response format
