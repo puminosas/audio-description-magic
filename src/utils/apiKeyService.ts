@@ -1,0 +1,34 @@
+
+import { supabase } from '@/integrations/supabase/client';
+
+export const fetchUserApiKeys = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, name, created_at, last_used_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  
+  return { data, error };
+};
+
+export const createApiKey = async (userId: string, name: string) => {
+  const { data, error } = await supabase
+    .from('api_keys')
+    .insert({
+      user_id: userId,
+      name: name || 'API Key'
+    })
+    .select('id, api_key, name, created_at')
+    .single();
+  
+  return { data, error };
+};
+
+export const deleteApiKey = async (keyId: string) => {
+  const { error } = await supabase
+    .from('api_keys')
+    .delete()
+    .eq('id', keyId);
+  
+  return { error };
+};
