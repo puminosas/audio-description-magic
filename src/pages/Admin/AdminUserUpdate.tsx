@@ -26,39 +26,73 @@ const AdminUserUpdate = () => {
       setSuccess(false);
       
       // Get the user from Supabase
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
-        perPage: 1000
-      });
+      const { data: users, error: userError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
       
       if (userError) {
-        throw new Error(`Error fetching users: ${userError.message}`);
+        throw new Error(`Error fetching user: ${userError.message}`);
       }
       
-      // Find the user with the given email
-      const user = userData?.users?.find(u => u.email === email);
-      
-      if (!user) {
-        throw new Error(`User with email ${email} not found`);
-      }
-      
-      console.log('Found user:', user);
-      
-      // 1. Assign admin role
-      const adminRoleAssigned = await assignAdminRole(user.id);
-      if (!adminRoleAssigned) {
-        throw new Error('Failed to assign admin role');
-      }
-      
-      // 2. Update plan to premium unlimited
-      const planUpdated = await updateUserPlan(user.id, 'premium');
-      if (!planUpdated) {
-        throw new Error('Failed to update user plan');
-      }
-      
-      // 3. Set unlimited remaining generations
-      const generationsUpdated = await updateUserRemainingGenerations(user.id, 9999);
-      if (!generationsUpdated) {
-        throw new Error('Failed to update remaining generations');
+      if (!users) {
+        // If not found in profiles, try to find the user in auth.users
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
+          perPage: 1000
+        });
+        
+        if (authError) {
+          throw new Error(`Error fetching users: ${authError.message}`);
+        }
+        
+        // Find the user with the given email
+        const user = authData?.users?.find(u => u.email === email);
+        
+        if (!user) {
+          throw new Error(`User with email ${email} not found`);
+        }
+        
+        console.log('Found user:', user);
+        
+        // 1. Assign admin role
+        const adminRoleAssigned = await assignAdminRole(user.id);
+        if (!adminRoleAssigned) {
+          throw new Error('Failed to assign admin role');
+        }
+        
+        // 2. Update plan to premium unlimited
+        const planUpdated = await updateUserPlan(user.id, 'premium');
+        if (!planUpdated) {
+          throw new Error('Failed to update user plan');
+        }
+        
+        // 3. Set unlimited remaining generations
+        const generationsUpdated = await updateUserRemainingGenerations(user.id, 9999);
+        if (!generationsUpdated) {
+          throw new Error('Failed to update remaining generations');
+        }
+      } else {
+        // User found in profiles, use the id
+        const userId = users.id;
+        
+        // 1. Assign admin role
+        const adminRoleAssigned = await assignAdminRole(userId);
+        if (!adminRoleAssigned) {
+          throw new Error('Failed to assign admin role');
+        }
+        
+        // 2. Update plan to premium unlimited
+        const planUpdated = await updateUserPlan(userId, 'premium');
+        if (!planUpdated) {
+          throw new Error('Failed to update user plan');
+        }
+        
+        // 3. Set unlimited remaining generations
+        const generationsUpdated = await updateUserRemainingGenerations(userId, 9999);
+        if (!generationsUpdated) {
+          throw new Error('Failed to update remaining generations');
+        }
       }
       
       // Success
