@@ -31,6 +31,11 @@ export const AudioPlayerContext = createContext<AudioPlayerState>({
   handlePlayPause: () => {},
   toggleLoop: () => {},
   changePlaybackSpeed: () => {},
+  
+  // Add the missing properties
+  setDuration: () => {},
+  setCurrentTime: () => {},
+  setIsLoading: () => {},
 });
 
 export default AudioPlayerContext;

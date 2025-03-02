@@ -2,15 +2,17 @@
 import React from 'react';
 import { AudioDownloadState } from '../types';
 
+interface AudioDownloadProviderProps {
+  children: (state: AudioDownloadState) => React.ReactElement;
+  audioUrl?: string;
+  fileName?: string;
+}
+
 export const AudioDownloadProvider = ({ 
   children,
   audioUrl,
   fileName = 'audio.mp3'
-}: { 
-  children: React.ReactNode;
-  audioUrl?: string;
-  fileName?: string;
-}) => {
+}: AudioDownloadProviderProps) => {
   const handleDownload = () => {
     if (!audioUrl) return;
     
@@ -26,11 +28,7 @@ export const AudioDownloadProvider = ({
     handleDownload,
   };
   
-  return (
-    <>
-      {children(downloadState)}
-    </>
-  );
+  return children(downloadState);
 };
 
 export default AudioDownloadProvider;

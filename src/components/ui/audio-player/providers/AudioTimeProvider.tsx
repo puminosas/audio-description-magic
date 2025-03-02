@@ -2,13 +2,15 @@
 import React, { useState } from 'react';
 import { AudioTimeState } from '../types';
 
+interface AudioTimeProviderProps {
+  children: (state: AudioTimeState) => React.ReactElement;
+  audioRef: React.RefObject<HTMLAudioElement>;
+}
+
 export const AudioTimeProvider = ({ 
   children,
   audioRef
-}: { 
-  children: React.ReactNode;
-  audioRef: React.RefObject<HTMLAudioElement>;
-}) => {
+}: AudioTimeProviderProps) => {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
@@ -36,11 +38,7 @@ export const AudioTimeProvider = ({
     setCurrentTime,
   };
   
-  return (
-    <>
-      {children(timeState)}
-    </>
-  );
+  return children(timeState);
 };
 
 export default AudioTimeProvider;

@@ -1,16 +1,18 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { AudioPlaybackState } from '../types';
+
+interface AudioPlaybackProviderProps {
+  children: (state: AudioPlaybackState) => React.ReactElement;
+  audioRef: React.RefObject<HTMLAudioElement>;
+  audioUrl?: string;
+}
 
 export const AudioPlaybackProvider = ({ 
   children, 
   audioRef,
   audioUrl
-}: { 
-  children: React.ReactNode;
-  audioRef: React.RefObject<HTMLAudioElement>;
-  audioUrl?: string;
-}) => {
+}: AudioPlaybackProviderProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [volume, setVolume] = useState(75);
@@ -80,11 +82,7 @@ export const AudioPlaybackProvider = ({
     changePlaybackSpeed,
   };
   
-  return (
-    <>
-      {children(playbackState)}
-    </>
-  );
+  return children(playbackState);
 };
 
 export default AudioPlaybackProvider;

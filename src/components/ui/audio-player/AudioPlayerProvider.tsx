@@ -45,13 +45,13 @@ export const AudioPlayerProvider = ({
                       };
                       
                       const handleEnded = () => {
-                        playbackState.setIsPlaying(false);
+                        playbackState.handlePause();
                       };
                       
                       const handleError = (e: Event) => {
                         console.error('Audio playback error:', e);
                         errorState.setError('Failed to play audio file. Please try again.');
-                        playbackState.setIsPlaying(false);
+                        playbackState.handlePause();
                         errorState.setIsLoading(false);
                       };
                       
@@ -97,7 +97,10 @@ export const AudioPlayerProvider = ({
                       ...downloadState,
                       audioRef,
                       waveformRef,
-                      isLooping: playbackState.loop
+                      isLooping: playbackState.loop,
+                      setIsLoading: errorState.setIsLoading,
+                      setDuration: timeState.setDuration,
+                      setCurrentTime: timeState.setCurrentTime
                     };
                     
                     return (
