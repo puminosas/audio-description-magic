@@ -23,23 +23,21 @@ export const fetchUsers = async (page: number, itemsPerPage: number) => {
     
     if (profilesError) throw profilesError;
     
-    // Get user roles
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('*');
+    // Get user roles - use the actual RPC function instead of direct table access
+    const { data: adminUsers, error: adminError } = await supabase
+      .rpc('get_admin_users');
+    
+    if (adminError) {
+      console.error('Error fetching admin users:', adminError);
+      // Continue without admin data if there's an error
+    }
     
     // Create a map of user_id to role
     const roleMap = {};
-    userRoles?.forEach(role => {
-      if (role.role === 'admin') {
-        roleMap[role.user_id] = 'admin';
-      }
-    });
-    
-    // Check if current user is admin
-    const { data: hasAdminRole } = await supabase.rpc('has_role', { role: 'admin' });
-    if (!hasAdminRole) {
-      throw new Error('You do not have admin permissions');
+    if (adminUsers && Array.isArray(adminUsers)) {
+      adminUsers.forEach(user => {
+        roleMap[user.user_id] = 'admin';
+      });
     }
     
     // Map profiles to UserData format
