@@ -22,25 +22,30 @@ export const generateAudioDescription = async (
     const { data: { session } } = await supabase.auth.getSession();
     
     // We'll use Supabase Edge Function for this since it has access to OPENAI_API_KEY
-    // and we don't want to expose the key in the client-side code
-    const { data, error } = await supabase.functions.invoke('generate-audio', {
+    const response = await supabase.functions.invoke('generate-audio', {
       body: {
         text: productText,
         language: languageId,
         voice: voiceId
       },
       // Using public invocation for better accessibility for guest users
-      // If authentication is strictly required, the Edge Function will handle it
       headers: session ? {
         Authorization: `Bearer ${session.access_token}`
       } : undefined
     });
 
-    // Log detailed error information
-    if (error) {
-      console.error('Error invoking generate-audio function:', error);
-      return { error: `Edge Function Error: ${error.message}` };
+    console.log("Edge function response:", response);
+
+    // Check for Edge Function errors
+    if (response.error) {
+      console.error('Error invoking generate-audio function:', response.error);
+      return { 
+        error: `Edge Function Error: ${response.error.message || 'Unknown Edge Function error'}`
+      };
     }
+
+    // Get the data from the response
+    const data = response.data;
 
     // Check response format
     if (!data) {
@@ -69,6 +74,19 @@ export const generateAudioDescription = async (
     };
   } catch (error) {
     console.error('Error in generateAudioDescription:', error);
-    return { error: error instanceof Error ? error.message : 'Unknown error generating audio' };
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Unknown error generating audio';
+      
+    // Provide more detailed error message based on common issues
+    if (errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')) {
+      return { error: 'Network error when connecting to the audio generation service. Please try again later.' };
+    }
+    
+    if (errorMessage.includes('timeout')) {
+      return { error: 'The audio generation service timed out. Please try with shorter text or try again later.' };
+    }
+    
+    return { error: errorMessage };
   }
 };

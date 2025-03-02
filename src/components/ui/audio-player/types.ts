@@ -1,19 +1,11 @@
 
 import { RefObject } from 'react';
 
-export interface AudioPlayerState {
-  audioRef: RefObject<HTMLAudioElement>;
-  waveformRef: RefObject<HTMLCanvasElement>;
+export interface AudioPlaybackState {
   isPlaying: boolean;
   playbackSpeed: number;
   volume: number;
   loop: boolean;
-  duration: number;
-  currentTime: number;
-  isSeeking: boolean;
-  error: string | null;
-  isLoading: boolean;
-  isLooping: boolean;
   
   togglePlay: () => void;
   handlePlay: () => void;
@@ -21,14 +13,43 @@ export interface AudioPlayerState {
   setPlaybackSpeed: (speed: number) => void;
   setVolume: (volume: number) => void;
   setLoop: (loop: boolean) => void;
-  seek: (time: number) => void;
-  startSeeking: () => void;
-  endSeeking: () => void;
-  handleDownload: () => void;
-  setError: (error: string | null) => void;
   handlePlayPause: () => void;
   toggleLoop: () => void;
   changePlaybackSpeed: () => void;
+}
+
+export interface AudioTimeState {
+  duration: number;
+  currentTime: number;
+  isSeeking: boolean;
+  
+  seek: (time: number) => void;
+  startSeeking: () => void;
+  endSeeking: () => void;
+  setDuration: (duration: number) => void;
+  setCurrentTime: (time: number) => void;
+}
+
+export interface AudioErrorState {
+  error: string | null;
+  isLoading: boolean;
+  
+  setError: (error: string | null) => void;
+  setIsLoading: (isLoading: boolean) => void;
+}
+
+export interface AudioDownloadState {
+  handleDownload: () => void;
+}
+
+export interface AudioPlayerState extends 
+  AudioPlaybackState,
+  AudioTimeState,
+  AudioErrorState,
+  AudioDownloadState {
+  audioRef: RefObject<HTMLAudioElement>;
+  waveformRef: RefObject<HTMLCanvasElement>;
+  isLooping: boolean;
 }
 
 export interface AudioPlayerProviderProps {
