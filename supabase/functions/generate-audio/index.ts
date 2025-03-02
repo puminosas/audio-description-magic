@@ -53,12 +53,20 @@ serve(async (req) => {
     });
 
     if (!descriptionResponse.ok) {
-      const errorData = await descriptionResponse.json();
+      const errorData = await descriptionResponse.text();
       console.error("OpenAI API error:", errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || JSON.stringify(errorData)}`);
+      throw new Error(`OpenAI API error: ${errorData}`);
     }
 
-    const descriptionData = await descriptionResponse.json();
+    // Safely parse the JSON response
+    let descriptionData;
+    try {
+      descriptionData = await descriptionResponse.json();
+    } catch (error) {
+      console.error("Error parsing description response:", error);
+      throw new Error("Failed to parse description response");
+    }
+
     const generatedDescription = descriptionData.choices[0]?.message?.content?.trim();
 
     if (!generatedDescription) {
@@ -89,24 +97,29 @@ serve(async (req) => {
       throw new Error(`TTS API error: ${errorText}`);
     }
 
-    // Handle binary audio data correctly
-    const audioBuffer = await ttsResponse.arrayBuffer();
-    const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-    
-    // Create a data URL for the audio file
-    const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
+    // Handle binary audio data correctly - OpenAI returns binary data directly, not JSON
+    try {
+      const audioBuffer = await ttsResponse.arrayBuffer();
+      const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+      
+      // Create a data URL for the audio file
+      const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
 
-    console.log("Generated Audio successfully");
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        audioUrl: audioUrl, 
-        text: generatedDescription,
-        id: crypto.randomUUID()
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      console.log("Generated Audio successfully, returning data URL");
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          audioUrl: audioUrl, 
+          text: generatedDescription,
+          id: crypto.randomUUID()
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error("Error processing audio data:", error);
+      throw new Error("Failed to process audio data");
+    }
 
   } catch (error) {
     console.error("Error in generate-audio function:", error);
