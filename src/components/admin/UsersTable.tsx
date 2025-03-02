@@ -101,7 +101,7 @@ const UsersTable = ({
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => onToggleAdmin(user.id, false)}
+                          onClick={() => onToggleAdmin(user.id, true)}
                         >
                           <ShieldX className="h-4 w-4 text-destructive" />
                         </Button>
@@ -109,7 +109,7 @@ const UsersTable = ({
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => onToggleAdmin(user.id, true)}
+                          onClick={() => onToggleAdmin(user.id, false)}
                         >
                           <ShieldCheck className="h-4 w-4 text-green-500" />
                         </Button>
