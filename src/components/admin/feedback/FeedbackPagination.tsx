@@ -25,7 +25,7 @@ const FeedbackPagination = ({
           variant="outline" 
           size="sm"
           disabled={page === 1}
-          onClick={() => setPage(page => Math.max(1, page - 1))}
+          onClick={() => setPage(Math.max(1, page - 1))}
         >
           Previous
         </Button>
@@ -33,7 +33,7 @@ const FeedbackPagination = ({
           variant="outline" 
           size="sm"
           disabled={page * itemsPerPage >= totalCount}
-          onClick={() => setPage(page => page + 1)}
+          onClick={() => setPage(page + 1)}
         >
           Next
         </Button>

@@ -20,7 +20,7 @@ interface FeedbackItem {
   id: string;
   type: string;
   message: string;
-  email: string;
+  email?: string;
   created_at: string;
   status: string;
   admin_notes?: string;
@@ -30,7 +30,7 @@ interface FeedbackTableProps {
   feedback: FeedbackItem[];
   onOpenDetails: (item: FeedbackItem) => void;
   onStatusChange: (id: string, status: string) => Promise<void>;
-  getStatusBadgeVariant: (status: string) => string;
+  getStatusBadgeVariant: (status: string) => "default" | "secondary" | "destructive" | "outline";
 }
 
 const FeedbackTable = ({

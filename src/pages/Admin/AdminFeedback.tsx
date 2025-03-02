@@ -8,6 +8,7 @@ import FeedbackPagination from '@/components/admin/feedback/FeedbackPagination';
 import FeedbackDetailsDialog from '@/components/admin/feedback/FeedbackDetailsDialog';
 import FeedbackLoading from '@/components/admin/feedback/FeedbackLoading';
 
+// Define the FeedbackItem interface once to avoid type conflicts
 interface FeedbackItem {
   id: string;
   type: string;
@@ -52,7 +53,7 @@ const AdminFeedback = () => {
         ) : [];
       const paginatedData = sortedData.slice(start, end);
       
-      setFeedback(paginatedData);
+      setFeedback(paginatedData as FeedbackItem[]);
     } catch (error) {
       console.error('Error loading feedback:', error);
       toast({
@@ -150,7 +151,7 @@ const AdminFeedback = () => {
   const statuses = [...new Set(feedback.map(item => item.status).filter(Boolean))];
   
   // Get status badge variant - fixed to use only allowed variants
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'new':
         return 'outline';
