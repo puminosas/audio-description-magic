@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabase/userRoles';
+import { assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabaseHelper';
 
 export interface UserData {
   id: string;
@@ -12,57 +12,48 @@ export interface UserData {
 
 export const fetchUsers = async (page: number, itemsPerPage: number) => {
   try {
-    // Get users from auth
-    const { data: authResponse, error: authError } = await supabase.auth.admin.listUsers({
-      page: page,
-      perPage: itemsPerPage
-    });
+    // Get user profiles instead of using admin API
+    const startIndex = (page - 1) * itemsPerPage;
     
-    if (authError) throw authError;
-    
-    const authUsers = authResponse?.users || [];
-    
-    // Get total count
-    const { data: allUsers, error: allUsersError } = await supabase.auth.admin.listUsers();
-    if (allUsersError) throw allUsersError;
-    
-    const totalCount = allUsers?.users?.length || 0;
-    
-    // Get user roles using the correct approach to avoid recursion
-    // We'll check each user individually using our RPC function
-    const roleMap = {};
-    for (const user of authUsers) {
-      // Using a more direct approach to avoid RLS issues
-      const { data: hasAdminRole } = await supabase.rpc('has_role', { role: 'admin' });
-      if (hasAdminRole) {
-        roleMap[user.id] = 'admin';
-      }
-    }
-    
-    // Get user profiles
-    const { data: profiles, error: profilesError } = await supabase
+    // Get user profiles with pagination
+    const { data: profiles, error: profilesError, count: totalCount } = await supabase
       .from('profiles')
-      .select('*');
+      .select('*', { count: 'exact' })
+      .range(startIndex, startIndex + itemsPerPage - 1);
     
     if (profilesError) throw profilesError;
     
-    // Create a map of user_id to profile
-    const profileMap = {};
-    profiles?.forEach(profile => {
-      profileMap[profile.id] = profile;
+    // Get user roles
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('*');
+    
+    // Create a map of user_id to role
+    const roleMap = {};
+    userRoles?.forEach(role => {
+      if (role.role === 'admin') {
+        roleMap[role.user_id] = 'admin';
+      }
     });
     
-    // Combine user data with roles and profiles
-    const enrichedUsers = authUsers.map(user => ({
-      ...user,
-      role: roleMap[user.id] || null,
-      plan: profileMap[user.id]?.plan || 'free',
-      email: user.email || ''
-    }));
+    // Check if current user is admin
+    const { data: hasAdminRole } = await supabase.rpc('has_role', { role: 'admin' });
+    if (!hasAdminRole) {
+      throw new Error('You do not have admin permissions');
+    }
+    
+    // Map profiles to UserData format
+    const users = profiles?.map(profile => ({
+      id: profile.id,
+      email: profile.email || '',
+      role: roleMap[profile.id] || null,
+      plan: profile.plan || 'free',
+      created_at: profile.created_at
+    })) || [];
 
     return {
-      users: enrichedUsers as UserData[],
-      totalCount
+      users: users as UserData[],
+      totalCount: totalCount || 0
     };
   } catch (error) {
     console.error('Error loading users:', error);

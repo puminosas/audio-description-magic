@@ -11,7 +11,7 @@ const AdminUserManagement = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterPlan, setFilterPlan] = useState('');
+  const [filterPlan, setFilterPlan] = useState('all');
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 10;
@@ -27,7 +27,7 @@ const AdminUserManagement = () => {
       console.error('Error loading users:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load users.',
+        description: 'Failed to load users. You may not have admin permissions.',
         variant: 'destructive',
       });
     } finally {
@@ -95,7 +95,7 @@ const AdminUserManagement = () => {
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.id?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesPlan = !filterPlan || user.plan === filterPlan;
+    const matchesPlan = filterPlan === 'all' || user.plan === filterPlan;
     
     return matchesSearch && matchesPlan;
   });

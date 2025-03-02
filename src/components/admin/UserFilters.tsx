@@ -44,7 +44,7 @@ const UserFilters = ({
             <SelectValue placeholder="Filter by plan" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Plans</SelectItem>
+            <SelectItem value="all">All Plans</SelectItem>
             <SelectItem value="free">Free</SelectItem>
             <SelectItem value="basic">Basic</SelectItem>
             <SelectItem value="premium">Premium</SelectItem>
