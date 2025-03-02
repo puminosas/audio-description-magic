@@ -9,6 +9,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Process base64 in chunks to prevent memory issues (stack overflow)
+function binaryToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let base64 = '';
+  const chunkSize = 1024; // Process in smaller chunks
+  
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
+    base64 += btoa(String.fromCharCode.apply(null, [...chunk]));
+  }
+  
+  return base64;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -53,12 +67,12 @@ serve(async (req) => {
     });
 
     if (!descriptionResponse.ok) {
-      const errorData = await descriptionResponse.text();
-      console.error("OpenAI API error:", errorData);
-      throw new Error(`OpenAI API error: ${errorData}`);
+      const errorText = await descriptionResponse.text();
+      console.error("OpenAI API error:", errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
     }
 
-    // Safely parse the JSON response
+    // Parse the JSON response
     let descriptionData;
     try {
       descriptionData = await descriptionResponse.json();
@@ -70,6 +84,7 @@ serve(async (req) => {
     const generatedDescription = descriptionData.choices[0]?.message?.content?.trim();
 
     if (!generatedDescription) {
+      console.error("No description generated", descriptionData);
       throw new Error("Failed to generate a description");
     }
 
@@ -97,15 +112,18 @@ serve(async (req) => {
       throw new Error(`TTS API error: ${errorText}`);
     }
 
-    // Handle binary audio data correctly - OpenAI returns binary data directly, not JSON
+    // Process the audio data with our chunked approach
     try {
       const audioBuffer = await ttsResponse.arrayBuffer();
-      const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+      console.log(`Received audio buffer of size: ${audioBuffer.byteLength} bytes`);
+      
+      // Process binary data in chunks to avoid stack overflow
+      const audioBase64 = binaryToBase64(audioBuffer);
       
       // Create a data URL for the audio file
       const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
 
-      console.log("Generated Audio successfully, returning data URL");
+      console.log("Successfully generated audio and converted to data URL");
       
       return new Response(
         JSON.stringify({ 
@@ -118,7 +136,7 @@ serve(async (req) => {
       );
     } catch (error) {
       console.error("Error processing audio data:", error);
-      throw new Error("Failed to process audio data");
+      throw new Error(`Failed to process audio data: ${error.message}`);
     }
 
   } catch (error) {
