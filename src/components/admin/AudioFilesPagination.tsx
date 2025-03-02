@@ -1,6 +1,14 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from "@/components/ui/pagination";
 
 interface AudioFilesPaginationProps {
   page: number;
@@ -15,37 +23,72 @@ const AudioFilesPagination = ({
   totalCount,
   itemsPerPage
 }: AudioFilesPaginationProps) => {
-  const goToPreviousPage = () => {
-    setPage(Math.max(1, page - 1));
-  };
-
-  const goToNextPage = () => {
-    setPage(page + 1);
+  // Calculate total pages
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+  
+  // Calculate displayed items range
+  const startItem = Math.min((page - 1) * itemsPerPage + 1, totalCount);
+  const endItem = Math.min(page * itemsPerPage, totalCount);
+  
+  // Generate page numbers to display (show up to 5 pages)
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxPagesToShow = 5;
+    
+    // Logic to determine which page numbers to show
+    let startPage = Math.max(1, page - Math.floor(maxPagesToShow / 2));
+    const endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    
+    // Adjust start page if we're near the end
+    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
   };
 
   return (
-    <div className="flex justify-between items-center mt-4">
-      <div className="text-sm text-muted-foreground">
-        Showing {Math.min((page - 1) * itemsPerPage + 1, totalCount)} to {Math.min(page * itemsPerPage, totalCount)} of {totalCount} entries
+    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="text-sm text-muted-foreground order-2 md:order-1">
+        {totalCount > 0 ? (
+          <>Showing {startItem} to {endItem} of {totalCount} entries</>
+        ) : (
+          <>No entries found</>
+        )}
       </div>
-      <div className="flex gap-2">
-        <Button 
-          variant="outline" 
-          size="sm"
-          disabled={page === 1}
-          onClick={goToPreviousPage}
-        >
-          Previous
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm"
-          disabled={page * itemsPerPage >= totalCount}
-          onClick={goToNextPage}
-        >
-          Next
-        </Button>
-      </div>
+      
+      <Pagination className="order-1 md:order-2">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious 
+              onClick={() => setPage(Math.max(1, page - 1))}
+              aria-disabled={page === 1}
+              className={page === 1 ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+          
+          {getPageNumbers().map(pageNumber => (
+            <PaginationItem key={pageNumber}>
+              <PaginationLink
+                onClick={() => setPage(pageNumber)}
+                isActive={pageNumber === page}
+              >
+                {pageNumber}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+          
+          <PaginationItem>
+            <PaginationNext 
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              aria-disabled={page >= totalPages}
+              className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 };
