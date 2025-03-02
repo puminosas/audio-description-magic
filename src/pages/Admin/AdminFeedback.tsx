@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -158,8 +159,8 @@ const AdminFeedback = () => {
   });
 
   // Get unique types and statuses for filters
-  const types = [...new Set(feedback.map(item => item.type))];
-  const statuses = [...new Set(feedback.map(item => item.status))];
+  const types = [...new Set(feedback.map(item => item.type).filter(Boolean))];
+  const statuses = [...new Set(feedback.map(item => item.status).filter(Boolean))];
   
   // Get status badge variant - fixed to use only allowed variants
   const getStatusBadgeVariant = (status) => {
@@ -192,7 +193,7 @@ const AdminFeedback = () => {
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all_types">All Types</SelectItem>
               {types.map(type => (
                 <SelectItem key={type} value={type}>{type}</SelectItem>
               ))}
@@ -206,7 +207,7 @@ const AdminFeedback = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all_statuses">All Statuses</SelectItem>
               {statuses.map(status => (
                 <SelectItem key={status} value={status}>{status}</SelectItem>
               ))}
@@ -361,7 +362,7 @@ const AdminFeedback = () => {
               <div>
                 <h4 className="font-medium mb-1">Status</h4>
                 <Select 
-                  value={selectedFeedback.status} 
+                  value={selectedFeedback.status || 'new'} 
                   onValueChange={(value) => handleStatusChange(selectedFeedback.id, value)}
                 >
                   <SelectTrigger>

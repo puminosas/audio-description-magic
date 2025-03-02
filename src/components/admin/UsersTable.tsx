@@ -73,7 +73,7 @@ const UsersTable = ({
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={user.plan}
+                      value={user.plan || 'free'}
                       onValueChange={(value) => onUpdatePlan(user.id, value)}
                     >
                       <SelectTrigger className="w-[100px]">
