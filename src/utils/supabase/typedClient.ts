@@ -10,6 +10,21 @@ function castTable(tableName: string) {
   return (supabase as any).from(tableName);
 }
 
+// Helper to properly chain methods
+function enhanceQuery(query: any) {
+  return {
+    ...query,
+    // Add methods with proper chaining
+    select: () => enhanceQuery(query.select()),
+    insert: (data: any) => enhanceQuery(query.insert(data)),
+    update: (data: any) => enhanceQuery(query.update(data)),
+    delete: () => enhanceQuery(query.delete()),
+    eq: (column: string, value: any) => enhanceQuery(query.eq(column, value)),
+    order: (column: string, options: { ascending?: boolean } = {}) => 
+      enhanceQuery(query.order(column, options))
+  };
+}
+
 // This helper provides a way to interact with Supabase tables
 // without modifying the original types.ts file
 export const supabaseTyped = {
@@ -46,8 +61,6 @@ export const supabaseTyped = {
     single: () => castTable('audio_files').select().single(),
     maybeSingle: () => castTable('audio_files').select().maybeSingle(),
     range: (from: number, to: number) => castTable('audio_files').select().range(from, to),
-    order: (column: string, options: { ascending?: boolean }) => 
-      castTable('audio_files').select().order(column, options),
     count: (options: { head?: boolean, exact?: boolean } = {}) => 
       castTable('audio_files').select().count(options),
   },

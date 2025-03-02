@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -37,24 +38,25 @@ const AdminAudioFiles = () => {
       setLoading(true);
       
       // First get the count
-      const { data: audioData, error: countError } = await supabaseTyped.audio_files.select();
+      const { data: countData, error: countError } = await supabaseTyped.audio_files.select();
       
       if (countError) throw countError;
-      setTotalCount(audioData?.length || 0);
+      setTotalCount(countData?.length || 0);
       
-      // Then get the paginated data
-      let query = supabaseTyped.audio_files
-        .select()
-        .order('created_at', { ascending: false });
-      
-      const { data, error } = await query;
+      // Then get the data and do client-side ordering
+      const { data, error } = await supabaseTyped.audio_files.select();
       
       if (error) throw error;
+      
+      // Sort data by created_at in descending order
+      const sortedData = data ? [...data].sort((a, b) => {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }) : [];
       
       // Apply manual pagination
       const start = (page - 1) * itemsPerPage;
       const end = start + itemsPerPage;
-      const paginatedData = data ? data.slice(start, end) : [];
+      const paginatedData = sortedData.slice(start, end);
       
       setAudioFiles(paginatedData);
     } catch (error) {
@@ -114,8 +116,8 @@ const AdminAudioFiles = () => {
     return matchesSearch && matchesLanguage && matchesVoice;
   });
 
-  const languages = [...new Set(audioFiles.map(file => file.language))];
-  const voices = [...new Set(audioFiles.map(file => file.voice_name))];
+  const languages = [...new Set(audioFiles.map(file => file.language).filter(Boolean))];
+  const voices = [...new Set(audioFiles.map(file => file.voice_name).filter(Boolean))];
 
   return (
     <div className="space-y-4">
@@ -135,9 +137,9 @@ const AdminAudioFiles = () => {
               <SelectValue placeholder="Filter by language" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Languages</SelectItem>
+              <SelectItem value="all">All Languages</SelectItem>
               {languages.map(lang => (
-                <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                <SelectItem key={lang} value={lang || "unknown"}>{lang || "Unknown"}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -149,9 +151,9 @@ const AdminAudioFiles = () => {
               <SelectValue placeholder="Filter by voice" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Voices</SelectItem>
+              <SelectItem value="all">All Voices</SelectItem>
               {voices.map(voice => (
-                <SelectItem key={voice} value={voice}>{voice}</SelectItem>
+                <SelectItem key={voice} value={voice || "unknown"}>{voice || "Unknown"}</SelectItem>
               ))}
             </SelectContent>
           </Select>
