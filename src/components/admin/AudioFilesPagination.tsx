@@ -15,6 +15,14 @@ const AudioFilesPagination = ({
   totalCount,
   itemsPerPage
 }: AudioFilesPaginationProps) => {
+  const goToPreviousPage = () => {
+    setPage(Math.max(1, page - 1));
+  };
+
+  const goToNextPage = () => {
+    setPage(page + 1);
+  };
+
   return (
     <div className="flex justify-between items-center mt-4">
       <div className="text-sm text-muted-foreground">
@@ -25,7 +33,7 @@ const AudioFilesPagination = ({
           variant="outline" 
           size="sm"
           disabled={page === 1}
-          onClick={() => setPage(page => Math.max(1, page - 1))}
+          onClick={goToPreviousPage}
         >
           Previous
         </Button>
@@ -33,7 +41,7 @@ const AudioFilesPagination = ({
           variant="outline" 
           size="sm"
           disabled={page * itemsPerPage >= totalCount}
-          onClick={() => setPage(page => page + 1)}
+          onClick={goToNextPage}
         >
           Next
         </Button>
