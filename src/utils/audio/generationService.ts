@@ -54,9 +54,9 @@ export const generateAudioDescription = async (
     }
 
     // Check for error message in the data
-    if (data.error) {
+    if (!data.success || data.error) {
       console.error('Error in function response:', data.error);
-      return { error: data.error };
+      return { error: data.error || 'Unknown error in function response' };
     }
 
     // Check for missing audioUrl

@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -43,13 +44,19 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: "gpt-4o-mini", // Updated to use available model
         messages: [
           { role: "system", content: "You are a professional e-commerce product description writer." },
           { role: "user", content: `Write a high-quality, engaging product description for "${text}" in ${language}. Highlight its main features and benefits. Keep it under 150 words.` }
         ]
       })
     });
+
+    if (!descriptionResponse.ok) {
+      const errorData = await descriptionResponse.json();
+      console.error("OpenAI API error:", errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || JSON.stringify(errorData)}`);
+    }
 
     const descriptionData = await descriptionResponse.json();
     const generatedDescription = descriptionData.choices[0]?.message?.content?.trim();
@@ -71,20 +78,33 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "tts-1",
         voice: voice,
-        input: generatedDescription
+        input: generatedDescription,
+        response_format: "mp3"
       })
     });
 
-    const ttsData = await ttsResponse.json();
-
-    if (!ttsData.audio_url) {
-      throw new Error("Failed to generate audio");
+    if (!ttsResponse.ok) {
+      const errorData = await ttsResponse.text();
+      console.error("TTS API error:", errorData);
+      throw new Error(`TTS API error: ${errorData}`);
     }
 
-    console.log("Generated Audio URL:", ttsData.audio_url);
+    // TTS returns audio data directly, not a JSON with a URL
+    const audioBuffer = await ttsResponse.arrayBuffer();
+    const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+    
+    // Create a data URL for the audio file
+    const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
+
+    console.log("Generated Audio successfully");
 
     return new Response(
-      JSON.stringify({ success: true, audioUrl: ttsData.audio_url, text: generatedDescription }),
+      JSON.stringify({ 
+        success: true, 
+        audioUrl: audioUrl, 
+        text: generatedDescription,
+        id: crypto.randomUUID()
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
