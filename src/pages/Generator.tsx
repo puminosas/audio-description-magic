@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -96,7 +97,23 @@ const Generator = () => {
         return;
       }
       
-      console.log("Audio generation successful:", result);
+      // Validate the audio URL
+      if (typeof result.audioUrl !== 'string' || 
+         (result.audioUrl.startsWith('data:audio/') && result.audioUrl.length < 1000)) {
+        console.error("Invalid audio URL format:", result.audioUrl?.substring(0, 50) + '...');
+        setError('Generated audio appears to be invalid. Please try again.');
+        toast({
+          title: 'Generation Error',
+          description: 'Failed to generate valid audio. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      console.log("Audio generation successful:", {
+        url: result.audioUrl.substring(0, 50) + '...',
+        text: result.text
+      });
       
       setGeneratedAudio({
         audioUrl: result.audioUrl,

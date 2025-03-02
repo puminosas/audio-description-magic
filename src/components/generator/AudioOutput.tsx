@@ -14,6 +14,11 @@ interface AudioOutputProps {
 const AudioOutput = ({ isGenerating, audioUrl, generatedText, error }: AudioOutputProps) => {
   if (!isGenerating && !audioUrl && !error) return null;
   
+  // Check if audioUrl is potentially invalid (too short for a data URL)
+  const isAudioUrlInvalid = audioUrl && 
+    audioUrl.startsWith('data:audio/') && 
+    audioUrl.length < 1000;
+  
   return (
     <div className="border-t border-border p-6 bg-secondary/20 rounded-md">
       <h3 className="text-xl font-semibold mb-4">
@@ -25,6 +30,14 @@ const AudioOutput = ({ isGenerating, audioUrl, generatedText, error }: AudioOutp
           <XCircle className="h-4 w-4" />
           <AlertTitle>Generation Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : isAudioUrlInvalid ? (
+        <Alert variant="destructive" className="mb-4">
+          <XCircle className="h-4 w-4" />
+          <AlertTitle>Audio Format Error</AlertTitle>
+          <AlertDescription>
+            The audio file appears to be invalid or corrupted. Please try generating again.
+          </AlertDescription>
         </Alert>
       ) : (
         <AudioPlayer 

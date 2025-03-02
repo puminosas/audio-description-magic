@@ -16,17 +16,25 @@ const AudioPlayer = ({
   fileName = 'audio-description.mp3', 
   isGenerating = false 
 }: AudioPlayerProps) => {
-  // Validate the audioUrl format if it exists
+  // Enhanced validation of the audioUrl format
   const isValidDataUrl = audioUrl && (
-    audioUrl.startsWith('data:audio/') || 
+    (audioUrl.startsWith('data:audio/') && audioUrl.includes('base64,')) || 
     audioUrl.startsWith('https://') || 
     audioUrl.startsWith('http://')
   );
 
+  // Check if the data URL is too short or potentially truncated
+  const isValidLength = !audioUrl || 
+    (audioUrl.startsWith('data:audio/') && audioUrl.length > 1000) || 
+    (audioUrl.startsWith('http'));
+
+  // Determine if we have a valid URL to work with
+  const hasValidUrl = isValidDataUrl && isValidLength;
+
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">
       <AudioPlayerProvider 
-        audioUrl={isValidDataUrl ? audioUrl : undefined}
+        audioUrl={hasValidUrl ? audioUrl : undefined}
         fileName={fileName}
         isGenerating={isGenerating}
       >
@@ -34,18 +42,18 @@ const AudioPlayer = ({
           <AudioStatus 
             audioUrl={audioUrl} 
             isGenerating={isGenerating} 
-            isValidUrl={isValidDataUrl}
+            isValidUrl={hasValidUrl}
           />
           
           <AudioWaveform 
             isGenerating={isGenerating} 
-            audioUrl={isValidDataUrl ? audioUrl : undefined} 
+            audioUrl={hasValidUrl ? audioUrl : undefined} 
           />
           
           <PlayerControls 
             isGenerating={isGenerating}
             fileName={fileName}
-            audioUrl={isValidDataUrl ? audioUrl : undefined}
+            audioUrl={hasValidUrl ? audioUrl : undefined}
           />
         </div>
       </AudioPlayerProvider>

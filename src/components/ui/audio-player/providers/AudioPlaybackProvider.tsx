@@ -32,8 +32,10 @@ export const AudioPlaybackProvider = ({
       audio.pause();
       setIsPlaying(false);
     } else {
+      // Play with proper error handling
       audio.play().catch(err => {
         console.error('Error playing audio:', err);
+        setIsPlaying(false);
       });
       setIsPlaying(true);
     }
@@ -45,8 +47,10 @@ export const AudioPlaybackProvider = ({
     const audio = audioRef.current;
     if (!audio) return;
     
+    // Play with proper error handling
     audio.play().catch(err => {
       console.error('Error playing audio:', err);
+      setIsPlaying(false);
     });
     setIsPlaying(true);
   };
