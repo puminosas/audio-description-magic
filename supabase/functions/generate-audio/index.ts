@@ -84,12 +84,12 @@ serve(async (req) => {
     });
 
     if (!ttsResponse.ok) {
-      const errorData = await ttsResponse.text();
-      console.error("TTS API error:", errorData);
-      throw new Error(`TTS API error: ${errorData}`);
+      const errorText = await ttsResponse.text();
+      console.error("TTS API error:", errorText);
+      throw new Error(`TTS API error: ${errorText}`);
     }
 
-    // TTS returns audio data directly, not a JSON with a URL
+    // Handle binary audio data correctly
     const audioBuffer = await ttsResponse.arrayBuffer();
     const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
     
