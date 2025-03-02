@@ -44,7 +44,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Updated to use available model
+        model: "gpt-4o-mini", // Using available model
         messages: [
           { role: "system", content: "You are a professional e-commerce product description writer." },
           { role: "user", content: `Write a high-quality, engaging product description for "${text}" in ${language}. Highlight its main features and benefits. Keep it under 150 words.` }
