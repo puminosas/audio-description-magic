@@ -1,11 +1,10 @@
 
-// This is the Edge Function for generating audio from text
-// It needs access to the OPENAI_API_KEY, which is stored in Supabase secrets
+// Import necessary modules for Supabase Edge Functions
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import OpenAI from 'https://esm.sh/openai@4.20.1';
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-
-// CORS headers to allow requests from any origin
+// Define CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -14,93 +13,176 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Get the OpenAI API key from environment variables
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error('OPENAI_API_KEY is not set in the environment variables');
-    }
-
     // Get request body
-    const body = await req.json();
-    const { text, language, voice } = body;
-
+    const { text, language, voice } = await req.json();
+    
+    // Validate input
     if (!text) {
-      throw new Error('No text provided for audio generation');
+      throw new Error('Text content is required');
     }
 
-    console.log(`Generating audio for text: ${text.substring(0, 50)}... with language: ${language}, voice: ${voice}`);
+    // Get the authentication context if available
+    const authHeader = req.headers.get('Authorization');
+    let userId = null;
 
-    // Make OpenAI TTS API request
+    if (authHeader) {
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      // Verify the user's token
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+
+      if (!error && user) {
+        userId = user.id;
+      }
+    }
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPENAI_API_KEY') || '',
+    });
+
+    // Enhance the product description for e-commerce
+    let enhancedText = text;
+    
+    // Only enhance if the text is relatively short (indicating it might be just a product name)
+    if (text.length < 100) {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert e-commerce copywriter. Your task is to create compelling, persuasive product descriptions that highlight benefits, features, and create emotional appeal. Keep descriptions concise (under 100 words) but impactful. Focus on what makes the product special and why customers should buy it. Use a tone appropriate for online shopping and audio narration.`
+          },
+          {
+            role: "user",
+            content: `Create a compelling product description for: "${text}". Make it engaging for audio narration in ${language || 'English'}.`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 250,
+      });
+
+      enhancedText = completion.choices[0].message.content || text;
+    }
+
+    // Generate speech from text
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
         model: 'tts-1',
-        input: text,
+        input: enhancedText,
         voice: voice || 'alloy',
+        response_format: 'mp3',
       }),
     });
 
-    // Check if the response is ok
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API Error:', errorData);
-      throw new Error(`OpenAI API Error: ${response.status} - ${errorData}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Failed to generate speech');
     }
 
-    // Get the audio data as a blob
-    const audioBlob = await response.blob();
+    // Get audio data
+    const audioBuffer = await response.arrayBuffer();
     
-    // Convert to base64 for storing in Supabase Storage
-    const buffer = await audioBlob.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    const base64Audio = btoa(String.fromCharCode(...bytes));
+    // Convert to Base64 for easier handling
+    const base64Audio = btoa(
+      String.fromCharCode(...new Uint8Array(audioBuffer))
+    );
 
-    // Generate a unique ID for the file
-    const id = crypto.randomUUID();
-    const fileName = `audio_${id}.mp3`;
+    // Create a unique filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `audio_${timestamp}.mp3`;
     
-    // Store in Supabase Storage (optional - if we want to persist)
-    // For now, just return as a data URL
-    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
-
-    console.log('Audio generated successfully!');
+    // Initialize Supabase Storage client for file upload
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Return the data
+    // Define the file path
+    const filePath = `audio/${userId || 'anonymous'}/${fileName}`;
+    
+    // Convert Base64 to Uint8Array for storage
+    const binaryData = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0));
+    
+    // Upload to Supabase Storage
+    const { data: storageData, error: storageError } = await supabase
+      .storage
+      .from('public')
+      .upload(filePath, binaryData, {
+        contentType: 'audio/mpeg',
+        upsert: false,
+      });
+    
+    if (storageError) {
+      throw new Error(`Storage error: ${storageError.message}`);
+    }
+    
+    // Get the public URL
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('public')
+      .getPublicUrl(filePath);
+    
+    // If user is authenticated, save to audio_files table
+    let audioFileId = null;
+    
+    if (userId) {
+      const { data: audioData, error: audioError } = await supabase
+        .from('audio_files')
+        .insert({
+          user_id: userId,
+          title: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+          description: enhancedText,
+          language: language || 'en',
+          voice_name: voice || 'alloy',
+          audio_url: publicUrl,
+          is_temporary: false,
+        })
+        .select('id')
+        .single();
+      
+      if (audioError) {
+        console.error('Error saving audio file metadata:', audioError);
+      } else {
+        audioFileId = audioData.id;
+      }
+    }
+    
+    // Return the response
     return new Response(
       JSON.stringify({
-        audioUrl,
-        text,
-        id,
+        audioUrl: publicUrl,
+        text: enhancedText,
+        id: audioFileId,
       }),
       {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
+
   } catch (error) {
     console.error('Error in generate-audio function:', error);
     
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       }),
       {
         status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
 });
