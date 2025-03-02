@@ -33,11 +33,31 @@ export const AudioPlaybackProvider = ({
       setIsPlaying(false);
     } else {
       // Play with proper error handling
-      audio.play().catch(err => {
-        console.error('Error playing audio:', err);
-        setIsPlaying(false);
-      });
-      setIsPlaying(true);
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch(err => {
+            console.error('Error playing audio:', err);
+            setIsPlaying(false);
+            
+            // Try one more time after a small delay
+            setTimeout(() => {
+              audio.play()
+                .then(() => setIsPlaying(true))
+                .catch(e => {
+                  console.error('Retry play failed:', e);
+                  setIsPlaying(false);
+                });
+            }, 300);
+          });
+      } else {
+        // For older browsers that don't return a promise
+        setIsPlaying(true);
+      }
     }
   };
   
@@ -47,12 +67,27 @@ export const AudioPlaybackProvider = ({
     const audio = audioRef.current;
     if (!audio) return;
     
+    // Ensure audio is ready
+    if (audio.readyState < 2) {
+      audio.load();
+    }
+    
     // Play with proper error handling
-    audio.play().catch(err => {
-      console.error('Error playing audio:', err);
-      setIsPlaying(false);
-    });
-    setIsPlaying(true);
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch(err => {
+          console.error('Error playing audio:', err);
+          setIsPlaying(false);
+        });
+    } else {
+      // For older browsers that don't return a promise
+      setIsPlaying(true);
+    }
   };
   
   const handlePause = () => {

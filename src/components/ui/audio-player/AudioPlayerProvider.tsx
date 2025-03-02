@@ -21,7 +21,7 @@ export const AudioPlayerProvider = ({
       {(playbackState) => (
         <AudioTimeProvider audioRef={audioRef}>
           {(timeState) => (
-            <AudioErrorProvider>
+            <AudioErrorProvider audioUrl={audioUrl}>
               {(errorState) => (
                 <AudioDownloadProvider audioUrl={audioUrl} fileName={fileName}>
                   {(downloadState) => {
@@ -34,7 +34,13 @@ export const AudioPlayerProvider = ({
                       errorState.setIsLoading(true);
                       
                       const handleLoadedMetadata = () => {
-                        timeState.setDuration(audio.duration);
+                        // Make sure the duration is valid
+                        if (audio.duration && !isNaN(audio.duration)) {
+                          timeState.setDuration(audio.duration);
+                        } else {
+                          timeState.setDuration(0);
+                          console.warn("Invalid audio duration:", audio.duration);
+                        }
                         errorState.setIsLoading(false);
                       };
                       
@@ -46,11 +52,34 @@ export const AudioPlayerProvider = ({
                       
                       const handleEnded = () => {
                         playbackState.handlePause();
+                        // Reset to beginning
+                        timeState.setCurrentTime(0);
+                        if (audio) audio.currentTime = 0;
                       };
                       
                       const handleError = (e: Event) => {
                         console.error('Audio playback error:', e);
-                        errorState.setError('Failed to play audio file. Please try again.');
+                        // Extract more specific error details if available
+                        let errorMessage = "Failed to play audio file. Please try again.";
+                        
+                        if (audio.error) {
+                          switch (audio.error.code) {
+                            case MediaError.MEDIA_ERR_ABORTED:
+                              errorMessage = "Audio playback was aborted.";
+                              break;
+                            case MediaError.MEDIA_ERR_NETWORK:
+                              errorMessage = "Network error occurred during playback.";
+                              break;
+                            case MediaError.MEDIA_ERR_DECODE:
+                              errorMessage = "Audio decoding failed. The file might be corrupted.";
+                              break;
+                            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                              errorMessage = "Audio format is not supported by your browser.";
+                              break;
+                          }
+                        }
+                        
+                        errorState.setError(errorMessage);
                         playbackState.handlePause();
                         errorState.setIsLoading(false);
                       };
@@ -69,6 +98,14 @@ export const AudioPlayerProvider = ({
                       audio.playbackRate = playbackState.playbackSpeed;
                       audio.loop = playbackState.loop;
                       
+                      // Force load to catch any immediate errors
+                      try {
+                        audio.load();
+                      } catch (err) {
+                        console.error("Error loading audio:", err);
+                        errorState.setError("Failed to initialize audio player.");
+                      }
+                      
                       // Cleanup
                       return () => {
                         audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
@@ -76,6 +113,15 @@ export const AudioPlayerProvider = ({
                         audio.removeEventListener('ended', handleEnded);
                         audio.removeEventListener('error', handleError);
                         audio.removeEventListener('canplaythrough', () => errorState.setIsLoading(false));
+                        
+                        // Proper cleanup
+                        try {
+                          audio.pause();
+                          playbackState.handlePause();
+                          timeState.setCurrentTime(0);
+                        } catch (err) {
+                          console.error("Error during audio cleanup:", err);
+                        }
                       };
                     }, [audioUrl, timeState.isSeeking, playbackState.volume, playbackState.playbackSpeed, playbackState.loop]);
                     

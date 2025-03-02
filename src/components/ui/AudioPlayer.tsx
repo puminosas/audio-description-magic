@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import AudioPlayerProvider from './audio-player/AudioPlayerProvider';
 import AudioWaveform from './audio-player/AudioWaveform';
 import AudioStatus from './audio-player/AudioStatus';
@@ -16,20 +16,29 @@ const AudioPlayer = ({
   fileName = 'audio-description.mp3', 
   isGenerating = false 
 }: AudioPlayerProps) => {
-  // Enhanced validation of the audioUrl format
-  const isValidDataUrl = audioUrl && (
-    (audioUrl.startsWith('data:audio/') && audioUrl.includes('base64,')) || 
-    audioUrl.startsWith('https://') || 
-    audioUrl.startsWith('http://')
-  );
-
-  // Check if the data URL is too short or potentially truncated
-  const isValidLength = !audioUrl || 
-    (audioUrl.startsWith('data:audio/') && audioUrl.length > 1000) || 
-    (audioUrl.startsWith('http'));
-
-  // Determine if we have a valid URL to work with
-  const hasValidUrl = isValidDataUrl && isValidLength;
+  // Enhanced validation of the audioUrl format with useMemo for efficiency
+  const { hasValidUrl, isValidUrl } = useMemo(() => {
+    // Don't validate if no URL or still generating
+    if (!audioUrl || isGenerating) {
+      return { hasValidUrl: false, isValidUrl: false };
+    }
+    
+    // Check for valid data URL format
+    const isValidDataUrl = 
+      (audioUrl.startsWith('data:audio/') && audioUrl.includes('base64,')) || 
+      audioUrl.startsWith('https://') || 
+      audioUrl.startsWith('http://');
+    
+    // Check if the data URL is too short or potentially truncated
+    const isValidLength = 
+      (audioUrl.startsWith('data:audio/') && audioUrl.length > 1000) || 
+      (audioUrl.startsWith('http'));
+    
+    return { 
+      hasValidUrl: isValidDataUrl && isValidLength,
+      isValidUrl: isValidDataUrl
+    };
+  }, [audioUrl, isGenerating]);
 
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">

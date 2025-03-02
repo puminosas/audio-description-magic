@@ -53,6 +53,22 @@ const Generator = () => {
     }
   }, [user, fetchGenerationStats]);
 
+  const validateAudioUrl = (url: string): boolean => {
+    if (!url) return false;
+    
+    // For data URLs, ensure they have sufficient length and valid format
+    if (url.startsWith('data:audio/')) {
+      return url.includes('base64,') && url.length > 1000;
+    }
+    
+    // For HTTP URLs, basic validation
+    if (url.startsWith('http')) {
+      return url.length > 10;
+    }
+    
+    return false;
+  };
+
   const handleGenerate = async (formData: {
     text: string;
     language: LanguageOption;
@@ -98,8 +114,7 @@ const Generator = () => {
       }
       
       // Validate the audio URL
-      if (typeof result.audioUrl !== 'string' || 
-         (result.audioUrl.startsWith('data:audio/') && result.audioUrl.length < 1000)) {
+      if (!validateAudioUrl(result.audioUrl)) {
         console.error("Invalid audio URL format:", result.audioUrl?.substring(0, 50) + '...');
         setError('Generated audio appears to be invalid. Please try again.');
         toast({
@@ -115,10 +130,13 @@ const Generator = () => {
         text: result.text
       });
       
-      setGeneratedAudio({
-        audioUrl: result.audioUrl,
-        text: result.text
-      });
+      // Small delay to ensure audio is fully processed before playback
+      setTimeout(() => {
+        setGeneratedAudio({
+          audioUrl: result.audioUrl,
+          text: result.text
+        });
+      }, 100);
       
       if (result.audioUrl && user?.id) {
         Promise.all([
@@ -172,11 +190,11 @@ const Generator = () => {
             }}
           />
           
-          {generatedAudio && (
+          {(generatedAudio || loading) && (
             <div className="mt-6">
               <AudioOutput 
-                audioUrl={generatedAudio.audioUrl} 
-                generatedText={generatedAudio.text} 
+                audioUrl={generatedAudio?.audioUrl || null} 
+                generatedText={generatedAudio?.text || null} 
                 isGenerating={loading}
                 error={error}
               />
