@@ -24,8 +24,9 @@ export const fetchUsers = async (page: number, itemsPerPage: number) => {
     if (profilesError) throw profilesError;
     
     // Get user roles - use the actual RPC function instead of direct table access
+    // Using 'any' to avoid TypeScript errors with custom RPC functions
     const { data: adminUsers, error: adminError } = await supabase
-      .rpc('get_admin_users');
+      .rpc('get_admin_users') as any;
     
     if (adminError) {
       console.error('Error fetching admin users:', adminError);
