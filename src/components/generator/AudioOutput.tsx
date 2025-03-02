@@ -1,15 +1,18 @@
 
 import React from 'react';
 import AudioPlayer from '@/components/ui/AudioPlayer';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { XCircle } from 'lucide-react';
 
 interface AudioOutputProps {
   isGenerating: boolean;
   audioUrl: string | null;
   generatedText: string | null;
+  error?: string | null;
 }
 
-const AudioOutput = ({ isGenerating, audioUrl, generatedText }: AudioOutputProps) => {
-  if (!isGenerating && !audioUrl) return null;
+const AudioOutput = ({ isGenerating, audioUrl, generatedText, error }: AudioOutputProps) => {
+  if (!isGenerating && !audioUrl && !error) return null;
   
   return (
     <div className="border-t border-border p-6 bg-secondary/20 rounded-md">
@@ -17,11 +20,19 @@ const AudioOutput = ({ isGenerating, audioUrl, generatedText }: AudioOutputProps
         {isGenerating ? 'Generating Your Audio...' : 'Your Generated Audio'}
       </h3>
       
-      <AudioPlayer 
-        audioUrl={audioUrl || undefined} 
-        isGenerating={isGenerating}
-        fileName={`product-description-${Date.now()}.mp3`}
-      />
+      {error ? (
+        <Alert variant="destructive" className="mb-4">
+          <XCircle className="h-4 w-4" />
+          <AlertTitle>Generation Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : (
+        <AudioPlayer 
+          audioUrl={audioUrl || undefined} 
+          isGenerating={isGenerating}
+          fileName={`product-description-${Date.now()}.mp3`}
+        />
+      )}
       
       {/* Display the AI-generated product description below the player */}
       {generatedText && !isGenerating && (

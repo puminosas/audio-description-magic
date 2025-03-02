@@ -16,10 +16,17 @@ const AudioPlayer = ({
   fileName = 'audio-description.mp3', 
   isGenerating = false 
 }: AudioPlayerProps) => {
+  // Validate the audioUrl format if it exists
+  const isValidDataUrl = audioUrl && (
+    audioUrl.startsWith('data:audio/') || 
+    audioUrl.startsWith('https://') || 
+    audioUrl.startsWith('http://')
+  );
+
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">
       <AudioPlayerProvider 
-        audioUrl={audioUrl}
+        audioUrl={isValidDataUrl ? audioUrl : undefined}
         fileName={fileName}
         isGenerating={isGenerating}
       >
@@ -27,17 +34,18 @@ const AudioPlayer = ({
           <AudioStatus 
             audioUrl={audioUrl} 
             isGenerating={isGenerating} 
+            isValidUrl={isValidDataUrl}
           />
           
           <AudioWaveform 
             isGenerating={isGenerating} 
-            audioUrl={audioUrl} 
+            audioUrl={isValidDataUrl ? audioUrl : undefined} 
           />
           
           <PlayerControls 
             isGenerating={isGenerating}
             fileName={fileName}
-            audioUrl={audioUrl}
+            audioUrl={isValidDataUrl ? audioUrl : undefined}
           />
         </div>
       </AudioPlayerProvider>

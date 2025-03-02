@@ -60,6 +60,7 @@ const Generator = () => {
     try {
       setLoading(true);
       setError(null);
+      setGeneratedAudio(null); // Reset previous audio when generating new one
       
       console.log("Generating audio with data:", formData);
       
@@ -160,6 +161,7 @@ const Generator = () => {
                 audioUrl={generatedAudio.audioUrl} 
                 generatedText={generatedAudio.text} 
                 isGenerating={loading}
+                error={error}
               />
             </div>
           )}

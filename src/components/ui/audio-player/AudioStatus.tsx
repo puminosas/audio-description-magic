@@ -8,9 +8,10 @@ import { XCircle } from 'lucide-react';
 interface AudioStatusProps {
   audioUrl?: string;
   isGenerating?: boolean;
+  isValidUrl?: boolean;
 }
 
-const AudioStatus = ({ audioUrl, isGenerating = false }: AudioStatusProps) => {
+const AudioStatus = ({ audioUrl, isGenerating = false, isValidUrl = true }: AudioStatusProps) => {
   const { error, isLoading } = useAudioPlayer();
   
   if (isGenerating) {
@@ -37,6 +38,18 @@ const AudioStatus = ({ audioUrl, isGenerating = false }: AudioStatusProps) => {
         <XCircle className="h-4 w-4" />
         <AlertTitle>Audio Playback Error</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (audioUrl && !isValidUrl) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <XCircle className="h-4 w-4" />
+        <AlertTitle>Audio Format Error</AlertTitle>
+        <AlertDescription>
+          The audio file is in an invalid format. Please regenerate the audio.
+        </AlertDescription>
       </Alert>
     );
   }

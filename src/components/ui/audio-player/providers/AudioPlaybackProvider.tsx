@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AudioPlaybackState } from '../types';
 
 interface AudioPlaybackProviderProps {
@@ -17,6 +17,11 @@ export const AudioPlaybackProvider = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [volume, setVolume] = useState(75);
   const [loop, setLoop] = useState(false);
+  
+  // Reset playback state when audio URL changes
+  useEffect(() => {
+    setIsPlaying(false);
+  }, [audioUrl]);
   
   // Controls
   const togglePlay = () => {
