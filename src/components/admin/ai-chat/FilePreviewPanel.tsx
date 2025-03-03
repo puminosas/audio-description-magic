@@ -58,6 +58,11 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   };
 
   const isFileContentError = fileContent && fileContent.startsWith('// Error loading content');
+  const handleRetry = () => {
+    if (handleAnalyzeWithAI) {
+      handleAnalyzeWithAI();
+    }
+  };
 
   return (
     <Card className="p-4">
@@ -110,7 +115,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={handleAnalyzeWithAI}
+              onClick={handleRetry}
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               Retry Loading

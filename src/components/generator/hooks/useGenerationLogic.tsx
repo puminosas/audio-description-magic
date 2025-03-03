@@ -142,8 +142,8 @@ export const useGenerationLogic = () => {
           if (onSuccess) {
             await onSuccess();
           }
-        } catch (err) {
-          console.error("Error saving to history:", err);
+        } catch (historyErr) {
+          console.error("Error saving to history:", historyErr);
           // Don't show error to user since audio was generated successfully
         }
       }
@@ -163,6 +163,8 @@ export const useGenerationLogic = () => {
       let userMessage = errorMessage;
       if (errorMessage.includes('timeout') || errorMessage.includes('took too long')) {
         userMessage = 'The generation timed out. Please try with shorter text.';
+      } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Failed to send')) {
+        userMessage = 'Unable to connect to the audio generation service. Please check your network connection and try again.';
       }
         
       setError(userMessage);

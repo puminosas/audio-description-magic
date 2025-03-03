@@ -23,6 +23,7 @@ export async function generateAudioDescription(
     
     if (text.length < 20) {
       try {
+        console.log(`Generating description for: ${text} in language: ${language.code}`);
         // This is likely a product name, so generate a description
         const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-description', {
           body: {
@@ -37,6 +38,10 @@ export async function generateAudioDescription(
           // Continue with original text if description generation fails
         } else if (descriptionData && descriptionData.success) {
           finalText = descriptionData.generated_text;
+          console.log('Successfully generated description:', finalText.substring(0, 50) + '...');
+        } else {
+          // Fallback if we got a response but no success flag
+          console.warn('Description generation returned unexpected format:', descriptionData);
         }
       } catch (descError) {
         console.error('Failed to connect to description service:', descError);
@@ -45,6 +50,7 @@ export async function generateAudioDescription(
     }
 
     try {
+      console.log(`Generating audio for ${finalText.substring(0, 30)}... with voice ${voice.id}`);
       // Now generate the audio using Google TTS
       const { data, error } = await supabase.functions.invoke('generate-google-tts', {
         body: {
@@ -61,6 +67,7 @@ export async function generateAudioDescription(
       }
 
       if (!data || !data.success) {
+        console.error('Invalid response from TTS service:', data);
         return { error: data?.error || 'Failed to generate audio, invalid response from server' };
       }
 
@@ -73,11 +80,20 @@ export async function generateAudioDescription(
       return result;
     } catch (audioError) {
       console.error('Connection error with audio generation service:', audioError);
-      return { error: 'Unable to connect to audio generation service. Please try again later.' };
+      
+      // If we're getting connection errors, provide a more helpful message
+      const errorMessage = audioError instanceof Error ? audioError.message : String(audioError);
+      const isFetchError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Failed to send');
+      
+      return { 
+        error: isFetchError 
+          ? 'Unable to connect to audio generation service. Please check your network connection and try again later.'
+          : 'Error generating audio. Please try again with different text or settings.'
+      };
     }
   } catch (error) {
     console.error('Error in generateAudioDescription:', error);
-    return { error: error.message || 'Failed to generate audio description' };
+    return { error: error instanceof Error ? error.message : 'Failed to generate audio description' };
   }
 }
 
