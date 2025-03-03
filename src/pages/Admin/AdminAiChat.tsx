@@ -10,13 +10,13 @@ const AdminAiChatPage = () => {
         <CardHeader className="px-0 pt-0">
           <CardTitle>AI Chat Assistant</CardTitle>
           <CardDescription>
-            Get help with administrative tasks and manage your platform more efficiently
+            Interact with OpenAI GPT-4o to manage your platform, analyze files, and automate admin tasks
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0">
           <p className="mb-4 text-muted-foreground">
-            This AI assistant has knowledge of your platform and can help with common administrative tasks,
-            provide guidance on troubleshooting issues, and assist with user management.
+            This AI assistant has access to your Supabase database, project files, and administrative functions.
+            Ask it to analyze user data, suggest code optimizations, or help with troubleshooting issues.
           </p>
           
           <AdminAiChat />

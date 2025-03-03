@@ -1,180 +1,266 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2, Send, Code, FileText, User, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock responses for the AI assistant
-const AI_RESPONSES = {
-  greeting: "Hello! I'm your admin AI assistant. I can help you with managing users, troubleshooting issues, and providing guidance on platform features. How can I assist you today?",
-  userManagement: "To manage users, you can go to the Users tab in the admin panel. There you can view, edit, and delete user accounts. You can also update user roles and permissions from the User Update tab.",
-  troubleshooting: "I can help you troubleshoot common issues. Could you provide more details about the problem you're experiencing? Common issues might include audio generation failures, user authentication problems, or billing issues.",
-  analytics: "The Analytics tab provides insights into platform usage, including total users, generations, and other key metrics. You can filter data by date range to track growth and identify trends.",
-  feedback: "User feedback is available in the Feedback tab. You can sort and filter feedback by date, rating, or status. This helps prioritize improvements based on user suggestions.",
-  settings: "In the Settings tab, you can configure platform-wide settings such as API rate limits, feature toggles, and notification preferences. Make sure to save changes after modifications.",
-  default: "I'm sorry, I don't have specific information about that yet. As your admin AI assistant, my knowledge is primarily focused on helping with platform management tasks. Is there something else I can help with?"
-};
+interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
 
-const getAIResponse = (message: string) => {
-  const lowerMsg = message.toLowerCase();
-  
-  if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('hey')) {
-    return AI_RESPONSES.greeting;
-  }
-  
-  if (lowerMsg.includes('user') || lowerMsg.includes('account') || lowerMsg.includes('profile') || lowerMsg.includes('member')) {
-    return AI_RESPONSES.userManagement;
-  }
-  
-  if (lowerMsg.includes('problem') || lowerMsg.includes('issue') || lowerMsg.includes('error') || lowerMsg.includes('bug') || lowerMsg.includes('fix')) {
-    return AI_RESPONSES.troubleshooting;
-  }
-  
-  if (lowerMsg.includes('analytics') || lowerMsg.includes('stats') || lowerMsg.includes('metrics') || lowerMsg.includes('data')) {
-    return AI_RESPONSES.analytics;
-  }
-  
-  if (lowerMsg.includes('feedback') || lowerMsg.includes('review') || lowerMsg.includes('suggestion')) {
-    return AI_RESPONSES.feedback;
-  }
-  
-  if (lowerMsg.includes('setting') || lowerMsg.includes('config') || lowerMsg.includes('preference')) {
-    return AI_RESPONSES.settings;
-  }
-  
-  return AI_RESPONSES.default;
-};
+interface FileInfo {
+  path: string;
+  type: string;
+}
 
-type Message = {
-  id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-};
-
-const AdminAiChat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: AI_RESPONSES.greeting,
-      isUser: false,
-      timestamp: new Date()
-    }
-  ]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+const AdminAiChat = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [files, setFiles] = useState<FileInfo[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Fetch project files
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const fetchFiles = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('project-files', {
+          method: 'GET',
+        });
 
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
-    
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: input.trim(),
-      isUser: true,
-      timestamp: new Date()
+        if (error) throw error;
+        setFiles(data as FileInfo[]);
+      } catch (error) {
+        console.error('Error fetching files:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load project files',
+          variant: 'destructive',
+        });
+      }
     };
+
+    fetchFiles();
+  }, [toast]);
+
+  // Send a message to the AI
+  const sendMessage = async () => {
+    if (!input.trim() || isProcessing) return;
+
+    const userMessage: Message = { role: 'user', content: input };
+    const updatedMessages = [...messages, userMessage];
     
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(updatedMessages);
     setInput('');
-    setIsLoading(true);
-    
-    // Simulate API delay
-    setTimeout(() => {
-      // Add AI response
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: getAIResponse(userMessage.text),
-        isUser: false,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1500);
+    setIsProcessing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: { 
+          messages: updatedMessages,
+          userId: user?.id
+        },
+      });
+
+      if (error) throw error;
+
+      setMessages([...updatedMessages, data as Message]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to get response from AI',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
+  // Handle "Enter" key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      sendMessage();
     }
   };
 
+  // Simulate file selection
+  const handleFileSelect = (filePath: string) => {
+    setSelectedFile(filePath);
+    // In a real implementation, this would fetch the actual file content
+    setFileContent(`// This is a simulated file content for ${filePath}\n\n// In a real implementation, this would be the actual file content.`);
+    setIsEditing(true);
+  };
+
+  // Simulate file editing
+  const handleSaveFile = () => {
+    toast({
+      title: 'Success',
+      description: `File ${selectedFile} updated successfully (simulated)`,
+    });
+    setIsEditing(false);
+    setSelectedFile(null);
+    setFileContent('');
+  };
+
   return (
-    <div className="flex flex-col rounded-lg border">
-      <div className="h-[500px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                message.isUser
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground'
-              }`}
-            >
-              <p className="whitespace-pre-wrap break-words">{message.text}</p>
-              <p className="text-xs opacity-70 mt-1">
-                {message.timestamp.toLocaleTimeString()}
-              </p>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg px-4 py-2 bg-secondary text-secondary-foreground">
-              <div className="flex items-center">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                <p>AI is typing...</p>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
+      {/* Left side: Chat interface */}
+      <div className="col-span-1 md:col-span-8">
+        <Card className="flex h-[600px] flex-col overflow-hidden p-4">
+          {/* Messages container */}
+          <div className="flex-1 overflow-y-auto">
+            {messages.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
+                <Info className="mb-2 h-12 w-12 opacity-50" />
+                <h3 className="mb-1 text-lg font-medium">AI Assistant</h3>
+                <p className="max-w-md text-sm">
+                  Ask me anything about your project, users, or administrative tasks.
+                  I can help with troubleshooting, data analysis, and task automation.
+                </p>
               </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      <div className="p-4 border-t">
-        <div className="flex space-x-2">
-          <Textarea
-            placeholder="Ask me anything about managing your platform..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="min-h-12 resize-none"
-            disabled={isLoading}
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!input.trim() || isLoading}
-            className="shrink-0"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <div className="space-y-4 pb-4">
+                {messages.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${
+                      msg.role === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+                    </div>
+                  </div>
+                ))}
+                {isProcessing && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-lg bg-muted px-4 py-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </Button>
+          </div>
+
+          {/* Input area */}
+          <div className="mt-4">
+            <div className="relative">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask the AI assistant..."
+                className="min-h-[80px] resize-none pr-12"
+              />
+              <Button
+                size="icon"
+                className="absolute bottom-2 right-2"
+                onClick={sendMessage}
+                disabled={isProcessing || !input.trim()}
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Press Enter to send, Shift+Enter for a new line
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Right side: Project files and user info */}
+      <div className="col-span-1 md:col-span-4">
+        <div className="space-y-6">
+          {/* Project files */}
+          <Card className="p-4">
+            <h3 className="mb-3 flex items-center text-lg font-medium">
+              <FileText className="mr-2 h-5 w-5" />
+              Project Files
+            </h3>
+            <div className="max-h-[200px] overflow-y-auto">
+              <ul className="space-y-1">
+                {files.map((file, index) => (
+                  <li key={index}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-left"
+                      onClick={() => handleFileSelect(file.path)}
+                    >
+                      <Code className="mr-2 h-4 w-4" />
+                      <span className="truncate">{file.path}</span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Card>
+
+          {/* File editing */}
+          {isEditing && selectedFile && (
+            <Card className="p-4">
+              <h3 className="mb-3 flex items-center text-lg font-medium">
+                <Code className="mr-2 h-5 w-5" />
+                Edit File: {selectedFile}
+              </h3>
+              <Textarea
+                value={fileContent}
+                onChange={(e) => setFileContent(e.target.value)}
+                className="min-h-[150px] font-mono text-sm"
+              />
+              <div className="mt-4 flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveFile}>Save Changes</Button>
+              </div>
+            </Card>
+          )}
+
+          {/* User information */}
+          <Card className="p-4">
+            <h3 className="mb-3 flex items-center text-lg font-medium">
+              <User className="mr-2 h-5 w-5" />
+              Admin Actions
+            </h3>
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full justify-start" size="sm">
+                <span className="truncate">View System Status</span>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" size="sm">
+                <span className="truncate">Manage User Permissions</span>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" size="sm">
+                <span className="truncate">Update App Settings</span>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" size="sm">
+                <span className="truncate">View Activity Logs</span>
+              </Button>
+            </div>
+          </Card>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          The admin AI assistant can help with platform management and user support.
-        </p>
       </div>
     </div>
   );
