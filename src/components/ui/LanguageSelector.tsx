@@ -1,8 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Globe, ChevronDown, Check, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +13,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { LanguageOption } from '@/utils/audio/types';
 import { getAvailableLanguages, initializeGoogleVoices } from '@/utils/audio';
+import { Input } from '@/components/ui/input';
 
 interface LanguageSelectorProps {
   onSelect: (language: LanguageOption) => void;
@@ -24,7 +24,20 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
   const [languages, setLanguages] = useState<LanguageOption[]>(getAvailableLanguages());
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLanguages, setDisplayLanguages] = useState<LanguageOption[]>(languages);
+  
+  // Use useMemo to derive filtered languages list
+  const displayLanguages = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return languages;
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    return languages.filter(lang => 
+      lang.name.toLowerCase().includes(query) || 
+      lang.nativeText.toLowerCase().includes(query) ||
+      lang.code.toLowerCase().includes(query)
+    );
+  }, [searchQuery, languages]);
 
   // Fetch available languages from Google TTS
   useEffect(() => {
@@ -56,7 +69,6 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
           formattedLanguages.sort((a, b) => a.name.localeCompare(b.name));
           
           setLanguages(formattedLanguages);
-          setDisplayLanguages(formattedLanguages);
           
           // If the selected language is not in the new list, select the first one
           if (!selectedLanguage || !formattedLanguages.find(l => l.code === selectedLanguage.code)) {
@@ -80,24 +92,7 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  // Filter languages when search query changes
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setDisplayLanguages(languages);
-      return;
-    }
-    
-    const query = searchQuery.toLowerCase().trim();
-    const filtered = languages.filter(lang => 
-      lang.name.toLowerCase().includes(query) || 
-      lang.nativeText.toLowerCase().includes(query) ||
-      lang.code.toLowerCase().includes(query)
-    );
-    
-    setDisplayLanguages(filtered);
-  }, [searchQuery, languages]);
+  }, [onSelect, selectedLanguage]);
 
   // Default to the first language if none selected
   const effectiveSelectedLanguage = selectedLanguage || (languages.length > 0 ? languages[0] : null);
@@ -120,13 +115,15 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
       <DropdownMenuContent className="w-[300px]">
         <DropdownMenuLabel>Select Language</DropdownMenuLabel>
         <div className="px-2 py-2">
-          <Input
-            placeholder="Search languages..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8"
-            icon={<Search className="h-4 w-4" />}
-          />
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search languages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 pl-8"
+            />
+          </div>
         </div>
         <DropdownMenuSeparator />
         <div className="max-h-64 overflow-y-auto">

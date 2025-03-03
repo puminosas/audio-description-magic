@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Mic, 
   ChevronDown, 
@@ -41,7 +41,27 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayVoices, setDisplayVoices] = useState<VoiceOption[]>(voices);
+  
+  // Use useMemo to derive filtered voices list for better performance
+  const displayVoices = useMemo(() => {
+    let filtered = voices;
+    
+    // Apply gender filter
+    if (filter !== 'all') {
+      filtered = filtered.filter(voice => voice.gender === filter);
+    }
+    
+    // Apply search query
+    if (searchQuery.trim()) {
+      const lowQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(voice => 
+        voice.name.toLowerCase().includes(lowQuery) || 
+        voice.id.toLowerCase().includes(lowQuery)
+      );
+    }
+    
+    return filtered;
+  }, [voices, filter, searchQuery]);
   
   // Fetch voices from Google TTS when language changes
   useEffect(() => {
@@ -79,9 +99,6 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
           
           setVoices(formattedVoices.length > 0 ? formattedVoices : DEFAULT_VOICES);
           
-          // Apply current filter and search
-          updateDisplayVoices(formattedVoices, filter, searchQuery);
-          
           // If the selected voice is not in the new list, select the first one
           if (!selectedVoice || !formattedVoices.find(v => v.id === selectedVoice.id)) {
             onSelect(formattedVoices[0]);
@@ -89,7 +106,6 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
         } else if (isMounted) {
           // If no voices for the selected language, use defaults
           setVoices(DEFAULT_VOICES);
-          setDisplayVoices(DEFAULT_VOICES);
           onSelect(DEFAULT_VOICES[0]);
         }
       } catch (error) {
@@ -106,7 +122,7 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
     return () => {
       isMounted = false;
     };
-  }, [language]);
+  }, [language, onSelect, selectedVoice]);
   
   // Helper function to format voice names for better readability
   function formatVoiceName(voiceName: string, gender?: string): string {
@@ -118,32 +134,6 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
     
     return `${voiceType} ${voiceId} (${gender === 'female' ? 'Female' : 'Male'})`;
   }
-  
-  // Update displayed voices when filter or search changes
-  const updateDisplayVoices = (allVoices: VoiceOption[], currentFilter: string, query: string) => {
-    let filtered = allVoices;
-    
-    // Apply gender filter
-    if (currentFilter !== 'all') {
-      filtered = filtered.filter(voice => voice.gender === currentFilter);
-    }
-    
-    // Apply search query
-    if (query.trim()) {
-      const lowQuery = query.toLowerCase();
-      filtered = filtered.filter(voice => 
-        voice.name.toLowerCase().includes(lowQuery) || 
-        voice.id.toLowerCase().includes(lowQuery)
-      );
-    }
-    
-    setDisplayVoices(filtered);
-  };
-  
-  // Handle filter changes
-  useEffect(() => {
-    updateDisplayVoices(voices, filter, searchQuery);
-  }, [filter, searchQuery, voices]);
   
   // Default to the first voice if none selected
   const effectiveSelectedVoice = selectedVoice || (voices.length > 0 ? voices[0] : null);
@@ -166,13 +156,15 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
       <DropdownMenuContent className="w-[300px]">
         <DropdownMenuLabel>Select Voice</DropdownMenuLabel>
         <div className="px-2 py-2">
-          <Input
-            placeholder="Search voices..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 mb-2"
-            icon={<Search className="h-4 w-4" />}
-          />
+          <div className="relative mb-2">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search voices..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 pl-8"
+            />
+          </div>
           <div className="flex p-1 bg-secondary/50 rounded-md text-xs">
             <button 
               className={`flex-1 px-2 py-1 rounded ${filter === 'all' ? 'bg-background shadow-sm' : ''}`}
