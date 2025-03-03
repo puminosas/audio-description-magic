@@ -1,132 +1,159 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { walk } from "https://deno.land/std@0.168.0/fs/walk.ts";
-import { extname, join } from "https://deno.land/std@0.168.0/path/mod.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { walk } from 'https://deno.land/std@0.168.0/fs/walk.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1';
+import { extname, basename } from 'https://deno.land/std@0.168.0/path/mod.ts';
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Origin': 'https://audiodescriptions.online',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-// Known project directories to include
-const PROJECT_ROOT = Deno.cwd();
-
-// Directories and files to ignore
+// Directories to ignore
 const IGNORE_DIRS = [
   '.git',
   'node_modules',
   'dist',
   'build',
-  '.cache'
+  '.cache',
+  '.github',
+  '.vscode',
+  'public',
 ];
 
-// File extensions to include
-const INCLUDE_EXTENSIONS = [
-  '.js', '.jsx', '.ts', '.tsx', '.css', '.scss', 
-  '.html', '.md', '.json', '.yml', '.yaml'
-];
+// Get file extension without the dot
+function getFileType(filePath: string): string {
+  const ext = extname(filePath).toLowerCase();
+  return ext ? ext.substring(1) : '';
+}
+
+// Function to check if a file should be included
+function shouldIncludeFile(path: string): boolean {
+  // Skip directories in the ignore list
+  for (const dir of IGNORE_DIRS) {
+    if (path.includes(`/${dir}/`) || path.endsWith(`/${dir}`)) {
+      return false;
+    }
+  }
+
+  // Skip hidden files and directories (starting with .)
+  const fileName = basename(path);
+  if (fileName.startsWith('.')) {
+    return false;
+  }
+
+  // Skip large files and binary files
+  const ext = getFileType(path);
+  const binaryExts = ['jpg', 'jpeg', 'png', 'gif', 'ico', 'woff', 'woff2', 'ttf', 'eot', 'mp3', 'mp4', 'mov', 'zip', 'pdf'];
+  if (binaryExts.includes(ext)) {
+    return false;
+  }
+
+  return true;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { 
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 
   try {
-    // Get auth header
-    const authHeader = req.headers.get('Authorization') || '';
-    
-    if (!authHeader) {
-      console.error('Missing authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Authorization required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Get Supabase environment variables
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase environment variables are not set');
     }
 
-    // Extract token
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Verify user is admin
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      console.error('User authentication error:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Authentication failed' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Check admin role
-    const { data: isAdmin, error: roleError } = await supabase.rpc('has_role', { 
-      role: 'admin',
-      user_id: user.id 
-    });
-    
-    if (roleError || !isAdmin) {
-      console.error('User is not an admin:', roleError);
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Parse URL to get user ID from query parameter
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('userId');
 
-    console.log('Getting project files from:', PROJECT_ROOT);
-    
-    const files = [];
-    const maxFiles = 100; // Limit the number of files to return
-    
-    try {
-      // List files using walk
-      for await (const entry of walk(PROJECT_ROOT, {
-        maxDepth: 4, // Limit depth to avoid too many files
-        includeDirs: false,
-        skip: (entry) => {
-          // Skip directories and files we want to ignore
-          if (IGNORE_DIRS.some(dir => entry.path.includes(`/${dir}/`))) {
-            return true;
+    // Initialize Supabase client with service role key
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Verify user is an admin if userId is provided
+    if (userId) {
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin');
+
+      if (rolesError) {
+        console.error('Error checking admin role:', rolesError);
+        throw new Error('Error verifying admin status');
+      }
+
+      if (!roles || roles.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized. Admin access required.' }),
+          { 
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
-          
-          // Only include files with specified extensions
-          const ext = extname(entry.path).toLowerCase();
-          return !INCLUDE_EXTENSIONS.includes(ext);
-        }
-      })) {
-        if (files.length >= maxFiles) break; // Limit the number of files
-        
-        // Get path relative to project root
-        const relativePath = entry.path.replace(PROJECT_ROOT, '').replace(/^\//, '');
+        );
+      }
+    }
+
+    // Get the project directory
+    const projectDir = Deno.cwd();
+    const files = [];
+
+    // Use the walk function to recursively traverse the directory
+    for await (const entry of walk(projectDir, { 
+      includeDirs: false,
+      followSymlinks: false,
+      exts: ['ts', 'tsx', 'js', 'jsx', 'json', 'css', 'scss', 'html', 'md', 'toml', 'yaml', 'yml'], 
+    })) {
+      // Get the relative path from the project directory
+      const relativePath = entry.path.substring(projectDir.length + 1);
+      
+      if (shouldIncludeFile(relativePath)) {
+        const fileType = getFileType(entry.path);
+        const fileInfo = await Deno.stat(entry.path);
         
         files.push({
           path: relativePath,
-          type: extname(entry.name).replace('.', ''),
-          size: (await Deno.stat(entry.path)).size
+          type: fileType,
+          size: fileInfo.size,
         });
       }
-      
-      console.log(`Found ${files.length} files`);
-      
-      return new Response(
-        JSON.stringify(files),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-      
-    } catch (fsError) {
-      console.error('Error reading filesystem:', fsError);
-      throw new Error(`File system error: ${fsError.message}`);
     }
-  } catch (error) {
-    console.error('Error in project-files function:', error.message, error.stack);
+
     return new Response(
-      JSON.stringify({ error: error.message || 'An error occurred' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify(files),
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  } catch (error) {
+    console.error('Error listing project files:', error);
+    
+    return new Response(
+      JSON.stringify({ error: `Failed to list project files: ${error.message}` }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
   }
 });

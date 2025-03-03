@@ -12,6 +12,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import ErrorAlert from '@/components/generator/ErrorAlert';
 import { Input } from '@/components/ui/input';
+import ChatMessages from './ai-chat/ChatMessages';
+import ProjectFilesPanel from './ai-chat/ProjectFilesPanel';
+import FilePreviewPanel from './ai-chat/FilePreviewPanel';
+import AdminActionsPanel from './ai-chat/AdminActionsPanel';
 
 interface Message {
   role: 'system' | 'user' | 'assistant';
@@ -216,47 +220,11 @@ const AdminAiChat = () => {
           )}
           
           {/* Messages container */}
-          <div className="flex-1 overflow-y-auto">
-            {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
-                <Info className="mb-2 h-12 w-12 opacity-50" />
-                <h3 className="mb-1 text-lg font-medium">AI Assistant</h3>
-                <p className="max-w-md text-sm">
-                  Ask me anything about your project, users, or administrative tasks.
-                  I can help with troubleshooting, data analysis, and task automation.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4 pb-4">
-                {messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${
-                      msg.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                        msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
-                    </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-                {isProcessing && (
-                  <div className="flex justify-start">
-                    <div className="max-w-[80%] rounded-lg bg-muted px-4 py-2">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <ChatMessages 
+            messages={messages} 
+            isProcessing={isProcessing} 
+            messagesEndRef={messagesEndRef} 
+          />
 
           {/* Input area */}
           <div className="mt-4">
@@ -305,152 +273,34 @@ const AdminAiChat = () => {
       <div className="col-span-1 md:col-span-4">
         <div className="space-y-6">
           {/* Project files */}
-          <Card className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="flex items-center text-lg font-medium">
-                <FileText className="mr-2 h-5 w-5" />
-                Project Files
-              </h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={fetchFiles}
-                disabled={isRefreshingFiles}
-                className="h-8 w-8 p-0"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshingFiles ? 'animate-spin' : ''}`} />
-                <span className="sr-only">Refresh Files</span>
-              </Button>
-            </div>
-            
-            {/* Search input */}
-            <div className="mb-3 relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search files..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            
-            {/* File type filters */}
-            {uniqueFileTypes.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-1">
-                {uniqueFileTypes.map(type => (
-                  <Button
-                    key={type}
-                    variant={fileTypeFilters.includes(type) ? "default" : "outline"}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => toggleFileTypeFilter(type)}
-                  >
-                    {type}
-                  </Button>
-                ))}
-                {fileTypeFilters.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setFileTypeFilters([])}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-            )}
-            
-            <div className="max-h-[250px] overflow-y-auto rounded-md border">
-              {isLoadingFiles ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Loading files...</span>
-                </div>
-              ) : filteredFiles.length > 0 ? (
-                <ul className="divide-y">
-                  {filteredFiles.map((file, index) => (
-                    <li key={index} className="px-1 py-0.5 hover:bg-muted/50">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start p-1 text-left text-xs"
-                        onClick={() => handleFileSelect(file.path)}
-                      >
-                        <Code className="mr-2 h-4 w-4" />
-                        <span className="truncate">{file.path}</span>
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="flex items-center justify-center py-8 text-center text-sm text-muted-foreground">
-                  {files.length === 0 ? (
-                    <>
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      No files available
-                    </>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-4 w-4" />
-                      No matching files found
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {filteredFiles.length} of {files.length} files shown
-            </p>
-          </Card>
+          <ProjectFilesPanel 
+            files={files}
+            filteredFiles={filteredFiles}
+            uniqueFileTypes={uniqueFileTypes}
+            fileTypeFilters={fileTypeFilters}
+            isLoadingFiles={isLoadingFiles}
+            isRefreshingFiles={isRefreshingFiles}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            toggleFileTypeFilter={toggleFileTypeFilter}
+            setFileTypeFilters={setFileTypeFilters}
+            fetchFiles={fetchFiles}
+            handleFileSelect={handleFileSelect}
+          />
 
           {/* File editing */}
           {isEditing && selectedFile && (
-            <Card className="p-4">
-              <h3 className="mb-3 flex items-center text-lg font-medium">
-                <Code className="mr-2 h-5 w-5" />
-                File Preview: {selectedFile}
-              </h3>
-              <Textarea
-                value={fileContent}
-                onChange={(e) => setFileContent(e.target.value)}
-                className="min-h-[150px] font-mono text-sm"
-                readOnly
-              />
-              <div className="mt-4 flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
-                  Close
-                </Button>
-                <Button onClick={handleSaveFile} disabled>File Editing Disabled</Button>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Note: For security reasons, file editing is disabled in this version
-              </p>
-            </Card>
+            <FilePreviewPanel 
+              selectedFile={selectedFile}
+              fileContent={fileContent}
+              setFileContent={setFileContent}
+              setIsEditing={setIsEditing}
+              handleSaveFile={handleSaveFile}
+            />
           )}
 
           {/* Admin actions */}
-          <Card className="p-4">
-            <h3 className="mb-3 flex items-center text-lg font-medium">
-              <User className="mr-2 h-5 w-5" />
-              Admin Actions
-            </h3>
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" size="sm">
-                <span className="truncate">View System Status</span>
-              </Button>
-              <Button variant="outline" className="w-full justify-start" size="sm">
-                <span className="truncate">Manage User Permissions</span>
-              </Button>
-              <Button variant="outline" className="w-full justify-start" size="sm">
-                <span className="truncate">Update App Settings</span>
-              </Button>
-              <Button variant="outline" className="w-full justify-start" size="sm">
-                <span className="truncate">View Activity Logs</span>
-              </Button>
-            </div>
-          </Card>
+          <AdminActionsPanel />
         </div>
       </div>
     </div>
