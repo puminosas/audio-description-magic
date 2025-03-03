@@ -5,13 +5,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Loader2, Send, Code, FileText, User, Info, 
-  AlertCircle, Search, RefreshCw, RotateCcw 
-} from 'lucide-react';
+import { Send, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ErrorAlert from '@/components/generator/ErrorAlert';
-import { Input } from '@/components/ui/input';
 import ChatMessages from './ai-chat/ChatMessages';
 import ProjectFilesPanel from './ai-chat/ProjectFilesPanel';
 import FilePreviewPanel from './ai-chat/FilePreviewPanel';
@@ -243,7 +239,7 @@ const AdminAiChat = () => {
                 disabled={isProcessing || !input.trim()}
               >
                 {isProcessing ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
                 ) : (
                   <Send className="h-5 w-5" />
                 )}
