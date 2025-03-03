@@ -65,6 +65,15 @@ export const generateAudioDescription = async (
       return { error: 'Failed to generate audio. No audio URL returned.' };
     }
 
+    // Validate the audio URL format
+    if (data.audioUrl.startsWith('data:audio/')) {
+      const parts = data.audioUrl.split('base64,');
+      if (parts.length !== 2 || parts[1].length < 100) {
+        console.error('Invalid audio data format', parts.length, parts[1]?.length);
+        return { error: 'Invalid audio data format received' };
+      }
+    }
+
     console.log('Successfully generated audio:', data);
     
     return {

@@ -17,10 +17,14 @@ const AudioPlayer = ({
   isGenerating = false 
 }: AudioPlayerProps) => {
   // Enhanced validation of the audioUrl format with useMemo for efficiency
-  const { hasValidUrl, isValidUrl } = useMemo(() => {
+  const { hasValidUrl, isValidUrl, validationDetails } = useMemo(() => {
     // Don't validate if no URL or still generating
     if (!audioUrl || isGenerating) {
-      return { hasValidUrl: false, isValidUrl: false };
+      return { 
+        hasValidUrl: false, 
+        isValidUrl: false, 
+        validationDetails: { reason: 'No URL or still generating' } 
+      };
     }
     
     try {
@@ -33,34 +37,44 @@ const AudioPlayer = ({
       // Check if the data URL is too short or potentially truncated
       // Data URLs for audio need to be quite long to contain actual audio data
       const isValidLength = 
-        (audioUrl.startsWith('data:audio/') && audioUrl.length > 1000) || 
+        (audioUrl.startsWith('data:audio/') && audioUrl.length > 10000) || 
         (audioUrl.startsWith('http'));
       
       // Check if the base64 part seems valid
-      const isValidBase64 = !audioUrl.startsWith('data:audio/') || 
-        (audioUrl.split('base64,')[1]?.length > 100);
+      const hasValidBase64 = !audioUrl.startsWith('data:audio/') || 
+        (audioUrl.split('base64,')[1]?.length > 1000);
+      
+      const validationDetails = {
+        isValidDataUrl,
+        isValidLength,
+        hasValidBase64,
+        urlLength: audioUrl.length,
+        startsWithDataAudio: audioUrl.startsWith('data:audio/'),
+        includesBase64: audioUrl.includes('base64,'),
+        base64Length: audioUrl.split('base64,')[1]?.length
+      };
       
       return { 
-        hasValidUrl: isValidDataUrl && isValidLength && isValidBase64,
-        isValidUrl: isValidDataUrl
+        hasValidUrl: isValidDataUrl && isValidLength && hasValidBase64,
+        isValidUrl: isValidDataUrl,
+        validationDetails
       };
     } catch (err) {
       console.error("Error validating audio URL:", err);
-      return { hasValidUrl: false, isValidUrl: false };
+      return { 
+        hasValidUrl: false, 
+        isValidUrl: false,
+        validationDetails: { error: err, reason: 'Validation error' }
+      };
     }
   }, [audioUrl, isGenerating]);
 
   // Add logging to help debug issues
   React.useEffect(() => {
     if (audioUrl && !hasValidUrl) {
-      console.log("Audio URL validation failed:", { 
-        urlLength: audioUrl?.length,
-        startsWithDataAudio: audioUrl?.startsWith('data:audio/'),
-        includesBase64: audioUrl?.includes('base64,'),
-        base64Length: audioUrl?.split('base64,')[1]?.length
-      });
+      console.log("Audio URL validation failed:", validationDetails);
     }
-  }, [audioUrl, hasValidUrl]);
+  }, [audioUrl, hasValidUrl, validationDetails]);
 
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">
@@ -74,6 +88,7 @@ const AudioPlayer = ({
             audioUrl={audioUrl} 
             isGenerating={isGenerating} 
             isValidUrl={hasValidUrl}
+            validationDetails={validationDetails}
           />
           
           <AudioWaveform 

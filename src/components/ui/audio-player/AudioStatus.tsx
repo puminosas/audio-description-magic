@@ -9,9 +9,15 @@ interface AudioStatusProps {
   audioUrl?: string;
   isGenerating?: boolean;
   isValidUrl?: boolean;
+  validationDetails?: any;
 }
 
-const AudioStatus = ({ audioUrl, isGenerating = false, isValidUrl = true }: AudioStatusProps) => {
+const AudioStatus = ({ 
+  audioUrl, 
+  isGenerating = false, 
+  isValidUrl = true,
+  validationDetails
+}: AudioStatusProps) => {
   const { error, isLoading } = useAudioPlayer();
   
   if (isGenerating) {
@@ -48,7 +54,12 @@ const AudioStatus = ({ audioUrl, isGenerating = false, isValidUrl = true }: Audi
         <XCircle className="h-4 w-4" />
         <AlertTitle>Audio Format Error</AlertTitle>
         <AlertDescription>
-          The audio file appears to be invalid or incomplete. Please try generating again.
+          The audio file appears to be invalid or incomplete. The data may be truncated.
+          {validationDetails && validationDetails.urlLength && (
+            <span className="block mt-1 text-xs opacity-70">
+              Audio data size: {Math.round(validationDetails.urlLength / 1024)}KB
+            </span>
+          )}
         </AlertDescription>
       </Alert>
     );

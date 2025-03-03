@@ -30,7 +30,8 @@ export const useGenerationLogic = () => {
       
       const base64Part = url.split('base64,')[1];
       
-      return base64Part && base64Part.length > 100 && url.length > 1000;
+      // Audio data needs to be substantial - at least 10KB for a valid audio file
+      return base64Part && base64Part.length > 10000;
     }
     
     if (url.startsWith('http')) {
@@ -91,13 +92,14 @@ export const useGenerationLogic = () => {
           urlStart: result.audioUrl?.substring(0, 50) + '...',
           urlLength: result.audioUrl?.length,
           hasBase64: result.audioUrl?.includes('base64,'),
-          dataType: result.audioUrl?.includes('data:audio/') ? 'audio' : 'unknown'
+          dataType: result.audioUrl?.includes('data:audio/') ? 'audio' : 'unknown',
+          base64Length: result.audioUrl?.split('base64,')[1]?.length || 0
         });
         
-        setError('Generated audio appears to be invalid. Please try again.');
+        setError('Generated audio appears to be invalid or truncated. Please try again with a shorter text.');
         toast({
           title: 'Generation Error',
-          description: 'Failed to generate valid audio. Please try again.',
+          description: 'Failed to generate valid audio. The response may have been truncated.',
           variant: 'destructive',
         });
         return;
@@ -108,6 +110,7 @@ export const useGenerationLogic = () => {
         text: result.text
       });
       
+      // Set audio with a small delay to ensure DOM is ready
       setTimeout(() => {
         setGeneratedAudio({
           audioUrl: result.audioUrl,
@@ -133,6 +136,7 @@ export const useGenerationLogic = () => {
           }
         } catch (err) {
           console.error("Error saving to history:", err);
+          // Don't show error to user since audio was generated successfully
         }
       }
       

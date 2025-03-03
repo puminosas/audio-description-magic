@@ -32,7 +32,7 @@ export const AudioErrorProvider = ({
     
     // Check that data URLs have a minimum valid length
     if (audioUrl.startsWith('data:audio/') && 
-        (!audioUrl.includes('base64,') || audioUrl.length < 1000)) {
+        (!audioUrl.includes('base64,') || audioUrl.length < 10000)) {
       setError("Invalid or truncated audio data");
       setIsLoading(false);
       return;
@@ -66,8 +66,16 @@ export const AudioErrorProvider = ({
       }
       
       // For data URLs, check if they're potentially truncated
-      if (audioUrl.startsWith('data:audio/') && audioUrl.length < 10000) {
-        errorMessage = "The audio data appears to be truncated or incomplete.";
+      if (audioUrl.startsWith('data:audio/')) {
+        const base64Part = audioUrl.split('base64,')[1] || '';
+        if (base64Part.length < 10000) {
+          errorMessage = "The audio data appears to be truncated or incomplete.";
+        }
+        
+        // Check if base64 data ends properly
+        if (!base64Part.endsWith('==') && !base64Part.endsWith('=')) {
+          errorMessage = "The audio data is incomplete (improper base64 padding).";
+        }
       }
       
       setError(errorMessage);
@@ -85,17 +93,17 @@ export const AudioErrorProvider = ({
     // Set a timeout to detect very slow loading
     const timeout = setTimeout(() => {
       if (isLoading) {
-        setError("Audio loading timed out. Please try again.");
+        setError("Audio loading timed out. The file may be too large or corrupted.");
         setIsLoading(false);
       }
-    }, 10000); // 10 seconds timeout
+    }, 15000); // 15 seconds timeout
     
     // Handle errors that might occur when setting the src
     try {
       // Test the audio data before setting it as a source
       if (audioUrl.startsWith('data:audio/')) {
         const base64Part = audioUrl.split('base64,')[1];
-        if (!base64Part || base64Part.length < 100) {
+        if (!base64Part || base64Part.length < 1000) {
           throw new Error("Invalid base64 audio data");
         }
       }

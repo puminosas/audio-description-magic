@@ -16,10 +16,15 @@ const AudioOutput = ({ isGenerating, audioUrl, generatedText, error }: AudioOutp
   
   // Enhanced validation for audio URL
   const isAudioUrlInvalid = audioUrl && (
-    (audioUrl.startsWith('data:audio/') && audioUrl.length < 1000) ||
+    (audioUrl.startsWith('data:audio/') && audioUrl.length < 10000) ||
     (audioUrl.startsWith('data:audio/') && !audioUrl.includes('base64,')) ||
-    (audioUrl.startsWith('data:audio/') && audioUrl.split('base64,')[1]?.length < 100)
+    (audioUrl.startsWith('data:audio/') && audioUrl.split('base64,')[1]?.length < 10000)
   );
+  
+  // Calculate size of audio data for debugging
+  const audioDataSize = audioUrl && audioUrl.startsWith('data:audio/') 
+    ? Math.round((audioUrl.length / 1024)) 
+    : null;
   
   return (
     <div className="border-t border-border p-6 bg-secondary/20 rounded-md">
@@ -38,14 +43,15 @@ const AudioOutput = ({ isGenerating, audioUrl, generatedText, error }: AudioOutp
           <XCircle className="h-4 w-4" />
           <AlertTitle>Audio Format Error</AlertTitle>
           <AlertDescription>
-            The audio file appears to be invalid or incomplete. Please try generating again.
+            The audio file appears to be invalid or incomplete. Please try generating again with shorter text.
+            {audioDataSize && <span className="block mt-1 text-xs opacity-70">Audio data size: {audioDataSize}KB</span>}
           </AlertDescription>
         </Alert>
       ) : (
         <AudioPlayer 
           audioUrl={audioUrl || undefined} 
           isGenerating={isGenerating}
-          fileName={`product-description-${Date.now()}.mp3`}
+          fileName={`audio-description-${Date.now()}.mp3`}
         />
       )}
       
