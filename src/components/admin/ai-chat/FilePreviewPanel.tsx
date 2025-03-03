@@ -3,8 +3,9 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Code, Save, X, Wand2, FileText, AlertCircle } from 'lucide-react';
+import { Code, Save, X, Wand2, FileText, AlertCircle, Clipboard } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 interface FilePreviewPanelProps {
   selectedFile: string;
@@ -25,6 +26,8 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   handleSaveFile,
   handleAnalyzeWithAI
 }) => {
+  const { toast } = useToast();
+
   // Determine file type from extension for syntax highlighting (can be expanded)
   const getFileType = () => {
     const ext = selectedFile.split('.').pop()?.toLowerCase();
@@ -32,6 +35,26 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     if (['html', 'css', 'scss'].includes(ext)) return 'HTML/CSS';
     if (['json'].includes(ext)) return 'JSON';
     return 'Text';
+  };
+
+  const copyToClipboard = () => {
+    if (fileContent) {
+      navigator.clipboard.writeText(fileContent)
+        .then(() => {
+          toast({
+            title: "Copied to clipboard",
+            description: `File content from ${selectedFile} has been copied`,
+          });
+        })
+        .catch((error) => {
+          console.error('Failed to copy:', error);
+          toast({
+            title: "Copy failed",
+            description: "Could not copy content to clipboard",
+            variant: "destructive"
+          });
+        });
+    }
   };
 
   return (
@@ -66,6 +89,15 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           Close
         </Button>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={copyToClipboard}
+            disabled={isLoadingContent || !fileContent}
+          >
+            <Clipboard className="mr-2 h-4 w-4" />
+            Copy Content
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
