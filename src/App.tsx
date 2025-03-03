@@ -17,6 +17,7 @@ import Contact from '@/pages/Contact';
 import NotFound from '@/pages/NotFound';
 import Admin from '@/pages/Admin';
 import '@/App.css';
+import { initializeGoogleVoices } from '@/utils/audio';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -30,11 +31,11 @@ function ScrollToTop() {
 
 function App() {
   useEffect(() => {
-    // Initialize any global services here
-    // For example, pre-fetching Google TTS voices data
+    // Initialize Google TTS voices data when the app starts
     const preloadServices = async () => {
       try {
-        // Any initialization code can go here
+        // Pre-fetch Google TTS voices data
+        await initializeGoogleVoices();
       } catch (error) {
         console.error('Error initializing services:', error);
       }

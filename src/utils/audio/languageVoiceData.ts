@@ -82,7 +82,7 @@ export const LANGUAGES: LanguageOption[] = [
   },
 ];
 
-// Default voices (will be replaced with actual data from Google TTS API)
+// Default voices for fallback
 const DEFAULT_VOICES: Record<string, VoiceOption[]> = {
   'en-US': [
     { id: 'en-US-Wavenet-A', name: 'Wavenet A (Male)', gender: 'male' },
@@ -94,21 +94,31 @@ const DEFAULT_VOICES: Record<string, VoiceOption[]> = {
   ],
 };
 
+// Google TTS API cache for languages and voices
+let googleLanguagesCache: LanguageOption[] | null = null;
+let googleVoicesCache: Record<string, {
+  voices: {
+    male: VoiceOption[];
+    female: VoiceOption[];
+    neutral: VoiceOption[];
+  }
+}> | null = null;
+
 // Function to get available languages
 export function getAvailableLanguages(): LanguageOption[] {
-  return LANGUAGES;
+  return googleLanguagesCache || LANGUAGES;
 }
 
-// Function to get voices based on language code
+// Function to get voices based on language code with fallback
 export function getVoicesForLanguage(languageCode: string): VoiceOption[] {
   return DEFAULT_VOICES[languageCode] || DEFAULT_VOICES['en-US'] || [];
 }
 
 // Function to get available voices for a language
 export function getAvailableVoices(languageCode: string): VoiceOption[] {
-  if (googleVoicesCache) {
+  if (googleVoicesCache && googleVoicesCache[languageCode]) {
     // Get the language data from cache
-    const languageData = googleVoicesCache.find(lang => lang.code === languageCode);
+    const languageData = googleVoicesCache[languageCode];
     
     if (languageData && languageData.voices) {
       // Combine all gender voices into a single array
@@ -127,47 +137,90 @@ export function getAvailableVoices(languageCode: string): VoiceOption[] {
   return getVoicesForLanguage(languageCode);
 }
 
-// Cache for Google TTS languages and voices
-let googleVoicesCache: any[] | null = null;
-
 // Function to fetch and set Google TTS languages and voices
 export async function initializeGoogleVoices(): Promise<void> {
   try {
-    if (!googleVoicesCache) {
-      const response = await fetch('/api/get-google-voices');
+    const response = await fetch('/api/get-google-voices');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Google voices: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data && typeof data === 'object') {
+      // Process language data
+      const languages: LanguageOption[] = Object.keys(data).map(code => ({
+        id: code,
+        code,
+        name: data[code].display_name || code,
+        nativeText: data[code].display_name || code,
+        nativeName: data[code].display_name || code
+      }));
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch Google voices: ${response.statusText}`);
-      }
+      // Sort languages alphabetically
+      languages.sort((a, b) => a.name.localeCompare(b.name));
       
-      const { data, error } = await response.json();
+      // Process voices data
+      const voices: Record<string, { voices: { male: VoiceOption[], female: VoiceOption[], neutral: VoiceOption[] }}> = {};
       
-      if (error) {
-        throw new Error(error);
-      }
+      Object.keys(data).forEach(langCode => {
+        const langData = data[langCode];
+        voices[langCode] = {
+          voices: {
+            male: (langData.voices.MALE || []).map((v: any) => ({
+              id: v.name,
+              name: formatVoiceName(v.name),
+              gender: 'male' as const
+            })),
+            female: (langData.voices.FEMALE || []).map((v: any) => ({
+              id: v.name,
+              name: formatVoiceName(v.name, 'female'),
+              gender: 'female' as const
+            })),
+            neutral: []
+          }
+        };
+      });
       
-      if (data && Array.isArray(data)) {
-        googleVoicesCache = data;
-        console.log(`Loaded ${data.length} languages from Google TTS`);
-      }
+      // Set the caches
+      googleLanguagesCache = languages;
+      googleVoicesCache = voices;
+      
+      console.log(`Loaded ${languages.length} languages from Google TTS API`);
     }
   } catch (error) {
     console.error('Error initializing Google voices:', error);
-    // Fall back to default voices if there's an error
+    // Fall back to default data if there's an error
   }
 }
 
+// Helper function for formatting voice names
+function formatVoiceName(voiceName: string, gender?: string): string {
+  const nameParts = voiceName.split('-');
+  const voiceId = nameParts[nameParts.length - 1];
+  const voiceType = voiceName.includes('Wavenet') ? 'Wavenet' : 
+                   voiceName.includes('Neural2') ? 'Neural2' : 
+                   voiceName.includes('Standard') ? 'Standard' : '';
+  
+  return `${voiceType} ${voiceId} (${gender === 'female' ? 'Female' : 'Male'})`;
+}
+
 // Set custom languages from Google TTS data
-export function setCustomLanguages(languages: any[]): void {
+export function setCustomLanguages(languages: LanguageOption[]): void {
   if (languages && Array.isArray(languages) && languages.length > 0) {
-    googleVoicesCache = languages;
+    googleLanguagesCache = languages;
+  }
+}
+
+// Set custom voices from Google TTS data
+export function setCustomVoices(voices: any): void {
+  if (voices && typeof voices === 'object') {
+    googleVoicesCache = voices;
   }
 }
 
 // Get all available languages from Google TTS cache
 export function getAllGoogleLanguages(): LanguageOption[] {
-  if (googleVoicesCache && Array.isArray(googleVoicesCache) && googleVoicesCache.length > 0) {
-    return googleVoicesCache as LanguageOption[];
-  }
-  return LANGUAGES; // Fall back to default languages
+  return googleLanguagesCache || LANGUAGES;
 }

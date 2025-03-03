@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { Globe, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { Globe, ChevronDown, Check, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,23 +13,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { LanguageOption } from '@/utils/audio/types';
+import { getAvailableLanguages, initializeGoogleVoices } from '@/utils/audio';
 
 interface LanguageSelectorProps {
   onSelect: (language: LanguageOption) => void;
   selectedLanguage?: LanguageOption;
 }
 
-// Default languages as fallback
-const DEFAULT_LANGUAGES: LanguageOption[] = [
-  { id: 'en-US', code: 'en-US', name: 'English (US)', nativeText: 'English (US)', nativeName: 'English (US)' },
-  { id: 'en-GB', code: 'en-GB', name: 'English (UK)', nativeText: 'English (UK)', nativeName: 'English (UK)' },
-  { id: 'es-ES', code: 'es-ES', name: 'Spanish', nativeText: 'Español', nativeName: 'Spanish' },
-  { id: 'fr-FR', code: 'fr-FR', name: 'French', nativeText: 'Français', nativeName: 'French' },
-];
-
 const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps) => {
-  const [languages, setLanguages] = useState<LanguageOption[]>(DEFAULT_LANGUAGES);
+  const [languages, setLanguages] = useState<LanguageOption[]>(getAvailableLanguages());
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [displayLanguages, setDisplayLanguages] = useState<LanguageOption[]>(languages);
 
   // Fetch available languages from Google TTS
   useEffect(() => {
@@ -56,12 +52,19 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
             nativeName: data[code].display_name || code
           }));
           
-          setLanguages(formattedLanguages.length > 0 ? formattedLanguages : DEFAULT_LANGUAGES);
+          // Sort languages alphabetically
+          formattedLanguages.sort((a, b) => a.name.localeCompare(b.name));
+          
+          setLanguages(formattedLanguages);
+          setDisplayLanguages(formattedLanguages);
           
           // If the selected language is not in the new list, select the first one
           if (!selectedLanguage || !formattedLanguages.find(l => l.code === selectedLanguage.code)) {
             onSelect(formattedLanguages[0]);
           }
+          
+          // Update our global cache
+          await initializeGoogleVoices();
         }
       } catch (error) {
         console.error('Error loading languages:', error);
@@ -79,8 +82,25 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
     };
   }, []);
 
+  // Filter languages when search query changes
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setDisplayLanguages(languages);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = languages.filter(lang => 
+      lang.name.toLowerCase().includes(query) || 
+      lang.nativeText.toLowerCase().includes(query) ||
+      lang.code.toLowerCase().includes(query)
+    );
+    
+    setDisplayLanguages(filtered);
+  }, [searchQuery, languages]);
+
   // Default to the first language if none selected
-  const effectiveSelectedLanguage = selectedLanguage || languages[0];
+  const effectiveSelectedLanguage = selectedLanguage || (languages.length > 0 ? languages[0] : null);
 
   return (
     <DropdownMenu>
@@ -97,16 +117,29 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[240px]">
+      <DropdownMenuContent className="w-[300px]">
         <DropdownMenuLabel>Select Language</DropdownMenuLabel>
+        <div className="px-2 py-2">
+          <Input
+            placeholder="Search languages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8"
+            icon={<Search className="h-4 w-4" />}
+          />
+        </div>
         <DropdownMenuSeparator />
         <div className="max-h-64 overflow-y-auto">
           {loading ? (
             <div className="p-4 flex justify-center">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
+          ) : displayLanguages.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              No languages found
+            </div>
           ) : (
-            languages.map((language) => (
+            displayLanguages.map((language) => (
               <DropdownMenuItem
                 key={language.code}
                 className="cursor-pointer"
@@ -115,9 +148,14 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center">
                     <Globe className="h-4 w-4 mr-2" />
-                    <span>{language.name}</span>
+                    <div>
+                      <div>{language.name}</div>
+                      {language.nativeText !== language.name && (
+                        <div className="text-xs text-muted-foreground">{language.nativeText}</div>
+                      )}
+                    </div>
                   </div>
-                  {language.code === effectiveSelectedLanguage.code && (
+                  {effectiveSelectedLanguage && language.code === effectiveSelectedLanguage.code && (
                     <Check className="h-4 w-4" />
                   )}
                 </div>
