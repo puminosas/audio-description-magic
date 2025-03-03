@@ -6,6 +6,7 @@ import ChatMessages from './ai-chat/ChatMessages';
 import ProjectFilesPanel from './ai-chat/ProjectFilesPanel';
 import FilePreviewPanel from './ai-chat/FilePreviewPanel';
 import AdminActionsPanel from './ai-chat/AdminActionsPanel';
+import ChatSessionsList from './ai-chat/ChatSessionsList';
 import { useChatLogic } from './ai-chat/hooks/useChatLogic';
 import { useFileManagement } from './ai-chat/hooks/useFileManagement';
 import ChatInput from './ai-chat/ChatInput';
@@ -21,10 +22,14 @@ const AdminAiChat = () => {
     typingStatus,
     error, 
     messagesEndRef, 
+    chatSessions,
+    isLoadingSessions,
+    currentSession,
     sendMessage, 
     handleKeyDown, 
     handleClearChat,
     retryLastMessage,
+    loadChatSession,
     startNewChat
   } = useChatLogic();
 
@@ -51,45 +56,63 @@ const AdminAiChat = () => {
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-      {/* Left side: Chat interface */}
+      {/* Left side: Chat history sidebar and chat interface */}
       <div className="col-span-1 md:col-span-8">
-        <Card className="flex h-[600px] flex-col overflow-hidden p-4">
-          {/* Connection error message */}
-          {!isProcessing && error && error.includes("Failed to send") && (
-            <div className="mb-4">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Connection Error</AlertTitle>
-                <AlertDescription>
-                  Could not connect to the AI service. Please try again later or contact support.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-8">
+          {/* Chat history sidebar */}
+          <div className="col-span-1 md:col-span-2">
+            <Card className="h-[600px] overflow-hidden p-3">
+              <ChatSessionsList 
+                sessions={chatSessions}
+                currentSessionId={currentSession}
+                isLoading={isLoadingSessions}
+                onSessionSelect={loadChatSession}
+                onNewChat={startNewChat}
+              />
+            </Card>
+          </div>
           
-          {/* Messages container */}
-          <ChatMessages 
-            messages={messages} 
-            isProcessing={isProcessing}
-            typingStatus={typingStatus}
-            messagesEndRef={messagesEndRef}
-            error={error}
-            retryLastMessage={retryLastMessage}
-          />
+          {/* Chat interface */}
+          <div className="col-span-1 md:col-span-6">
+            <Card className="flex h-[600px] flex-col overflow-hidden p-4">
+              {/* Connection error message */}
+              {!isProcessing && error && error.includes("Failed to send") && (
+                <div className="mb-4">
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Connection Error</AlertTitle>
+                    <AlertDescription>
+                      Could not connect to the AI service. Please try again later or contact support.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+              
+              {/* Messages container */}
+              <ChatMessages 
+                messages={messages} 
+                isProcessing={isProcessing}
+                typingStatus={typingStatus}
+                messagesEndRef={messagesEndRef}
+                error={error}
+                retryLastMessage={retryLastMessage}
+              />
 
-          {/* Input area */}
-          <ChatInput
-            input={input}
-            setInput={setInput}
-            handleKeyDown={handleKeyDown}
-            sendMessage={sendMessage}
-            isProcessing={isProcessing}
-            typingStatus={typingStatus}
-            messages={messages}
-            handleClearChat={handleClearChat}
-            startNewChat={startNewChat}
-          />
-        </Card>
+              {/* Input area */}
+              <ChatInput
+                input={input}
+                setInput={setInput}
+                handleKeyDown={handleKeyDown}
+                sendMessage={sendMessage}
+                isProcessing={isProcessing}
+                typingStatus={typingStatus}
+                messages={messages}
+                handleClearChat={handleClearChat}
+                startNewChat={startNewChat}
+              />
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* Right side: Project files and user info */}
