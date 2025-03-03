@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -72,7 +73,7 @@ export const useFileOperations = () => {
         throw new Error(error.message || 'Failed to fetch file content');
       }
       
-      if (!data || !data.content) {
+      if (!data || typeof data.content !== 'string') {
         console.error('Invalid response for file content:', data);
         throw new Error('Invalid response from server');
       }

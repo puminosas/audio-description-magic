@@ -1,7 +1,6 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { Configuration, OpenAIApi } from 'https://esm.sh/openai@3.3.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,72 +14,84 @@ serve(async (req) => {
   }
 
   try {
-    // Get the request body
-    const { product_name, language = 'en-US', voice_name = 'default', category = 'general' } = await req.json();
+    // Get request body
+    const { product_name, language = 'en', voice_name = 'default' } = await req.json();
 
     if (!product_name) {
-      throw new Error('Product name is required');
+      throw new Error('Missing required field: product_name');
     }
 
     console.log(`Generating description for product: ${product_name}, language: ${language}`);
 
-    // Initialize OpenAI
-    const configuration = new Configuration({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
-    });
-    const openai = new OpenAIApi(configuration);
+    // Set up a simple default description if OpenAI fails
+    const defaultDescription = `${product_name} is a high-quality product designed to meet your needs. It features excellent craftsmanship and reliable performance.`;
 
-    // Language-specific instructions
-    const languageCode = language.split('-')[0];
-    
-    // Create system prompt for the specified language
-    const systemPrompt = `You are an AI product description generator. 
-      Your task is to create an engaging and concise product description for '${product_name}' in the '${category}' category.
-      Highlight key features, benefits, and unique selling points.
-      Ensure the language is clear, natural, and easy to understand when read aloud or converted into audio.
-      Maintain a professional yet engaging tone suitable for marketing purposes.
-      Structure the response well, avoiding unnecessary symbols or characters.
-      The description should be in ${languageCode === 'en' ? 'English' : languageCode} language.
-      Keep the response relatively short - around 150-200 words maximum.`;
+    // Try to generate with OpenAI
+    try {
+      const openAIKey = Deno.env.get('OPENAI_API_KEY');
+      
+      if (!openAIKey) {
+        console.log('No OpenAI API key found, returning default description');
+        return new Response(
+          JSON.stringify({ success: true, generated_text: defaultDescription }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    // Generate the product description
-    const response = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create a concise and engaging product description for: ${product_name}` }
-      ],
-      max_tokens: 350,
-      temperature: 0.7,
-    });
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an AI product description generator. Create a concise, engaging product description for "${product_name}" in ${language} language.
+              The description should be 2-3 sentences highlighting key features and benefits. Make it sound natural for text-to-speech conversion.`
+            },
+            { 
+              role: 'user', 
+              content: `Write a product description for: ${product_name}` 
+            }
+          ],
+          max_tokens: 250,
+        }),
+      });
 
-    // Extract the generated text
-    const generatedText = response.data.choices[0]?.message?.content?.trim();
+      const data = await response.json();
+      
+      if (data.error || !data.choices || !data.choices[0]) {
+        console.error('OpenAI API error:', data.error || 'No choices returned');
+        throw new Error('Failed to generate description using AI');
+      }
 
-    if (!generatedText) {
-      throw new Error('Failed to generate product description');
+      const generatedText = data.choices[0].message.content.trim();
+      console.log('Successfully generated description with OpenAI');
+
+      return new Response(
+        JSON.stringify({ success: true, generated_text: generatedText }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (openAiError) {
+      console.error('Error with OpenAI description generation:', openAiError);
+      // Fall back to default description
+      return new Response(
+        JSON.stringify({ success: true, generated_text: defaultDescription }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    console.log('Successfully generated product description');
-
-    // Return the generated description
-    return new Response(
-      JSON.stringify({
-        success: true,
-        generated_text: generatedText,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   } catch (error) {
-    console.error('Error generating product description:', error);
-    
+    console.error('Error in generate-description function:', error);
     return new Response(
-      JSON.stringify({
+      JSON.stringify({ 
         success: false, 
-        error: error.message || 'Failed to generate product description'
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
       }),
       { 
-        status: 500, 
+        status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );

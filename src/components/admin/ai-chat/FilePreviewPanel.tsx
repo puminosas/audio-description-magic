@@ -3,7 +3,8 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Code, Save, X, Wand2, FileText } from 'lucide-react';
+import { Code, Save, X, Wand2, FileText, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface FilePreviewPanelProps {
   selectedFile: string;
@@ -45,12 +46,19 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           <span className="ml-2">Loading file content...</span>
         </div>
-      ) : (
+      ) : fileContent ? (
         <Textarea
           value={fileContent}
           onChange={(e) => setFileContent(e.target.value)}
           className="min-h-[300px] font-mono text-sm"
         />
+      ) : (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load file content. The file may be empty or inaccessible.
+          </AlertDescription>
+        </Alert>
       )}
       <div className="mt-4 flex justify-between">
         <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
@@ -70,7 +78,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           <Button 
             size="sm" 
             onClick={handleSaveFile}
-            disabled={isLoadingContent}
+            disabled={isLoadingContent || !fileContent}
           >
             <Save className="mr-2 h-4 w-4" />
             Save Changes
