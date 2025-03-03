@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseTyped } from '../supabaseHelper';
-import { LanguageOption, VoiceOption, AudioGenerationResult } from './types';
+import { LanguageOption, VoiceOption, AudioGenerationResult, AudioSuccessResult, AudioErrorResult } from './types';
 
 /**
  * Generate an audio description for a product
@@ -40,8 +40,8 @@ export const generateAudioDescription = async (
     });
 
     console.log("Edge function response:", {
-      status: response.status,
-      statusText: response.statusText,
+      status: response.status !== undefined ? response.status : 'N/A',
+      statusText: response.statusText !== undefined ? response.statusText : 'N/A',
       error: response.error,
       hasData: !!response.data
     });

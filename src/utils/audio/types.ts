@@ -17,12 +17,17 @@ export interface VoiceOption {
   premium?: boolean;
 }
 
-export interface AudioGenerationResult {
-  audioUrl?: string;
+export interface AudioSuccessResult {
+  audioUrl: string;
   text?: string;
   id?: string;
-  error?: string;
 }
+
+export interface AudioErrorResult {
+  error: string;
+}
+
+export type AudioGenerationResult = AudioSuccessResult | AudioErrorResult;
 
 export interface GenerationStats {
   total: number;

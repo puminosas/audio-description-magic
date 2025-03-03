@@ -7,7 +7,10 @@ import {
   saveAudioToHistory, 
   updateGenerationCount,
   LanguageOption,
-  VoiceOption
+  VoiceOption,
+  AudioGenerationResult,
+  AudioSuccessResult,
+  AudioErrorResult
 } from '@/utils/audio';
 
 export interface GeneratedAudio {
@@ -59,7 +62,7 @@ export const useGenerationLogic = () => {
       }
       
       // Add a timeout to prevent long-running requests
-      const timeoutPromise = new Promise<{error: string}>((_, reject) => 
+      const timeoutPromise = new Promise<AudioErrorResult>((_, reject) => 
         setTimeout(() => reject({error: 'The request took too long to complete. Try with a shorter text.'}), 30000)
       );
       
@@ -73,8 +76,8 @@ export const useGenerationLogic = () => {
         timeoutPromise
       ]);
       
-      if (result.error || !result.audioUrl) {
-        const errorMessage = result.error || 'Failed to generate audio. Please try again.';
+      if ('error' in result) {
+        const errorMessage = result.error;
         
         if (errorMessage.includes('Authentication required') || errorMessage.includes('authentication')) {
           setError('You need to be signed in to generate audio. Please sign in and try again.');
@@ -129,7 +132,7 @@ export const useGenerationLogic = () => {
         });
       }, 100);
       
-      if (result.audioUrl && user?.id) {
+      if (user?.id) {
         try {
           await Promise.all([
             saveAudioToHistory(
