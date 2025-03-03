@@ -33,7 +33,7 @@ const Navbar = () => {
     { name: 'Home', path: '/' },
     { name: 'Generate', path: '/generator' },
     { name: 'Pricing', path: '/pricing' },
-    { name: 'API', path: '/api' },
+    { name: 'API', path: '/api-docs' }, // Updated to correct path
   ];
 
   return (
@@ -69,7 +69,11 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Navigation Menu */}
-      <MobileMenu isOpen={mobileMenuOpen} links={navLinks} />
+      <MobileMenu 
+        isOpen={mobileMenuOpen} 
+        links={navLinks} 
+        onLinkClick={() => setMobileMenuOpen(false)} 
+      />
     </header>
   );
 };

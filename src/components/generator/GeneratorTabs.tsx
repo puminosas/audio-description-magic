@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,20 +31,20 @@ const GeneratorTabs = ({
   return (
     <Card className="overflow-hidden">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full rounded-none bg-muted/50">
-          <TabsTrigger value="generate" className="flex-1">Generate</TabsTrigger>
-          <TabsTrigger value="text-to-audio" className="flex-1">Text to Audio</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1">History</TabsTrigger>
+        <TabsList className="w-full rounded-none bg-muted/50 flex-wrap justify-center md:justify-start">
+          <TabsTrigger value="generate" className="flex-1 max-w-[150px]">Generate</TabsTrigger>
+          <TabsTrigger value="text-to-audio" className="flex-1 max-w-[150px]">Text to Audio</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1 max-w-[150px]">History</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="generate" className="p-6">
+        <TabsContent value="generate" className="p-4 md:p-6">
           <GeneratorForm 
             onGenerate={handleGenerate} 
             loading={loading} 
           />
         </TabsContent>
         
-        <TabsContent value="text-to-audio" className="p-6">
+        <TabsContent value="text-to-audio" className="p-4 md:p-6">
           <TextToAudioTab 
             onGenerate={handleGenerate} 
             loading={loading}
@@ -51,7 +52,7 @@ const GeneratorTabs = ({
           />
         </TabsContent>
         
-        <TabsContent value="history" className="p-6">
+        <TabsContent value="history" className="p-4 md:p-6">
           <HistoryTab 
             user={user} 
             onRefreshStats={onRefreshStats}

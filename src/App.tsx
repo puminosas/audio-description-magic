@@ -42,6 +42,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/generator" element={<Generator />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
+                <Route path="/api" element={<ApiDocs />} /> {/* Add redirect for /api */}
                 <Route path="/api-client" element={<ApiClient />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/admin/*" element={<Admin />} />

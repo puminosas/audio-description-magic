@@ -1,6 +1,6 @@
 
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/context/AuthContext';
@@ -19,6 +19,22 @@ import AdminAiChatPage from './AdminAiChat';
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Get current tab from path
+  const getCurrentTab = () => {
+    const path = location.pathname.split('/')[2] || '';
+    switch (path) {
+      case 'audio-files': return 'audio-files';
+      case 'users': return 'users';
+      case 'user-update': return 'user-update';
+      case 'feedback': return 'feedback';
+      case 'ai-chat': return 'ai-chat';
+      case 'settings': return 'settings';
+      default: return 'analytics';
+    }
+  };
   
   // Emergency function to ensure the current user has admin access
   // This helps during development and testing
@@ -58,37 +74,79 @@ const Admin = () => {
       </div>
     );
   }
+
+  const handleTabClick = (tab: string) => {
+    setMobileMenuOpen(false);
+    
+    switch (tab) {
+      case 'audio-files': navigate('/admin/audio-files'); break;
+      case 'users': navigate('/admin/users'); break;
+      case 'user-update': navigate('/admin/user-update'); break;
+      case 'feedback': navigate('/admin/feedback'); break;
+      case 'ai-chat': navigate('/admin/ai-chat'); break;
+      case 'settings': navigate('/admin/settings'); break;
+      default: navigate('/admin'); break;
+    }
+  };
   
   return (
-    <div className="container max-w-7xl mx-auto px-4 py-8">
+    <div className="container max-w-7xl mx-auto px-4 py-8 pt-20 md:pt-8">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage your application and users</p>
         </div>
         
-        <Tabs defaultValue="analytics" className="space-y-6">
+        <Tabs value={getCurrentTab()} className="space-y-6">
           <div className="overflow-auto">
             <TabsList className="flex flex-wrap">
-              <TabsTrigger value="analytics" onClick={() => navigate('/admin')} className="flex-shrink-0">
+              <TabsTrigger 
+                value="analytics" 
+                onClick={() => handleTabClick('analytics')} 
+                className="flex-shrink-0"
+              >
                 Analytics
               </TabsTrigger>
-              <TabsTrigger value="audio-files" onClick={() => navigate('/admin/audio-files')} className="flex-shrink-0">
+              <TabsTrigger 
+                value="audio-files" 
+                onClick={() => handleTabClick('audio-files')} 
+                className="flex-shrink-0"
+              >
                 Audio Files
               </TabsTrigger>
-              <TabsTrigger value="users" onClick={() => navigate('/admin/users')} className="flex-shrink-0">
+              <TabsTrigger 
+                value="users" 
+                onClick={() => handleTabClick('users')} 
+                className="flex-shrink-0"
+              >
                 Users
               </TabsTrigger>
-              <TabsTrigger value="user-update" onClick={() => navigate('/admin/user-update')} className="flex-shrink-0">
+              <TabsTrigger 
+                value="user-update" 
+                onClick={() => handleTabClick('user-update')} 
+                className="flex-shrink-0"
+              >
                 Update User
               </TabsTrigger>
-              <TabsTrigger value="feedback" onClick={() => navigate('/admin/feedback')} className="flex-shrink-0">
+              <TabsTrigger 
+                value="feedback" 
+                onClick={() => handleTabClick('feedback')} 
+                className="flex-shrink-0"
+              >
                 Feedback
               </TabsTrigger>
-              <TabsTrigger value="ai-chat" onClick={() => navigate('/admin/ai-chat')} className="flex-shrink-0">
+              <TabsTrigger 
+                value="ai-chat" 
+                onClick={() => handleTabClick('ai-chat')} 
+                className="flex-shrink-0"
+              >
                 AI Chat
               </TabsTrigger>
-              <TabsTrigger value="settings" onClick={() => navigate('/admin/settings')} className="flex-shrink-0">
+              <TabsTrigger 
+                value="settings" 
+                onClick={() => handleTabClick('settings')} 
+                className="flex-shrink-0"
+              >
                 Settings
               </TabsTrigger>
             </TabsList>

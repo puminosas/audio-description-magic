@@ -9,23 +9,37 @@ import { useAuth } from '@/context/AuthContext';
 interface MobileMenuProps {
   isOpen: boolean;
   links: NavLink[];
+  onLinkClick?: () => void;
 }
 
-const MobileMenu = ({ isOpen, links }: MobileMenuProps) => {
+const MobileMenu = ({ isOpen, links, onLinkClick }: MobileMenuProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   if (!isOpen) return null;
 
+  const handleLinkClick = () => {
+    if (onLinkClick) {
+      onLinkClick();
+    }
+  };
+
+  const handleSignIn = () => {
+    if (onLinkClick) {
+      onLinkClick();
+    }
+    navigate('/auth');
+  };
+
   return (
     <nav className="md:hidden py-4 px-4 glassmorphism animate-fade-in">
       <div className="flex flex-col space-y-4">
-        <NavLinks links={links} variant="mobile" />
+        <NavLinks links={links} variant="mobile" onLinkClick={handleLinkClick} />
         
         {user ? (
           <UserMenu variant="mobile" />
         ) : (
-          <Button onClick={() => navigate('/auth')} className="mt-2">Sign In</Button>
+          <Button onClick={handleSignIn} className="mt-2">Sign In</Button>
         )}
       </div>
     </nav>
