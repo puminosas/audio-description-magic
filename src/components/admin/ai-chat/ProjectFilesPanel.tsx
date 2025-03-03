@@ -3,7 +3,21 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FileText, Loader2, AlertCircle, Search, RefreshCw, Code, Eye } from 'lucide-react';
+import { 
+  FileText, 
+  Loader2, 
+  AlertCircle, 
+  Search, 
+  RefreshCw, 
+  Eye,
+  FileCode,
+  FileJson,
+  FileSpreadsheet,
+  FileImage,
+  FileAudio,
+  FileVideo,
+  File 
+} from 'lucide-react';
 
 interface FileInfo {
   path: string;
@@ -40,6 +54,55 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
   fetchFiles,
   handleFileSelect
 }) => {
+  // Determine appropriate icon based on file extension
+  const getFileIcon = (filePath: string) => {
+    const extension = filePath.split('.').pop()?.toLowerCase() || '';
+    
+    // Code files
+    if (['js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'go', 'rb', 'php'].includes(extension)) {
+      return <FileCode className="mr-2 h-4 w-4" />;
+    }
+    
+    // Markup and style files
+    if (['html', 'xml', 'css', 'scss', 'sass', 'less'].includes(extension)) {
+      return <FileText className="mr-2 h-4 w-4" />;
+    }
+    
+    // Data files
+    if (['json', 'yaml', 'yml', 'toml'].includes(extension)) {
+      return <FileJson className="mr-2 h-4 w-4" />;
+    }
+    
+    // Spreadsheet files
+    if (['csv', 'xlsx', 'xls'].includes(extension)) {
+      return <FileSpreadsheet className="mr-2 h-4 w-4" />;
+    }
+    
+    // Image files
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {
+      return <FileImage className="mr-2 h-4 w-4" />;
+    }
+    
+    // Audio files
+    if (['mp3', 'wav', 'ogg', 'flac'].includes(extension)) {
+      return <FileAudio className="mr-2 h-4 w-4" />;
+    }
+    
+    // Video files
+    if (['mp4', 'webm', 'avi', 'mov'].includes(extension)) {
+      return <FileVideo className="mr-2 h-4 w-4" />;
+    }
+    
+    // Default file icon
+    return <File className="mr-2 h-4 w-4" />;
+  };
+
+  // Get human-readable file extension for display
+  const getFileExtension = (filePath: string) => {
+    const extension = filePath.split('.').pop()?.toLowerCase();
+    return extension ? `.${extension}` : '';
+  };
+
   return (
     <Card className="p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -119,8 +182,11 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
                   className="w-full justify-start p-1 text-left text-xs"
                   onClick={() => handleFileSelect(file.path)}
                 >
-                  <Code className="mr-2 h-4 w-4" />
+                  {getFileIcon(file.path)}
                   <span className="truncate">{file.path}</span>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    {getFileExtension(file.path)}
+                  </span>
                   <Eye className="ml-auto h-3 w-3 opacity-50" />
                 </Button>
               </li>
