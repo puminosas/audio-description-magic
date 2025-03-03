@@ -121,9 +121,21 @@ let googleVoicesCache: Record<string, any> | null = null;
 // Function to fetch and set Google TTS voices
 export async function initializeGoogleVoices(): Promise<void> {
   try {
-    // Implement the logic to fetch Google TTS voices from our Edge Function
-    // This will be called when the app initializes
-    // We'll implement this later
+    if (!googleVoicesCache) {
+      const { data, error } = await fetch('/api/get-google-voices')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch Google voices');
+          }
+          return response.json();
+        });
+
+      if (error) {
+        throw new Error(error);
+      }
+
+      googleVoicesCache = data;
+    }
   } catch (error) {
     console.error('Error initializing Google voices:', error);
     // Fall back to default voices if there's an error

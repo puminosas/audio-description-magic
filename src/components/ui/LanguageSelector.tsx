@@ -11,11 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface LanguageOption {
-  code: string;
-  name: string;
-}
+import { LanguageOption } from '@/utils/audio/types';
 
 interface LanguageSelectorProps {
   onSelect: (language: LanguageOption) => void;
@@ -24,10 +20,10 @@ interface LanguageSelectorProps {
 
 // Default languages as fallback
 const DEFAULT_LANGUAGES: LanguageOption[] = [
-  { code: 'en-US', name: 'English (US)' },
-  { code: 'en-GB', name: 'English (UK)' },
-  { code: 'es-ES', name: 'Spanish' },
-  { code: 'fr-FR', name: 'French' },
+  { id: 'en-US', code: 'en-US', name: 'English (US)', nativeText: 'English (US)', nativeName: 'English (US)' },
+  { id: 'en-GB', code: 'en-GB', name: 'English (UK)', nativeText: 'English (UK)', nativeName: 'English (UK)' },
+  { id: 'es-ES', code: 'es-ES', name: 'Spanish', nativeText: 'Español', nativeName: 'Spanish' },
+  { id: 'fr-FR', code: 'fr-FR', name: 'French', nativeText: 'Français', nativeName: 'French' },
 ];
 
 const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps) => {
@@ -53,14 +49,17 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
         // Format the languages from the response
         if (isMounted) {
           const formattedLanguages: LanguageOption[] = Object.keys(data).map(code => ({
+            id: code,
             code,
-            name: data[code].display_name || code
+            name: data[code].display_name || code,
+            nativeText: data[code].display_name || code,
+            nativeName: data[code].display_name || code
           }));
           
           setLanguages(formattedLanguages.length > 0 ? formattedLanguages : DEFAULT_LANGUAGES);
           
           // If the selected language is not in the new list, select the first one
-          if (selectedLanguage && !formattedLanguages.find(l => l.code === selectedLanguage.code)) {
+          if (!selectedLanguage || !formattedLanguages.find(l => l.code === selectedLanguage.code)) {
             onSelect(formattedLanguages[0]);
           }
         }

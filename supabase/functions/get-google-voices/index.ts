@@ -1,93 +1,132 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { GoogleAuth } from 'https://esm.sh/google-auth-library@8.7.0';
+import { TextToSpeechClient } from 'https://esm.sh/@google-cloud/text-to-speech@4.2.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Cache object to store voices data (will reset when function is redeployed)
-let voicesCache: any = null;
-let lastCacheTime = 0;
-const CACHE_DURATION = 3600000; // 1 hour in milliseconds
+// Get display name for language code
+function getLanguageDisplayName(code: string): string {
+  const languageNames: Record<string, string> = {
+    'af-ZA': 'Afrikaans (South Africa)',
+    'ar-XA': 'Arabic',
+    'bn-IN': 'Bengali (India)',
+    'bg-BG': 'Bulgarian (Bulgaria)',
+    'ca-ES': 'Catalan (Spain)',
+    'cs-CZ': 'Czech (Czech Republic)',
+    'da-DK': 'Danish (Denmark)',
+    'de-DE': 'German (Germany)',
+    'el-GR': 'Greek (Greece)',
+    'en-AU': 'English (Australia)',
+    'en-GB': 'English (United Kingdom)',
+    'en-IN': 'English (India)',
+    'en-US': 'English (United States)',
+    'es-ES': 'Spanish (Spain)',
+    'es-US': 'Spanish (United States)',
+    'fi-FI': 'Finnish (Finland)',
+    'fil-PH': 'Filipino (Philippines)',
+    'fr-CA': 'French (Canada)',
+    'fr-FR': 'French (France)',
+    'he-IL': 'Hebrew (Israel)',
+    'hi-IN': 'Hindi (India)',
+    'hu-HU': 'Hungarian (Hungary)',
+    'id-ID': 'Indonesian (Indonesia)',
+    'is-IS': 'Icelandic (Iceland)',
+    'it-IT': 'Italian (Italy)',
+    'ja-JP': 'Japanese (Japan)',
+    'ko-KR': 'Korean (South Korea)',
+    'lt-LT': 'Lithuanian (Lithuania)',
+    'lv-LV': 'Latvian (Latvia)',
+    'ms-MY': 'Malay (Malaysia)',
+    'ml-IN': 'Malayalam (India)',
+    'cmn-CN': 'Mandarin Chinese (China Mainland)',
+    'cmn-TW': 'Mandarin Chinese (Taiwan)',
+    'nb-NO': 'Norwegian (Norway)',
+    'nl-NL': 'Dutch (Netherlands)',
+    'pl-PL': 'Polish (Poland)',
+    'pt-BR': 'Portuguese (Brazil)',
+    'pt-PT': 'Portuguese (Portugal)',
+    'ro-RO': 'Romanian (Romania)',
+    'ru-RU': 'Russian (Russia)',
+    'sk-SK': 'Slovak (Slovakia)',
+    'sr-RS': 'Serbian (Serbia)',
+    'sv-SE': 'Swedish (Sweden)',
+    'ta-IN': 'Tamil (India)',
+    'te-IN': 'Telugu (India)',
+    'th-TH': 'Thai (Thailand)',
+    'tr-TR': 'Turkish (Turkey)',
+    'uk-UA': 'Ukrainian (Ukraine)',
+    'vi-VN': 'Vietnamese (Vietnam)',
+    'yue-HK': 'Cantonese (Hong Kong)',
+  };
+
+  return languageNames[code] || code;
+}
 
 serve(async (req) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const currentTime = Date.now();
+    console.log('Fetching Google TTS voices...');
+
+    // Create client with credentials from environment variables
+    const client = new TextToSpeechClient();
     
-    // Return cached voices if available and not expired
-    if (voicesCache && (currentTime - lastCacheTime < CACHE_DURATION)) {
-      return new Response(
-        JSON.stringify(voicesCache),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Create Google Auth client
-    const auth = new GoogleAuth({
-      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    });
-    const client = await auth.getClient();
-
-    // Get voices from Google TTS API
-    const response = await client.request({
-      url: 'https://texttospeech.googleapis.com/v1/voices',
-      method: 'GET',
-    });
-
-    if (!response.data || !response.data.voices) {
-      throw new Error('Failed to fetch voices from Google TTS API');
-    }
-
-    // Process voices into structured format
-    const voices = response.data.voices;
-    const voiceData: Record<string, any> = {};
+    // List all available voices
+    const [response] = await client.listVoices({});
     
-    for (const voice of voices) {
-      for (const languageCode of voice.languageCodes) {
-        if (!voiceData[languageCode]) {
-          voiceData[languageCode] = {
-            display_name: getLanguageDisplayName(languageCode),
-            voices: { MALE: [], FEMALE: [] }
+    // Organize voices by language code
+    const voicesByLanguage: Record<string, {
+      display_name: string,
+      voices: {
+        MALE: any[],
+        FEMALE: any[],
+        NEUTRAL: any[]
+      }
+    }> = {};
+
+    response.voices?.forEach(voice => {
+      voice.languageCodes?.forEach(langCode => {
+        if (!voicesByLanguage[langCode]) {
+          voicesByLanguage[langCode] = {
+            display_name: getLanguageDisplayName(langCode),
+            voices: {
+              MALE: [],
+              FEMALE: [],
+              NEUTRAL: []
+            }
           };
         }
 
-        const voiceInfo = {
-          name: voice.name,
-          ssml_gender: voice.ssmlGender
-        };
-
-        if (voice.ssmlGender === 'MALE' || voice.ssmlGender === 'FEMALE') {
-          voiceData[languageCode].voices[voice.ssmlGender].push(voiceInfo);
+        if (voice.ssmlGender) {
+          const genderKey = voice.ssmlGender.toString();
+          
+          // Add voice to the appropriate gender category
+          if (['MALE', 'FEMALE', 'NEUTRAL'].includes(genderKey)) {
+            voicesByLanguage[langCode].voices[genderKey as 'MALE' | 'FEMALE' | 'NEUTRAL'].push({
+              name: voice.name,
+              ssml_gender: genderKey
+            });
+          }
         }
-      }
-    }
+      });
+    });
 
-    // Update cache
-    voicesCache = voiceData;
-    lastCacheTime = currentTime;
+    console.log(`Successfully fetched voices for ${Object.keys(voicesByLanguage).length} languages`);
 
+    return new Response(JSON.stringify(voicesByLanguage), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error fetching Google TTS voices:', error);
+    
     return new Response(
-      JSON.stringify(voiceData),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-  } 
-  catch (error) {
-    console.error('Error fetching voices:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to fetch voices' }),
+      JSON.stringify({ error: error.message || 'Failed to fetch Google TTS voices' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -95,23 +134,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Helper function to get language display name
-function getLanguageDisplayName(languageCode: string): string {
-  const languageNames: Record<string, string> = {
-    'en-US': 'English (US)',
-    'en-GB': 'English (UK)',
-    'fr-FR': 'French',
-    'de-DE': 'German',
-    'es-ES': 'Spanish',
-    'it-IT': 'Italian',
-    'ja-JP': 'Japanese',
-    'ko-KR': 'Korean',
-    'pt-BR': 'Portuguese (Brazil)',
-    'ru-RU': 'Russian',
-    'zh-CN': 'Chinese (Simplified)',
-    // Add more languages as needed
-  };
-
-  return languageNames[languageCode] || languageCode;
-}

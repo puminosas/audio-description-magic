@@ -19,14 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface VoiceOption {
-  id: string;
-  name: string;
-  gender: 'male' | 'female' | 'neutral';
-  sample?: string;
-  premium?: boolean;
-}
+import { VoiceOption } from '@/utils/audio/types';
 
 interface VoiceSelectorProps {
   onSelect: (voice: VoiceOption) => void;
@@ -66,12 +59,12 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
           const formattedVoices: VoiceOption[] = [
             ...data[language].voices.MALE.map((v: any) => ({
               id: v.name,
-              name: v.name.split('-').pop(),
+              name: v.name.split('-').pop() + ' (Male)',
               gender: 'male' as const
             })),
             ...data[language].voices.FEMALE.map((v: any) => ({
               id: v.name,
-              name: v.name.split('-').pop(),
+              name: v.name.split('-').pop() + ' (Female)',
               gender: 'female' as const
             }))
           ];
@@ -79,9 +72,13 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
           setVoices(formattedVoices.length > 0 ? formattedVoices : DEFAULT_VOICES);
           
           // If the selected voice is not in the new list, select the first one
-          if (selectedVoice && !formattedVoices.find(v => v.id === selectedVoice.id)) {
+          if (!selectedVoice || !formattedVoices.find(v => v.id === selectedVoice.id)) {
             onSelect(formattedVoices[0]);
           }
+        } else if (isMounted) {
+          // If no voices for the selected language, use defaults
+          setVoices(DEFAULT_VOICES);
+          onSelect(DEFAULT_VOICES[0]);
         }
       } catch (error) {
         console.error('Error loading voices:', error);
