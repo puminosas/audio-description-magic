@@ -17,19 +17,26 @@ export const useMessageHandling = (
   const [error, setError] = useState<string | null>(null);
 
   // Send a message to the AI
-  const sendMessage = async () => {
-    if (!input.trim() || isProcessing) return;
+  const sendMessage = async (customMessages?: Message[]) => {
+    if ((!input.trim() && !customMessages) || isProcessing) return;
 
-    const userMessage: Message = { 
-      role: 'user', 
-      content: input,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
-    const updatedMessages = [...messages, userMessage];
+    // Use custom messages if provided, otherwise create a new user message
+    let updatedMessages: Message[];
+    
+    if (customMessages) {
+      updatedMessages = customMessages;
+    } else {
+      const userMessage: Message = { 
+        role: 'user', 
+        content: input,
+        id: uuidv4(),
+        createdAt: new Date().toISOString()
+      };
+      updatedMessages = [...messages, userMessage];
+      setInput('');
+    }
     
     setMessages(updatedMessages);
-    setInput('');
     setIsProcessing(true);
     setTypingStatus('processing');
     setError(null);

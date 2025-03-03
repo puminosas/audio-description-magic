@@ -55,6 +55,33 @@ export const useChatLogic = () => {
     }
   };
 
+  // Request AI to analyze a file
+  const sendFileAnalysisRequest = async (filePath: string, fileContent: string) => {
+    if (isProcessing) return;
+    
+    // Create a user message about the file analysis request
+    const userMessage: Message = {
+      role: 'user',
+      content: `Please analyze this file: ${filePath}\n\`\`\`\n${fileContent}\n\`\`\``,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString()
+    };
+    
+    // Update state with the new message
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setTypingStatus('processing');
+    
+    // Now send the message to the AI
+    const newMessages = await handleSendMessage(updatedMessages);
+    if (newMessages) {
+      // Save chat history after receiving AI response
+      setTimeout(() => {
+        saveChatHistory();
+      }, 500);
+    }
+  };
+
   return {
     input,
     setInput,
@@ -71,6 +98,7 @@ export const useChatLogic = () => {
     handleClearChat,
     retryLastMessage,
     loadChatSession,
-    startNewChat
+    startNewChat,
+    sendFileAnalysisRequest
   };
 };

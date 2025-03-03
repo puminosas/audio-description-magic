@@ -3,7 +3,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FileText, Loader2, AlertCircle, Search, RefreshCw, Code } from 'lucide-react';
+import { FileText, Loader2, AlertCircle, Search, RefreshCw, Code, Eye } from 'lucide-react';
 
 interface FileInfo {
   path: string;
@@ -116,6 +116,7 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
                 >
                   <Code className="mr-2 h-4 w-4" />
                   <span className="truncate">{file.path}</span>
+                  <Eye className="ml-auto h-3 w-3 opacity-50" />
                 </Button>
               </li>
             ))}

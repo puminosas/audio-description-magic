@@ -13,6 +13,7 @@ export const useFileManagement = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshingFiles, setIsRefreshingFiles] = useState(false);
@@ -70,26 +71,102 @@ export const useFileManagement = () => {
     }
   }, [fetchFiles, user]);
 
-  // Get file content (simulated for now)
-  const handleFileSelect = (filePath: string) => {
-    setSelectedFile(filePath);
+  // Fetch file content
+  const fetchFileContent = async (filePath: string) => {
+    setIsLoadingContent(true);
+    setError(null);
     
-    // In a real implementation, this would fetch the actual file content
-    // For security reasons, we're just returning the file path information
-    setFileContent(`// This is a preview for ${filePath}\n\n// In a full implementation, this would fetch and display the actual file content.\n// For security reasons, this feature is limited in the current version.`);
-    
-    setIsEditing(true);
+    try {
+      console.log(`Fetching content for file: ${filePath}`);
+      const { data, error } = await supabase.functions.invoke('get-file-content', {
+        body: { filePath }
+      });
+
+      if (error) {
+        console.error('Error fetching file content:', error);
+        throw new Error(error.message || 'Failed to fetch file content');
+      }
+      
+      if (!data || !data.content) {
+        console.error('Invalid response for file content:', data);
+        throw new Error('Invalid response from server');
+      }
+      
+      console.log('File content loaded successfully');
+      return data.content;
+    } catch (error) {
+      console.error('Error fetching file content:', error);
+      setError(`Failed to load file content: ${error.message}`);
+      toast({
+        title: 'Error',
+        description: 'Failed to load file content',
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsLoadingContent(false);
+    }
   };
 
-  // Simulate file editing
-  const handleSaveFile = () => {
+  // Get file content
+  const handleFileSelect = async (filePath: string) => {
+    setSelectedFile(filePath);
+    setIsEditing(true);
+    
+    const content = await fetchFileContent(filePath);
+    if (content) {
+      setFileContent(content);
+    } else {
+      // Fallback message if content can't be loaded
+      setFileContent(`// Error loading content for ${filePath}\n// This may be due to permission restrictions or file access limitations.`);
+    }
+  };
+
+  // Save file content
+  const handleSaveFile = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      console.log(`Saving changes to file: ${selectedFile}`);
+      const { data, error } = await supabase.functions.invoke('edit-file', {
+        body: { 
+          filePath: selectedFile,
+          newContent: fileContent
+        }
+      });
+
+      if (error) {
+        console.error('Error saving file:', error);
+        throw new Error(error.message || 'Failed to save file changes');
+      }
+      
+      console.log('File saved successfully:', data);
+      toast({
+        title: 'Success',
+        description: 'File changes saved successfully',
+      });
+    } catch (error) {
+      console.error('Error saving file:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to save file: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Ask AI to analyze the file content
+  const handleAnalyzeWithAI = async () => {
+    if (!selectedFile || !fileContent) return;
+    
     toast({
-      title: 'Feature Limited',
-      description: `File editing is a simulated feature and doesn't modify actual files`,
+      title: 'AI Analysis Requested',
+      description: 'Analyzing file content with AI...',
     });
-    setIsEditing(false);
-    setSelectedFile(null);
-    setFileContent('');
+    
+    // This functionality would be implemented in the chat handling logic
+    // Here we just log it for demo purposes
+    console.log('AI analysis requested for file:', selectedFile);
   };
 
   // Filter files by type and search term
@@ -115,6 +192,7 @@ export const useFileManagement = () => {
     selectedFile,
     fileContent,
     isEditing,
+    isLoadingContent,
     error,
     searchTerm,
     isRefreshingFiles,
@@ -127,6 +205,7 @@ export const useFileManagement = () => {
     fetchFiles,
     handleFileSelect,
     handleSaveFile,
+    handleAnalyzeWithAI,
     toggleFileTypeFilter
   };
 };

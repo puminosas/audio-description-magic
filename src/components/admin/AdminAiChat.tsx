@@ -30,7 +30,8 @@ const AdminAiChat = () => {
     handleClearChat,
     retryLastMessage,
     loadChatSession,
-    startNewChat
+    startNewChat,
+    sendFileAnalysisRequest
   } = useChatLogic();
 
   const {
@@ -40,6 +41,7 @@ const AdminAiChat = () => {
     selectedFile,
     fileContent,
     isEditing,
+    isLoadingContent,
     isRefreshingFiles,
     searchTerm,
     fileTypeFilters,
@@ -51,8 +53,17 @@ const AdminAiChat = () => {
     fetchFiles,
     handleFileSelect,
     handleSaveFile,
+    handleAnalyzeWithAI: requestFileAnalysis,
     toggleFileTypeFilter
   } = useFileManagement();
+
+  // Connect the file analysis request to the chat logic
+  const handleAnalyzeWithAI = () => {
+    if (selectedFile && fileContent) {
+      sendFileAnalysisRequest(selectedFile, fileContent);
+      requestFileAnalysis();
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
@@ -139,9 +150,11 @@ const AdminAiChat = () => {
             <FilePreviewPanel 
               selectedFile={selectedFile}
               fileContent={fileContent}
+              isLoadingContent={isLoadingContent}
               setFileContent={setFileContent}
               setIsEditing={setIsEditing}
               handleSaveFile={handleSaveFile}
+              handleAnalyzeWithAI={handleAnalyzeWithAI}
             />
           )}
 
