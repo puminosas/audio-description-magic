@@ -23,7 +23,21 @@ export const AudioPlaybackProvider = ({
   useEffect(() => {
     setIsPlaying(false);
     setPlayAttemptFailed(false);
-  }, [audioUrl]);
+    
+    // When URL changes, force audio element to reset
+    const audio = audioRef.current;
+    if (audio && audioUrl) {
+      try {
+        // Completely reset the audio element
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = audioUrl;
+        audio.load();
+      } catch (err) {
+        console.error("Error resetting audio element:", err);
+      }
+    }
+  }, [audioUrl, audioRef]);
   
   // Handle audio playback errors
   useEffect(() => {
@@ -34,6 +48,17 @@ export const AudioPlaybackProvider = ({
       console.error("Audio playback error:", e);
       setIsPlaying(false);
       setPlayAttemptFailed(true);
+      
+      // Try to recover by reloading the audio
+      if (audio.src) {
+        try {
+          setTimeout(() => {
+            audio.load();
+          }, 500);
+        } catch (err) {
+          console.error("Error reloading audio after error:", err);
+        }
+      }
     };
     
     audio.addEventListener('error', handleError);
@@ -55,6 +80,13 @@ export const AudioPlaybackProvider = ({
       // Play with proper error handling
       try {
         setPlayAttemptFailed(false);
+        
+        // Make sure audio is ready
+        if (audio.readyState < 2) {
+          // Try reloading if not ready
+          audio.load();
+        }
+        
         const playPromise = audio.play();
         
         if (playPromise !== undefined) {
@@ -71,10 +103,15 @@ export const AudioPlaybackProvider = ({
               // If autoplay was blocked, try again with user interaction
               if (err.name === 'NotAllowedError') {
                 console.log('Autoplay blocked. User interaction required.');
+              } else if (err.name === 'AbortError') {
+                console.log('Play request was aborted.');
               } else {
                 // Try one more time after a small delay for other errors
                 setTimeout(() => {
                   if (audioRef.current) {
+                    // Try reloading before playing
+                    audioRef.current.load();
+                    
                     audioRef.current.play()
                       .then(() => {
                         setIsPlaying(true);
@@ -85,7 +122,7 @@ export const AudioPlaybackProvider = ({
                         setIsPlaying(false);
                       });
                   }
-                }, 300);
+                }, 500);
               }
             });
         } else {

@@ -30,12 +30,45 @@ export const AudioErrorProvider = ({
       return;
     }
     
-    // Check that data URLs have a minimum valid length (20KB)
-    if (audioUrl.startsWith('data:audio/') && 
-        (!audioUrl.includes('base64,') || audioUrl.length < 20000)) {
-      setError("Invalid or truncated audio data");
-      setIsLoading(false);
-      return;
+    // Enhanced validation for data URLs
+    if (audioUrl.startsWith('data:audio/')) {
+      const parts = audioUrl.split('base64,');
+      
+      // Check for basic format validity
+      if (parts.length !== 2) {
+        setError("Invalid audio data format");
+        setIsLoading(false);
+        return;
+      }
+      
+      const base64Data = parts[1];
+      
+      // Check for minimum data length
+      if (base64Data.length < 10000) {
+        setError("Audio data is too small to be valid");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Check for truncation (invalid base64 padding)
+      if (base64Data.length % 4 !== 0) {
+        setError("Audio data appears to be truncated. Try generating with shorter text.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Try to validate MP3 header (basic check)
+      try {
+        const headerBytes = atob(base64Data.substring(0, 8));
+        const validMP3Header = headerBytes.indexOf('ID3') === 0 || headerBytes.charCodeAt(0) === 0xFF;
+        if (!validMP3Header) {
+          setError("Audio data does not appear to be a valid MP3 file");
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking MP3 header:", err);
+      }
     }
     
     setIsLoading(true);
@@ -65,16 +98,28 @@ export const AudioErrorProvider = ({
         }
       }
       
-      // For data URLs, check if they're potentially truncated
+      // For data URLs, provide more specific error messages
       if (audioUrl.startsWith('data:audio/')) {
         const base64Part = audioUrl.split('base64,')[1] || '';
-        if (base64Part.length < 20000) {
-          errorMessage = "The audio data appears to be truncated or incomplete. Try generating a shorter description.";
+        
+        // Log detailed information for debugging
+        console.log("Audio data diagnostics:", {
+          totalLength: audioUrl.length,
+          base64Length: base64Part.length,
+          sizeKB: Math.round(base64Part.length/1024),
+          hasPadding: base64Part.endsWith('==') || base64Part.endsWith('='),
+          validPadding: base64Part.length % 4 === 0
+        });
+        
+        // If decoding failed and it's a data URL, suggest browser compatibility issues
+        if (audio.error?.code === MediaError.MEDIA_ERR_DECODE || 
+            audio.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+          errorMessage = "Your browser couldn't decode the audio. Try using a different browser or generating a shorter description.";
         }
         
-        // Check if base64 data ends properly
-        if (!base64Part.endsWith('==') && !base64Part.endsWith('=') && base64Part.length % 4 !== 0) {
-          errorMessage = "The audio data is incomplete (improper base64 padding). Try with a shorter text.";
+        // If data is potentially truncated
+        if (base64Part.length % 4 !== 0) {
+          errorMessage = "The audio data appears to be truncated. Try generating a shorter description.";
         }
       }
       

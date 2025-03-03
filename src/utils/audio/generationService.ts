@@ -77,7 +77,7 @@ export const generateAudioDescription = async (
       return { error: 'Failed to generate audio. No audio URL returned.' };
     }
 
-    // Validate the audio URL format and size
+    // Enhanced validation for audio data
     if (data.audioUrl.startsWith('data:audio/')) {
       const parts = data.audioUrl.split('base64,');
       
@@ -87,15 +87,30 @@ export const generateAudioDescription = async (
         return { error: 'Invalid audio data format received' };
       }
       
-      // Check data length - audio files shouldn't be tiny
-      if (parts[1].length < 5000) {
-        console.error('Audio data appears to be too small:', parts[1].length, 'bytes');
+      // Improved check for audio data length - MP3 audio data should be substantial
+      const base64Data = parts[1];
+      if (base64Data.length < 10000) {
+        console.error('Audio data appears to be too small:', base64Data.length, 'bytes');
         return { error: 'Generated audio file is too small to be valid' };
       }
       
-      // Check for truncation (minimum 20KB for a usable MP3)
-      if (parts[1].length < 20000) {
-        console.warn('Audio data may be truncated, size is only:', Math.round(parts[1].length/1024), 'KB');
+      // Check for potential truncation
+      if (base64Data.length % 4 !== 0) {
+        console.error('Audio data appears to be truncated (invalid base64 padding):', base64Data.length);
+        return { error: 'Audio data appears to be truncated. Try with shorter text.' };
+      }
+      
+      // Check for minimum size for a usable MP3
+      if (base64Data.length < 20000) {
+        console.warn('Audio data may be too small for quality playback:', Math.round(base64Data.length/1024), 'KB');
+      }
+      
+      // Quick check for MP3 header signature to validate format
+      const headerBytes = atob(base64Data.substring(0, 8));
+      const validMP3Header = headerBytes.indexOf('ID3') === 0 || headerBytes.charCodeAt(0) === 0xFF;
+      if (!validMP3Header) {
+        console.error('Audio data does not appear to have a valid MP3 header');
+        return { error: 'Generated audio does not appear to be a valid MP3 file' };
       }
     }
 
