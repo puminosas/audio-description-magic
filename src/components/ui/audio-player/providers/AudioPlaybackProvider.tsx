@@ -17,10 +17,12 @@ export const AudioPlaybackProvider = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [volume, setVolume] = useState(75);
   const [loop, setLoop] = useState(false);
+  const [playAttemptFailed, setPlayAttemptFailed] = useState(false);
   
   // Reset playback state when audio URL changes
   useEffect(() => {
     setIsPlaying(false);
+    setPlayAttemptFailed(false);
   }, [audioUrl]);
   
   // Controls
@@ -33,30 +35,47 @@ export const AudioPlaybackProvider = ({
       setIsPlaying(false);
     } else {
       // Play with proper error handling
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-          })
-          .catch(err => {
-            console.error('Error playing audio:', err);
-            setIsPlaying(false);
-            
-            // Try one more time after a small delay
-            setTimeout(() => {
-              audio.play()
-                .then(() => setIsPlaying(true))
-                .catch(e => {
-                  console.error('Retry play failed:', e);
-                  setIsPlaying(false);
-                });
-            }, 300);
-          });
-      } else {
-        // For older browsers that don't return a promise
-        setIsPlaying(true);
+      try {
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+              setPlayAttemptFailed(false);
+            })
+            .catch(err => {
+              console.error('Error playing audio:', err);
+              setIsPlaying(false);
+              setPlayAttemptFailed(true);
+              
+              // If autoplay was blocked, try again with user interaction
+              if (err.name === 'NotAllowedError') {
+                console.log('Autoplay blocked. User interaction required.');
+              } else {
+                // Try one more time after a small delay for other errors
+                setTimeout(() => {
+                  if (audioRef.current) {
+                    audioRef.current.play()
+                      .then(() => {
+                        setIsPlaying(true);
+                        setPlayAttemptFailed(false);
+                      })
+                      .catch(e => {
+                        console.error('Retry play failed:', e);
+                        setIsPlaying(false);
+                      });
+                  }
+                }, 300);
+              }
+            });
+        } else {
+          // For older browsers that don't return a promise
+          setIsPlaying(true);
+        }
+      } catch (error) {
+        console.error('Unexpected error during play:', error);
+        setIsPlaying(false);
       }
     }
   };
@@ -73,20 +92,32 @@ export const AudioPlaybackProvider = ({
     }
     
     // Play with proper error handling
-    const playPromise = audio.play();
-    
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          setIsPlaying(true);
-        })
-        .catch(err => {
-          console.error('Error playing audio:', err);
-          setIsPlaying(false);
-        });
-    } else {
-      // For older browsers that don't return a promise
-      setIsPlaying(true);
+    try {
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            setPlayAttemptFailed(false);
+          })
+          .catch(err => {
+            console.error('Error playing audio:', err);
+            setIsPlaying(false);
+            setPlayAttemptFailed(true);
+            
+            // Special handling for autoplay policy
+            if (err.name === 'NotAllowedError') {
+              console.log('Play blocked by browser. User interaction required.');
+            }
+          });
+      } else {
+        // For older browsers that don't return a promise
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Unexpected error during play:', error);
+      setIsPlaying(false);
     }
   };
   
@@ -94,8 +125,12 @@ export const AudioPlaybackProvider = ({
     const audio = audioRef.current;
     if (!audio) return;
     
-    audio.pause();
-    setIsPlaying(false);
+    try {
+      audio.pause();
+      setIsPlaying(false);
+    } catch (error) {
+      console.error('Error during pause:', error);
+    }
   };
   
   // Additional controls (kept for interface compatibility)

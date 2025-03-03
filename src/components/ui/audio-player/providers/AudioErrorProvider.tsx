@@ -30,6 +30,14 @@ export const AudioErrorProvider = ({
       return;
     }
     
+    // Check that data URLs have a minimum valid length
+    if (audioUrl.startsWith('data:audio/') && 
+        (!audioUrl.includes('base64,') || audioUrl.length < 1000)) {
+      setError("Invalid or truncated audio data");
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     
     // Create a new Audio element to precheck if the URL is valid
@@ -57,6 +65,11 @@ export const AudioErrorProvider = ({
         }
       }
       
+      // For data URLs, check if they're potentially truncated
+      if (audioUrl.startsWith('data:audio/') && audioUrl.length < 10000) {
+        errorMessage = "The audio data appears to be truncated or incomplete.";
+      }
+      
       setError(errorMessage);
       setIsLoading(false);
     };
@@ -79,6 +92,14 @@ export const AudioErrorProvider = ({
     
     // Handle errors that might occur when setting the src
     try {
+      // Test the audio data before setting it as a source
+      if (audioUrl.startsWith('data:audio/')) {
+        const base64Part = audioUrl.split('base64,')[1];
+        if (!base64Part || base64Part.length < 100) {
+          throw new Error("Invalid base64 audio data");
+        }
+      }
+      
       // Set the audio source
       audio.src = audioUrl;
       

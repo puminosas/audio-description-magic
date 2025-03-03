@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -56,12 +55,14 @@ const Generator = () => {
   const validateAudioUrl = (url: string): boolean => {
     if (!url) return false;
     
-    // For data URLs, ensure they have sufficient length and valid format
     if (url.startsWith('data:audio/')) {
-      return url.includes('base64,') && url.length > 1000;
+      if (!url.includes('base64,')) return false;
+      
+      const base64Part = url.split('base64,')[1];
+      
+      return base64Part && base64Part.length > 100 && url.length > 1000;
     }
     
-    // For HTTP URLs, basic validation
     if (url.startsWith('http')) {
       return url.length > 10;
     }
@@ -77,7 +78,7 @@ const Generator = () => {
     try {
       setLoading(true);
       setError(null);
-      setGeneratedAudio(null); // Reset previous audio when generating new one
+      setGeneratedAudio(null);
       
       console.log("Generating audio with data:", formData);
       
@@ -113,9 +114,16 @@ const Generator = () => {
         return;
       }
       
-      // Validate the audio URL
+      console.log("Successfully generated audio:", result);
+      
       if (!validateAudioUrl(result.audioUrl)) {
-        console.error("Invalid audio URL format:", result.audioUrl?.substring(0, 50) + '...');
+        console.error("Invalid audio URL format:", {
+          urlStart: result.audioUrl?.substring(0, 50) + '...',
+          urlLength: result.audioUrl?.length,
+          hasBase64: result.audioUrl?.includes('base64,'),
+          dataType: result.audioUrl?.includes('data:audio/') ? 'audio' : 'unknown'
+        });
+        
         setError('Generated audio appears to be invalid. Please try again.');
         toast({
           title: 'Generation Error',
@@ -130,27 +138,29 @@ const Generator = () => {
         text: result.text
       });
       
-      // Small delay to ensure audio is fully processed before playback
       setTimeout(() => {
         setGeneratedAudio({
           audioUrl: result.audioUrl,
-          text: result.text
+          text: result.text || formData.text
         });
       }, 100);
       
       if (result.audioUrl && user?.id) {
-        Promise.all([
-          saveAudioToHistory(
-            result.audioUrl,
-            result.text,
-            formData.language.name,
-            formData.voice.name,
-            user.id
-          ),
-          updateGenerationCount(user.id)
-        ])
-        .then(() => fetchGenerationStats())
-        .catch(err => console.error("Background tasks error:", err));
+        try {
+          await Promise.all([
+            saveAudioToHistory(
+              result.audioUrl,
+              result.text || formData.text,
+              formData.language.name,
+              formData.voice.name,
+              user.id
+            ),
+            updateGenerationCount(user.id)
+          ]);
+          await fetchGenerationStats();
+        } catch (err) {
+          console.error("Error saving to history:", err);
+        }
       }
       
       toast({
@@ -160,7 +170,10 @@ const Generator = () => {
       
     } catch (error) {
       console.error('Error generating audio:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate audio';
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to generate audio';
+        
       setError(errorMessage);
       toast({
         title: 'Error',

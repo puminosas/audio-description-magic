@@ -16,6 +16,23 @@ export const AudioPlayerProvider = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const waveformRef = useRef<HTMLCanvasElement>(null);
   
+  // Reset audio element when URL changes to prevent stale state
+  useEffect(() => {
+    if (audioRef.current && audioUrl) {
+      // Properly reset the audio element
+      try {
+        const audio = audioRef.current;
+        audio.pause();
+        audio.currentTime = 0;
+        
+        // Force a reload with the new URL
+        audio.load();
+      } catch (err) {
+        console.error("Error resetting audio element:", err);
+      }
+    }
+  }, [audioUrl]);
+  
   return (
     <AudioPlaybackProvider audioRef={audioRef} audioUrl={audioUrl}>
       {(playbackState) => (
@@ -79,6 +96,11 @@ export const AudioPlayerProvider = ({
                           }
                         }
                         
+                        // Add more specific error for data URLs
+                        if (audioUrl?.startsWith('data:audio/') && audioUrl.length < 10000) {
+                          errorMessage = "The audio data appears to be incomplete or truncated.";
+                        }
+                        
                         errorState.setError(errorMessage);
                         playbackState.handlePause();
                         errorState.setIsLoading(false);
@@ -119,6 +141,10 @@ export const AudioPlayerProvider = ({
                           audio.pause();
                           playbackState.handlePause();
                           timeState.setCurrentTime(0);
+                          
+                          // Clear src to release memory
+                          audio.removeAttribute('src');
+                          audio.load();
                         } catch (err) {
                           console.error("Error during audio cleanup:", err);
                         }

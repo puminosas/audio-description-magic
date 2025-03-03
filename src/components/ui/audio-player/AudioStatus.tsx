@@ -48,7 +48,7 @@ const AudioStatus = ({ audioUrl, isGenerating = false, isValidUrl = true }: Audi
         <XCircle className="h-4 w-4" />
         <AlertTitle>Audio Format Error</AlertTitle>
         <AlertDescription>
-          The audio file is in an invalid format. Please regenerate the audio.
+          The audio file appears to be invalid or incomplete. Please try generating again.
         </AlertDescription>
       </Alert>
     );
