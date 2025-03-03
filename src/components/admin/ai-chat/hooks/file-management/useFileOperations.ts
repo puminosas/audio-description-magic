@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,10 +9,17 @@ export const useFileOperations = () => {
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
-  
+  const [fetchCount, setFetchCount] = useState(0);
+
   // Fetch project files
   const fetchFiles = useCallback(async (): Promise<FileInfo[]> => {
     if (!user) return [];
+    
+    setFetchCount(prev => prev + 1);
+    if (fetchCount > 5) {
+      console.warn('Too many file fetch attempts, throttling...');
+      return [];
+    }
     
     setError(null);
     
@@ -34,6 +40,9 @@ export const useFileOperations = () => {
       }
       
       console.log('Project files loaded:', data.length);
+      
+      setTimeout(() => setFetchCount(0), 5000);
+      
       return data as FileInfo[];
     } catch (error) {
       console.error('Error fetching files:', error);
@@ -45,7 +54,7 @@ export const useFileOperations = () => {
       });
       return [];
     }
-  }, [toast, user]);
+  }, [toast, user, fetchCount]);
 
   // Fetch file content
   const fetchFileContent = async (filePath: string): Promise<string | null> => {

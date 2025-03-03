@@ -53,8 +53,13 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
           onClick={fetchFiles}
           disabled={isRefreshingFiles}
           className="h-8 w-8 p-0"
+          title="Refresh files list"
         >
-          <RefreshCw className={`h-4 w-4 ${isRefreshingFiles ? 'animate-spin' : ''}`} />
+          {isRefreshingFiles ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
           <span className="sr-only">Refresh Files</span>
         </Button>
       </div>

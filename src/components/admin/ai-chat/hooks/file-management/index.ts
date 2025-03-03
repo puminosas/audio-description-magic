@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useFileOperations } from './useFileOperations';
 import { useFileFilters } from './useFileFilters';
@@ -12,6 +11,8 @@ export const useFileManagement = () => {
   const { toast } = useToast();
   const { state, updateState } = useFileState();
   const { fetchFiles, fetchFileContent, saveFileContent, isLoadingContent } = useFileOperations();
+  const [filesLoaded, setFilesLoaded] = useState(false);
+
   const { 
     searchTerm, 
     setSearchTerm, 
@@ -22,9 +23,9 @@ export const useFileManagement = () => {
     toggleFileTypeFilter
   } = useFileFilters(state.files);
 
-  // Load files on component mount
+  // Load files on component mount - ONCE
   const loadFiles = useCallback(async () => {
-    if (!user) return;
+    if (!user || filesLoaded || state.isRefreshingFiles) return;
     
     updateState({ 
       isLoadingFiles: true,
@@ -38,14 +39,32 @@ export const useFileManagement = () => {
       isLoadingFiles: false,
       isRefreshingFiles: false
     });
-  }, [fetchFiles, updateState, user]);
+    
+    setFilesLoaded(true);
+  }, [fetchFiles, updateState, user, filesLoaded, state.isRefreshingFiles]);
 
-  // On component mount, fetch files
+  // Manual refresh - only when explicitly called
+  const refreshFiles = useCallback(async () => {
+    if (!user || state.isRefreshingFiles) return;
+    
+    updateState({ 
+      isRefreshingFiles: true
+    });
+    
+    const files = await fetchFiles();
+    
+    updateState({ 
+      files,
+      isRefreshingFiles: false
+    });
+  }, [fetchFiles, updateState, user, state.isRefreshingFiles]);
+
+  // On component mount, fetch files ONCE
   useEffect(() => {
-    if (user) {
+    if (user && !filesLoaded) {
       loadFiles();
     }
-  }, [loadFiles, user]);
+  }, [loadFiles, user, filesLoaded]);
 
   // Get file content
   const handleFileSelect = async (filePath: string) => {
@@ -128,7 +147,7 @@ export const useFileManagement = () => {
     setFileTypeFilters,
     
     // Operations
-    fetchFiles: loadFiles,
+    fetchFiles: refreshFiles,
     handleFileSelect,
     handleSaveFile,
     handleAnalyzeWithAI,
