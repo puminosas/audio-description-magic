@@ -5,12 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   generateAudioDescription, 
   saveAudioToHistory, 
-  updateGenerationCount,
+  updateGenerationCount, 
   LanguageOption,
   VoiceOption,
-  AudioGenerationResult,
-  AudioSuccessResult,
-  AudioErrorResult
 } from '@/utils/audio';
 
 export interface GeneratedAudio {
@@ -28,18 +25,16 @@ export const useGenerationLogic = () => {
   const validateAudioUrl = (url: string): boolean => {
     if (!url) return false;
     
-    if (url.startsWith('data:audio/')) {
-      if (!url.includes('base64,')) return false;
-      
-      const base64Part = url.split('base64,')[1];
-      
-      // Audio data needs to be substantial - at least 20KB for a valid audio file
-      // This helps prevent issues with truncated responses
-      return base64Part && base64Part.length > 20000;
+    // Google Cloud Storage URLs will be http(s) links
+    if (url.startsWith('http')) {
+      return url.includes('storage.googleapis.com') || url.includes('storage.cloud.google.com');
     }
     
-    if (url.startsWith('http')) {
-      return url.length > 10;
+    // For data URLs (fallback)
+    if (url.startsWith('data:audio/')) {
+      if (!url.includes('base64,')) return false;
+      const base64Part = url.split('base64,')[1];
+      return base64Part && base64Part.length > 5000; // Much smaller minimum size for validation
     }
     
     return false;
@@ -62,8 +57,8 @@ export const useGenerationLogic = () => {
       }
       
       // Add a timeout to prevent long-running requests
-      const timeoutPromise = new Promise<AudioErrorResult>((_, reject) => 
-        setTimeout(() => reject({error: 'The request took too long to complete. Try with a shorter text.'}), 30000)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('The request took too long to complete. Try with a shorter text.')), 60000) // Increased timeout for Google TTS
       );
       
       // Race the generation with a timeout
@@ -103,17 +98,13 @@ export const useGenerationLogic = () => {
       if (!validateAudioUrl(result.audioUrl)) {
         console.error("Invalid audio URL format:", {
           urlStart: result.audioUrl?.substring(0, 50) + '...',
-          urlLength: result.audioUrl?.length,
-          hasBase64: result.audioUrl?.includes('base64,'),
-          dataType: result.audioUrl?.includes('data:audio/') ? 'audio' : 'unknown',
-          base64Length: result.audioUrl?.split('base64,')[1]?.length || 0,
-          minimumRequired: 20000
+          urlLength: result.audioUrl?.length
         });
         
-        setError('Generated audio appears to be invalid or truncated. Please try again with a shorter text (recommended: under 500 characters).');
+        setError('Generated audio appears to be invalid. Please try again with a shorter text.');
         toast({
           title: 'Generation Error',
-          description: 'Failed to generate valid audio. The response may have been truncated. Try with shorter text.',
+          description: 'Failed to generate valid audio. Try with shorter text.',
           variant: 'destructive',
         });
         return;
@@ -156,7 +147,7 @@ export const useGenerationLogic = () => {
       
       toast({
         title: 'Success!',
-        description: 'Your audio description has been generated.',
+        description: 'Your audio description has been generated using Google Text-to-Speech.',
       });
       
     } catch (error) {
@@ -168,7 +159,7 @@ export const useGenerationLogic = () => {
       // Provide more user-friendly error message
       let userMessage = errorMessage;
       if (errorMessage.includes('timeout') || errorMessage.includes('took too long')) {
-        userMessage = 'The generation timed out. Please try with shorter text (under 500 characters).';
+        userMessage = 'The generation timed out. Please try with shorter text.';
       }
         
       setError(userMessage);

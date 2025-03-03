@@ -1,12 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Mic, 
   ChevronDown, 
   Check,
   User,
   UserRound,
-  Users
+  Users,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface VoiceOption {
   id: string;
@@ -32,52 +34,75 @@ interface VoiceSelectorProps {
   language?: string;
 }
 
-// This uses modern TTS voice options, expanded from OpenAI's set
-const VOICES: Record<string, VoiceOption[]> = {
-  all: [
-    // OpenAI voices
-    { id: 'alloy', name: 'Alloy', gender: 'neutral' },
-    { id: 'echo', name: 'Echo', gender: 'male' },
-    { id: 'fable', name: 'Fable', gender: 'female' },
-    { id: 'onyx', name: 'Onyx', gender: 'male' },
-    { id: 'nova', name: 'Nova', gender: 'female' },
-    { id: 'shimmer', name: 'Shimmer', gender: 'female', premium: true },
-    // ElevenLabs voices
-    { id: '9BWtsMINqrJLrRacOk9x', name: 'Aria', gender: 'female', premium: true },
-    { id: 'CwhRBWXzGAHq8TQ4Fs17', name: 'Roger', gender: 'male', premium: true },
-    { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', gender: 'female', premium: true },
-    { id: 'FGY2WhTYpPnrIDTdsKH5', name: 'Laura', gender: 'female', premium: true },
-    { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie', gender: 'male', premium: true },
-    { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George', gender: 'male', premium: true },
-    { id: 'N2lVS1w4EtoT3dr4eOWO', name: 'Callum', gender: 'male', premium: true },
-    { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', gender: 'neutral', premium: true },
-    { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', gender: 'male', premium: true },
-    { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte', gender: 'female', premium: true },
-    { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', gender: 'female', premium: true },
-    { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', gender: 'female', premium: true },
-    { id: 'bIHbv24MWmeRgasZH58o', name: 'Will', gender: 'male', premium: true },
-    { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', gender: 'female', premium: true },
-    { id: 'cjVigY5qzO86Huf0OWal', name: 'Eric', gender: 'male', premium: true },
-    { id: 'iP95p4xoKVk53GoZ742B', name: 'Chris', gender: 'male', premium: true },
-    { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', gender: 'male', premium: true },
-    { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', gender: 'male', premium: true },
-    { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', gender: 'female', premium: true },
-    { id: 'pqHfZKP75CvOlQylNhV4', name: 'Bill', gender: 'male', premium: true },
-  ]
-};
+// Initial default voices for fallback
+const DEFAULT_VOICES: VoiceOption[] = [
+  { id: 'en-US-Wavenet-A', name: 'Wavenet A (Male)', gender: 'male' },
+  { id: 'en-US-Wavenet-E', name: 'Wavenet E (Female)', gender: 'female' },
+];
 
-// Use all voices for all languages since modern TTS systems handle multiple languages
-const getVoicesForLanguage = (languageCode: string): VoiceOption[] => {
-  return VOICES.all;
-};
-
-const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelectorProps) => {
-  const voices = getVoicesForLanguage(language);
-  const defaultVoice = voices[0];
-  const effectiveSelectedVoice = selectedVoice || defaultVoice;
-  
+const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSelectorProps) => {
+  const [voices, setVoices] = useState<VoiceOption[]>(DEFAULT_VOICES);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
   
+  // Fetch voices from Google TTS when language changes
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchVoices = async () => {
+      try {
+        setLoading(true);
+        
+        // Call our Edge Function to get voices
+        const { data, error } = await supabase.functions.invoke('get-google-voices');
+        
+        if (error || !data) {
+          console.error('Error fetching voices:', error);
+          return;
+        }
+        
+        // Format the voices for our component
+        if (isMounted && data[language]) {
+          const formattedVoices: VoiceOption[] = [
+            ...data[language].voices.MALE.map((v: any) => ({
+              id: v.name,
+              name: v.name.split('-').pop(),
+              gender: 'male' as const
+            })),
+            ...data[language].voices.FEMALE.map((v: any) => ({
+              id: v.name,
+              name: v.name.split('-').pop(),
+              gender: 'female' as const
+            }))
+          ];
+          
+          setVoices(formattedVoices.length > 0 ? formattedVoices : DEFAULT_VOICES);
+          
+          // If the selected voice is not in the new list, select the first one
+          if (selectedVoice && !formattedVoices.find(v => v.id === selectedVoice.id)) {
+            onSelect(formattedVoices[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading voices:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchVoices();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [language]);
+  
+  // Default to the first voice if none selected
+  const effectiveSelectedVoice = selectedVoice || voices[0];
+  
+  // Filter voices based on selection
   const filteredVoices = voices.filter(voice => {
     if (filter === 'all') return true;
     return voice.gender === filter;
@@ -88,11 +113,12 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelect
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="w-full justify-between">
           <span className="flex items-center">
-            <Mic className="mr-2 h-4 w-4" />
-            <span>{effectiveSelectedVoice.name}</span>
-            {effectiveSelectedVoice.premium && (
-              <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded-full">Premium</span>
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Mic className="mr-2 h-4 w-4" />
             )}
+            <span>{effectiveSelectedVoice?.name || 'Select Voice'}</span>
           </span>
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
@@ -124,43 +150,41 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en' }: VoiceSelect
               Female
             </span>
           </button>
-          <button 
-            className={`flex-1 px-2 py-1 rounded ${filter === 'neutral' ? 'bg-background shadow-sm' : ''}`}
-            onClick={() => setFilter('neutral')}
-          >
-            <span className="flex items-center justify-center">
-              <Users className="h-3 w-3 mr-1" />
-              Neutral
-            </span>
-          </button>
         </div>
         <DropdownMenuSeparator />
         <div className="max-h-64 overflow-y-auto">
-          {filteredVoices.map((voice) => (
-            <DropdownMenuItem
-              key={voice.id}
-              className="cursor-pointer"
-              onClick={() => onSelect(voice)}
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center">
-                  {voice.gender === 'male' ? 
-                    <User className="h-4 w-4 mr-2 text-blue-500" /> : 
-                    voice.gender === 'female' ?
-                    <UserRound className="h-4 w-4 mr-2 text-pink-500" /> :
-                    <Users className="h-4 w-4 mr-2 text-purple-500" />
-                  }
-                  <span>{voice.name}</span>
-                  {voice.premium && (
-                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded-full">Premium</span>
+          {loading ? (
+            <div className="p-4 flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : filteredVoices.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              No voices available for this language
+            </div>
+          ) : (
+            filteredVoices.map((voice) => (
+              <DropdownMenuItem
+                key={voice.id}
+                className="cursor-pointer"
+                onClick={() => onSelect(voice)}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    {voice.gender === 'male' ? 
+                      <User className="h-4 w-4 mr-2 text-blue-500" /> : 
+                      voice.gender === 'female' ?
+                      <UserRound className="h-4 w-4 mr-2 text-pink-500" /> :
+                      <Users className="h-4 w-4 mr-2 text-purple-500" />
+                    }
+                    <span>{voice.name}</span>
+                  </div>
+                  {voice.id === effectiveSelectedVoice.id && (
+                    <Check className="h-4 w-4" />
                   )}
                 </div>
-                {voice.id === effectiveSelectedVoice.id && (
-                  <Check className="h-4 w-4" />
-                )}
-              </div>
-            </DropdownMenuItem>
-          ))}
+              </DropdownMenuItem>
+            ))
+          )}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
