@@ -9,6 +9,8 @@ import AdminActionsPanel from './ai-chat/AdminActionsPanel';
 import { useChatLogic } from './ai-chat/hooks/useChatLogic';
 import { useFileManagement } from './ai-chat/hooks/useFileManagement';
 import ChatInput from './ai-chat/ChatInput';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const AdminAiChat = () => {
   const { 
@@ -16,11 +18,14 @@ const AdminAiChat = () => {
     setInput, 
     messages, 
     isProcessing, 
+    typingStatus,
     error, 
     messagesEndRef, 
     sendMessage, 
     handleKeyDown, 
-    handleClearChat 
+    handleClearChat,
+    retryLastMessage,
+    startNewChat
   } = useChatLogic();
 
   const {
@@ -49,18 +54,27 @@ const AdminAiChat = () => {
       {/* Left side: Chat interface */}
       <div className="col-span-1 md:col-span-8">
         <Card className="flex h-[600px] flex-col overflow-hidden p-4">
-          {/* Error message */}
-          {error && (
+          {/* Connection error message */}
+          {!isProcessing && error && error.includes("Failed to send") && (
             <div className="mb-4">
-              <ErrorAlert error={error} />
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Connection Error</AlertTitle>
+                <AlertDescription>
+                  Could not connect to the AI service. Please try again later or contact support.
+                </AlertDescription>
+              </Alert>
             </div>
           )}
           
           {/* Messages container */}
           <ChatMessages 
             messages={messages} 
-            isProcessing={isProcessing} 
-            messagesEndRef={messagesEndRef} 
+            isProcessing={isProcessing}
+            typingStatus={typingStatus}
+            messagesEndRef={messagesEndRef}
+            error={error}
+            retryLastMessage={retryLastMessage}
           />
 
           {/* Input area */}
@@ -70,8 +84,10 @@ const AdminAiChat = () => {
             handleKeyDown={handleKeyDown}
             sendMessage={sendMessage}
             isProcessing={isProcessing}
+            typingStatus={typingStatus}
             messages={messages}
             handleClearChat={handleClearChat}
+            startNewChat={startNewChat}
           />
         </Card>
       </div>

@@ -17,33 +17,6 @@ serve(async (req: Request) => {
       throw new Error('OPENAI_API_KEY is not set');
     }
 
-    // Verify admin role
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const adminCheckResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_role`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader,
-        'apikey': SUPABASE_ANON_KEY || '',
-      },
-      body: JSON.stringify({ role: 'admin' }),
-    });
-
-    const isAdmin = await adminCheckResponse.json();
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Admin access required' }), { 
-        status: 403, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
     // Get request body
     const { messages, userId } = await req.json();
 
@@ -52,6 +25,45 @@ serve(async (req: Request) => {
     }
 
     console.log(`Processing AI chat request for user ${userId} with ${messages.length} messages`);
+
+    // Verify admin role if userId is provided
+    if (userId) {
+      try {
+        // Get the JWT from the Authorization header
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+          throw new Error('Missing Authorization header');
+        }
+
+        // Check if user has admin role
+        const adminCheckResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_role`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader,
+            'apikey': SUPABASE_ANON_KEY || '',
+          },
+          body: JSON.stringify({ role: 'admin' }),
+        });
+
+        if (!adminCheckResponse.ok) {
+          const errorData = await adminCheckResponse.json();
+          console.error('Admin check error:', errorData);
+          throw new Error(`Unauthorized: Admin role required. Error: ${JSON.stringify(errorData)}`);
+        }
+
+        const isAdmin = await adminCheckResponse.json();
+        if (!isAdmin) {
+          throw new Error('Unauthorized: Admin access required');
+        }
+      } catch (error) {
+        console.error('Error verifying admin role:', error);
+        return new Response(JSON.stringify({ error: error.message }), { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     // Add a system message if not present
     const systemMessage = {
@@ -65,35 +77,40 @@ serve(async (req: Request) => {
       ? messages 
       : [systemMessage, ...messages];
 
-    // Call OpenAI API directly with fetch - more reliable than using axios or openai package in Deno
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: chatMessages,
-        temperature: 0.7,
-        max_tokens: 1000
-      })
-    });
+    // Call OpenAI API
+    try {
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: chatMessages.map(m => ({ role: m.role, content: m.content })),
+          temperature: 0.7,
+          max_tokens: 1000
+        })
+      });
 
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.json();
+        console.error('OpenAI API error:', errorData);
+        throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await openAIResponse.json();
+      const aiMessage = data.choices[0].message;
+
+      console.log(`AI response generated successfully, length: ${aiMessage.content.length}`);
+
+      return new Response(JSON.stringify(aiMessage), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      throw new Error(`Failed to generate AI response: ${error.message}`);
     }
-
-    const data = await openAIResponse.json();
-    const aiMessage = data.choices[0].message;
-
-    console.log(`AI response generated successfully, length: ${aiMessage.content.length}`);
-
-    return new Response(JSON.stringify(aiMessage), { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     console.error('Error in ai-chat function:', error);
     return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), { 
