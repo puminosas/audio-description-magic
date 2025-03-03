@@ -57,6 +57,11 @@ export const AudioErrorProvider = ({
         return;
       }
       
+      // Check file size - warning for very large files
+      if (base64Data.length > 1500000) {
+        console.warn("Very large audio file detected:", Math.round(base64Data.length/1024), "KB");
+      }
+      
       // Try to validate MP3 header (basic check)
       try {
         const headerBytes = atob(base64Data.substring(0, 8));
@@ -90,10 +95,10 @@ export const AudioErrorProvider = ({
             errorMessage = "Network error occurred while loading audio.";
             break;
           case MediaError.MEDIA_ERR_DECODE:
-            errorMessage = "Audio decoding failed. The file might be corrupted or incomplete.";
+            errorMessage = "Audio decoding failed. The file might be too large or in an unsupported format.";
             break;
           case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            errorMessage = "Audio format is not supported by your browser.";
+            errorMessage = "Audio format is not supported by your browser. Try a different browser or download the file.";
             break;
         }
       }
@@ -101,12 +106,13 @@ export const AudioErrorProvider = ({
       // For data URLs, provide more specific error messages
       if (audioUrl.startsWith('data:audio/')) {
         const base64Part = audioUrl.split('base64,')[1] || '';
+        const fileSizeKB = Math.round(base64Part.length/1024);
         
         // Log detailed information for debugging
         console.log("Audio data diagnostics:", {
           totalLength: audioUrl.length,
           base64Length: base64Part.length,
-          sizeKB: Math.round(base64Part.length/1024),
+          sizeKB: fileSizeKB,
           hasPadding: base64Part.endsWith('==') || base64Part.endsWith('='),
           validPadding: base64Part.length % 4 === 0
         });
@@ -114,7 +120,12 @@ export const AudioErrorProvider = ({
         // If decoding failed and it's a data URL, suggest browser compatibility issues
         if (audio.error?.code === MediaError.MEDIA_ERR_DECODE || 
             audio.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-          errorMessage = "Your browser couldn't decode the audio. Try using a different browser or generating a shorter description.";
+          
+          if (fileSizeKB > 1000) {
+            errorMessage = `Audio file (${fileSizeKB}KB) may be too large for browser playback. Try downloading the file instead.`;
+          } else {
+            errorMessage = "Your browser couldn't decode the audio. Try using a different browser or generating a shorter description.";
+          }
         }
         
         // If data is potentially truncated
@@ -138,7 +149,18 @@ export const AudioErrorProvider = ({
     // Set a timeout to detect very slow loading
     const timeout = setTimeout(() => {
       if (isLoading) {
-        setError("Audio loading timed out. The file may be too large or corrupted.");
+        if (audioUrl.startsWith('data:audio/')) {
+          const base64Part = audioUrl.split('base64,')[1] || '';
+          const fileSizeKB = Math.round(base64Part.length/1024);
+          
+          if (fileSizeKB > 1000) {
+            setError(`Audio loading timed out. The file (${fileSizeKB}KB) may be too large for your browser. Try downloading instead.`);
+          } else {
+            setError("Audio loading timed out. Try a different browser or download the file.");
+          }
+        } else {
+          setError("Audio loading timed out. Check your network connection or try again later.");
+        }
         setIsLoading(false);
       }
     }, 15000); // 15 seconds timeout

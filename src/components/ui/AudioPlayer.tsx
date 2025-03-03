@@ -53,8 +53,8 @@ const AudioPlayer = ({
       let hasValidDataFormat = true;
       let hasValidHeader = true;
       
-      // Check if base64 data is substantial enough
-      const isValidLength = base64Data.length >= 20000;
+      // Check if base64 data is substantial enough - increased minimum size
+      const isValidLength = base64Data.length >= 10000; // Reduced minimum required size
       
       // Check if base64 has valid padding
       const hasValidPadding = base64Data.length % 4 === 0;
@@ -84,7 +84,7 @@ const AudioPlayer = ({
         hasValidPadding: base64Data.length % 4 === 0,
         startsWithDataAudio: audioUrl.startsWith('data:audio/'),
         includesBase64: audioUrl.includes('base64,'),
-        minimumRequired: 20000
+        minimumRequired: 10000 // Updated minimum required size
       };
       
       return { 

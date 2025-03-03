@@ -46,9 +46,13 @@ const AudioStatus = ({
         <AlertDescription>
           {error}
           {validationDetails && validationDetails.urlLength && (
-            <span className="block mt-1 text-xs opacity-70">
-              Audio data may be truncated. Size: {Math.round(validationDetails.urlLength / 1024)}KB
-            </span>
+            <div className="mt-2 text-xs space-y-1">
+              <p>Audio data: {Math.round(validationDetails.urlLength / 1024)}KB</p>
+              {validationDetails.urlLength > 1000000 && (
+                <p className="font-medium">Try generating shorter audio as your browser may have limits on playback size.</p>
+              )}
+              <p>For large files, consider downloading the audio instead of streaming.</p>
+            </div>
           )}
         </AlertDescription>
       </Alert>
@@ -61,11 +65,15 @@ const AudioStatus = ({
         <XCircle className="h-4 w-4" />
         <AlertTitle>Audio Format Error</AlertTitle>
         <AlertDescription>
-          The audio file appears to be invalid or incomplete. The data may be truncated.
+          The audio file appears to be invalid or incomplete.
           {validationDetails && validationDetails.urlLength && (
-            <span className="block mt-1 text-xs opacity-70">
-              Audio data size: {Math.round(validationDetails.urlLength / 1024)}KB (minimum 20KB required)
-            </span>
+            <div className="mt-2 text-xs space-y-1">
+              <p>Audio data size: {Math.round(validationDetails.urlLength / 1024)}KB</p>
+              {validationDetails.urlLength > 1000000 && (
+                <p>The file might be too large for your browser to process.</p>
+              )}
+              <p>Try generating a shorter audio description or downloading the file.</p>
+            </div>
           )}
         </AlertDescription>
       </Alert>
