@@ -125,6 +125,21 @@ export const supabaseTyped = {
       castTable('feedback').select().count(options),
   },
   
+  // Chat sessions table operations
+  chat_sessions: {
+    select: () => castTable('chat_sessions'),
+    insert: (data: any) => castTable('chat_sessions').insert(data),
+    update: (data: any) => castTable('chat_sessions').update(data),
+    delete: () => castTable('chat_sessions').delete(),
+    eq: (column: string, value: any) => castTable('chat_sessions').select().eq(column, value),
+    single: () => castTable('chat_sessions').select().single(),
+    maybeSingle: () => castTable('chat_sessions').select().maybeSingle(),
+    order: (column: string, options: { ascending?: boolean }) => 
+      castTable('chat_sessions').select().order(column, options),
+    count: (options: { head?: boolean, exact?: boolean } = {}) => 
+      castTable('chat_sessions').select().count(options),
+  },
+  
   // Generic functions for any table (helpful for dynamic operations)
   custom: {
     from: (tableName: string) => castTable(tableName),

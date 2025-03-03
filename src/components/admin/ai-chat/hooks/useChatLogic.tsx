@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Message, TypingStatus, ChatSession } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { supabaseTyped } from '@/utils/supabase/typedClient';
 
 export const useChatLogic = () => {
   const { user } = useAuth();
@@ -35,7 +36,7 @@ export const useChatLogic = () => {
     const loadChatSessions = async () => {
       setIsLoadingSessions(true);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseTyped.custom
           .from('chat_sessions')
           .select('*')
           .eq('user_id', user.id)
@@ -43,7 +44,16 @@ export const useChatLogic = () => {
         
         if (error) throw error;
         
-        setChatSessions(data || []);
+        // Transform data to match ChatSession type
+        const formattedSessions = data.map(session => ({
+          id: session.id,
+          title: session.title,
+          createdAt: session.created_at,
+          updatedAt: session.updated_at,
+          messages: Array.isArray(session.messages) ? session.messages : JSON.parse(session.messages)
+        }));
+        
+        setChatSessions(formattedSessions);
       } catch (error) {
         console.error('Error loading chat sessions:', error);
         toast({
@@ -78,7 +88,7 @@ export const useChatLogic = () => {
           : 'New Chat';
         
         // Create a new chat session
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseTyped.custom
           .from('chat_sessions')
           .insert({
             id: sessionId,
@@ -100,7 +110,7 @@ export const useChatLogic = () => {
         
       } else {
         // Update existing session
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseTyped.custom
           .from('chat_sessions')
           .update({
             messages: JSON.stringify(messages),
@@ -130,16 +140,21 @@ export const useChatLogic = () => {
   // Load a specific chat session
   const loadChatSession = async (sessionId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseTyped.custom
         .from('chat_sessions')
-        .select('messages')
+        .select('*')
         .eq('id', sessionId)
         .single();
       
       if (error) throw error;
       
       if (data && data.messages) {
-        setMessages(JSON.parse(data.messages));
+        // Parse messages if they're stored as a string
+        const parsedMessages = typeof data.messages === 'string' 
+          ? JSON.parse(data.messages) 
+          : data.messages;
+          
+        setMessages(parsedMessages);
         setCurrentSession(sessionId);
       }
     } catch (error) {
