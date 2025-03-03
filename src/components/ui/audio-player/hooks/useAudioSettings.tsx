@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 
 export const useAudioSettings = () => {
@@ -14,7 +13,11 @@ export const useAudioSettings = () => {
     setVolume(newVolume);
   };
   
-  const toggleLoop = (newLoopState: boolean) => {
+  const toggleLoop = () => {
+    setLoop(prevLoop => !prevLoop);
+  };
+  
+  const setLoopState = (newLoopState: boolean) => {
     setLoop(newLoopState);
   };
   
@@ -24,6 +27,7 @@ export const useAudioSettings = () => {
     loop,
     updatePlaybackSpeed,
     updateVolume,
-    toggleLoop
+    toggleLoop,
+    setLoopState
   };
 };

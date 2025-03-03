@@ -19,7 +19,7 @@ export const AudioPlaybackProvider = ({
   const [playAttemptFailed, setPlayAttemptFailed] = useState(false);
   
   // Use custom hooks to separate concerns
-  const { playbackSpeed, volume, loop, updatePlaybackSpeed, updateVolume, toggleLoop } = useAudioSettings();
+  const { playbackSpeed, volume, loop, updatePlaybackSpeed, updateVolume, toggleLoop, setLoopState } = useAudioSettings();
   const { handlePlay, handlePause, togglePlay } = useAudioPlayControls({ 
     audioRef, 
     isPlaying, 
@@ -114,7 +114,7 @@ export const AudioPlaybackProvider = ({
     handlePause,
     setPlaybackSpeed: updatePlaybackSpeed,
     setVolume: updateVolume,
-    setLoop: toggleLoop,
+    setLoop: setLoopState,
     handlePlayPause: togglePlay,
     toggleLoop,
     changePlaybackSpeed,
