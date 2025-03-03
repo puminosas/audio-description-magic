@@ -1,13 +1,17 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Send, Code, FileText, User, Info, AlertCircle } from 'lucide-react';
+import { 
+  Loader2, Send, Code, FileText, User, Info, 
+  AlertCircle, Search, RefreshCw, RotateCcw 
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ErrorAlert from '@/components/generator/ErrorAlert';
+import { Input } from '@/components/ui/input';
 
 interface Message {
   role: 'system' | 'user' | 'assistant';
@@ -32,58 +36,71 @@ const AdminAiChat = () => {
   const [fileContent, setFileContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isRefreshingFiles, setIsRefreshingFiles] = useState(false);
+  const [fileTypeFilters, setFileTypeFilters] = useState<string[]>([]);
 
   // Scroll to bottom of messages
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
+
+  // Extract unique file types from the files array
+  const uniqueFileTypes = Array.from(
+    new Set(files.map(file => file.type))
+  ).filter(type => type);
 
   // Fetch project files
-  useEffect(() => {
-    const fetchFiles = async () => {
-      setIsLoadingFiles(true);
-      setError(null);
-      
-      try {
-        console.log('Fetching project files...');
-        const { data, error } = await supabase.functions.invoke('project-files', {
-          method: 'GET',
-        });
+  const fetchFiles = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoadingFiles(true);
+    setError(null);
+    setIsRefreshingFiles(true);
+    
+    try {
+      console.log('Fetching project files...');
+      const { data, error } = await supabase.functions.invoke('project-files', {
+        method: 'GET',
+      });
 
-        if (error) {
-          console.error('Error invoking project-files function:', error);
-          throw new Error(error.message || 'Failed to load project files');
-        }
-        
-        if (!data || !Array.isArray(data)) {
-          console.error('Invalid response from project-files function:', data);
-          throw new Error('Invalid response from server');
-        }
-        
-        console.log('Project files loaded:', data.length);
-        setFiles(data as FileInfo[]);
-      } catch (error) {
-        console.error('Error fetching files:', error);
-        setError(`Failed to load project files: ${error.message}`);
-        toast({
-          title: 'Error',
-          description: 'Failed to load project files',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoadingFiles(false);
+      if (error) {
+        console.error('Error invoking project-files function:', error);
+        throw new Error(error.message || 'Failed to load project files');
       }
-    };
+      
+      if (!data || !Array.isArray(data)) {
+        console.error('Invalid response from project-files function:', data);
+        throw new Error('Invalid response from server');
+      }
+      
+      console.log('Project files loaded:', data.length);
+      setFiles(data as FileInfo[]);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      setError(`Failed to load project files: ${error.message}`);
+      toast({
+        title: 'Error',
+        description: 'Failed to load project files',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingFiles(false);
+      setIsRefreshingFiles(false);
+    }
+  }, [toast, user]);
 
+  // On component mount, fetch files
+  useEffect(() => {
     if (user) {
       fetchFiles();
     }
-  }, [toast, user]);
+  }, [fetchFiles, user]);
 
   // Send a message to the AI
   const sendMessage = async () => {
@@ -161,11 +178,30 @@ const AdminAiChat = () => {
     setFileContent('');
   };
 
-  // Filter files by type or search term
-  const [searchTerm, setSearchTerm] = useState('');
-  const filteredFiles = files.filter(file => 
-    file.path.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter files by type and search term
+  const filteredFiles = files.filter(file => {
+    const matchesSearch = file.path.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = fileTypeFilters.length === 0 || fileTypeFilters.includes(file.type);
+    return matchesSearch && matchesType;
+  });
+
+  // Toggle a file type filter
+  const toggleFileTypeFilter = (type: string) => {
+    setFileTypeFilters(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type) 
+        : [...prev, type]
+    );
+  };
+
+  // Clear the chat
+  const handleClearChat = () => {
+    setMessages([]);
+    toast({
+      title: 'Chat Cleared',
+      description: 'All chat messages have been cleared',
+    });
+  };
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
@@ -245,9 +281,22 @@ const AdminAiChat = () => {
                 )}
               </Button>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for a new line
-            </p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Press Enter to send, Shift+Enter for a new line
+              </p>
+              {messages.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleClearChat}
+                  className="h-7 px-2 text-xs"
+                >
+                  <RotateCcw className="mr-1 h-3 w-3" />
+                  Clear Chat
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       </div>
@@ -257,36 +306,76 @@ const AdminAiChat = () => {
         <div className="space-y-6">
           {/* Project files */}
           <Card className="p-4">
-            <h3 className="mb-3 flex items-center text-lg font-medium">
-              <FileText className="mr-2 h-5 w-5" />
-              Project Files
-            </h3>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="flex items-center text-lg font-medium">
+                <FileText className="mr-2 h-5 w-5" />
+                Project Files
+              </h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchFiles}
+                disabled={isRefreshingFiles}
+                className="h-8 w-8 p-0"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshingFiles ? 'animate-spin' : ''}`} />
+                <span className="sr-only">Refresh Files</span>
+              </Button>
+            </div>
             
             {/* Search input */}
-            <div className="mb-2">
-              <input
+            <div className="mb-3 relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
                 type="text"
                 placeholder="Search files..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="pl-8"
               />
             </div>
             
-            <div className="max-h-[200px] overflow-y-auto">
+            {/* File type filters */}
+            {uniqueFileTypes.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-1">
+                {uniqueFileTypes.map(type => (
+                  <Button
+                    key={type}
+                    variant={fileTypeFilters.includes(type) ? "default" : "outline"}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => toggleFileTypeFilter(type)}
+                  >
+                    {type}
+                  </Button>
+                ))}
+                {fileTypeFilters.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setFileTypeFilters([])}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            )}
+            
+            <div className="max-h-[250px] overflow-y-auto rounded-md border">
               {isLoadingFiles ? (
-                <div className="flex items-center justify-center py-4">
+                <div className="flex items-center justify-center py-8">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   <span>Loading files...</span>
                 </div>
               ) : filteredFiles.length > 0 ? (
-                <ul className="space-y-1">
+                <ul className="divide-y">
                   {filteredFiles.map((file, index) => (
-                    <li key={index}>
+                    <li key={index} className="px-1 py-0.5 hover:bg-muted/50">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-left text-xs"
+                        className="w-full justify-start p-1 text-left text-xs"
                         onClick={() => handleFileSelect(file.path)}
                       >
                         <Code className="mr-2 h-4 w-4" />
@@ -296,11 +385,24 @@ const AdminAiChat = () => {
                   ))}
                 </ul>
               ) : (
-                <div className="py-4 text-center text-sm text-muted-foreground">
-                  {files.length === 0 ? 'No files available' : 'No matching files found'}
+                <div className="flex items-center justify-center py-8 text-center text-sm text-muted-foreground">
+                  {files.length === 0 ? (
+                    <>
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      No files available
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      No matching files found
+                    </>
+                  )}
                 </div>
               )}
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {filteredFiles.length} of {files.length} files shown
+            </p>
           </Card>
 
           {/* File editing */}

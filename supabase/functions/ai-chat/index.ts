@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { Configuration, OpenAIApi } from "https://esm.sh/openai@4.20.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,11 +38,17 @@ serve(async (req) => {
     // Check if the user is an admin
     let isAdmin = false;
     if (userId) {
-      const { data: roleData, error: roleError } = await supabase.rpc('has_role', { role: 'admin' });
+      console.log('Checking admin role for user:', userId);
+      const { data: roleData, error: roleError } = await supabase.rpc('has_role', { 
+        role: 'admin',
+        user_id: userId 
+      });
+      
       if (roleError) {
         console.error('Error checking admin role:', roleError);
       } else {
         isAdmin = !!roleData;
+        console.log('Is admin:', isAdmin);
       }
       
       if (!isAdmin) {
@@ -56,7 +63,7 @@ serve(async (req) => {
     const lastMessage = messages[messages.length - 1];
     console.log('Processing message:', lastMessage.content);
     
-    // Send the message to OpenAI API
+    // Send the message to OpenAI API - Using fetch directly instead of the OpenAI SDK
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -82,6 +89,7 @@ serve(async (req) => {
     }
     
     const data = await response.json();
+    console.log('OpenAI response received successfully');
     
     // Return the AI response
     return new Response(
@@ -90,7 +98,7 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    console.error('Error in AI chat function:', error.message);
+    console.error('Error in AI chat function:', error.message, error.stack);
     return new Response(
       JSON.stringify({ error: error.message || 'An error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
