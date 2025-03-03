@@ -26,7 +26,7 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
   const [filter, setFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Custom hook to fetch voice data
+  // Custom hook to fetch voice data - fixed the parameter order
   const { voices, loading } = useVoiceData(language, selectedVoice, onSelect);
   
   // Use useMemo to derive filtered voices list for better performance

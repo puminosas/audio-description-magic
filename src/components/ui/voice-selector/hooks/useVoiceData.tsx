@@ -12,8 +12,8 @@ const DEFAULT_VOICES: VoiceOption[] = [
 
 export function useVoiceData(
   language: string,
-  onSelect: (voice: VoiceOption) => void,
-  selectedVoice?: VoiceOption
+  selectedVoice?: VoiceOption,
+  onSelect?: (voice: VoiceOption) => void
 ) {
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,13 +54,19 @@ export function useVoiceData(
           setVoices(formattedVoices.length > 0 ? formattedVoices : DEFAULT_VOICES);
           
           // If the selected voice is not in the new list, select the first one
-          if (!selectedVoice || !formattedVoices.find(v => v.id === selectedVoice.id)) {
-            onSelect(formattedVoices[0]);
+          if (onSelect && (!selectedVoice || !formattedVoices.find(v => v.id === selectedVoice.id))) {
+            if (formattedVoices.length > 0) {
+              onSelect(formattedVoices[0]);
+            } else {
+              onSelect(DEFAULT_VOICES[0]);
+            }
           }
         } else if (isMounted) {
           // If no voices for the selected language, use defaults
           setVoices(DEFAULT_VOICES);
-          onSelect(DEFAULT_VOICES[0]);
+          if (onSelect) {
+            onSelect(DEFAULT_VOICES[0]);
+          }
         }
       } catch (error) {
         console.error('Error loading voices:', error);
@@ -76,7 +82,7 @@ export function useVoiceData(
     return () => {
       isMounted = false;
     };
-  }, [language, onSelect, selectedVoice]);
+  }, [language, selectedVoice, onSelect]);
 
   return { voices, loading };
 }
