@@ -1,5 +1,5 @@
 
-import { Users, User, UserRound } from 'lucide-react';
+import { Users, User, UserRound, Mic } from 'lucide-react';
 
 type VoiceFilter = 'all' | 'male' | 'female' | 'neutral';
 
@@ -36,6 +36,15 @@ const FilterButtons = ({ filter, setFilter }: FilterButtonsProps) => {
         <span className="flex items-center justify-center">
           <UserRound className="h-3 w-3 mr-1" />
           Female
+        </span>
+      </button>
+      <button 
+        className={`flex-1 px-2 py-1 rounded ${filter === 'neutral' ? 'bg-background shadow-sm' : ''}`}
+        onClick={() => setFilter('neutral')}
+      >
+        <span className="flex items-center justify-center">
+          <Mic className="h-3 w-3 mr-1" />
+          Neutral
         </span>
       </button>
     </div>

@@ -12,8 +12,8 @@ const DEFAULT_VOICES: VoiceOption[] = [
 
 export function useVoiceData(
   language: string,
-  selectedVoice?: VoiceOption,
-  onSelect: (voice: VoiceOption) => void
+  onSelect: (voice: VoiceOption) => void,
+  selectedVoice?: VoiceOption
 ) {
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [loading, setLoading] = useState(false);

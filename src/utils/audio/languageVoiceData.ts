@@ -1,85 +1,18 @@
-
 import { LanguageOption, VoiceOption } from './types';
 
 // Default language options (will be replaced with actual data from Google TTS API)
 export const LANGUAGES: LanguageOption[] = [
-  { 
-    id: 'en-US', 
-    code: 'en-US', 
-    name: 'English (US)', 
-    nativeText: 'English (US)', 
-    nativeName: 'English (US)'
-  },
-  { 
-    id: 'en-GB', 
-    code: 'en-GB', 
-    name: 'English (UK)', 
-    nativeText: 'English (UK)', 
-    nativeName: 'English (UK)'
-  },
-  { 
-    id: 'es-ES', 
-    code: 'es-ES', 
-    name: 'Spanish', 
-    nativeText: 'Español', 
-    nativeName: 'Spanish'
-  },
-  { 
-    id: 'fr-FR', 
-    code: 'fr-FR', 
-    name: 'French', 
-    nativeText: 'Français', 
-    nativeName: 'French'
-  },
-  { 
-    id: 'de-DE', 
-    code: 'de-DE', 
-    name: 'German', 
-    nativeText: 'Deutsch', 
-    nativeName: 'German'
-  },
-  { 
-    id: 'it-IT', 
-    code: 'it-IT', 
-    name: 'Italian', 
-    nativeText: 'Italiano', 
-    nativeName: 'Italian'
-  },
-  { 
-    id: 'ja-JP', 
-    code: 'ja-JP', 
-    name: 'Japanese', 
-    nativeText: '日本語', 
-    nativeName: 'Japanese'
-  },
-  { 
-    id: 'ko-KR', 
-    code: 'ko-KR', 
-    name: 'Korean', 
-    nativeText: '한국어', 
-    nativeName: 'Korean'
-  },
-  { 
-    id: 'pt-BR', 
-    code: 'pt-BR', 
-    name: 'Portuguese (Brazil)', 
-    nativeText: 'Português (Brasil)', 
-    nativeName: 'Portuguese (Brazil)'
-  },
-  { 
-    id: 'ru-RU', 
-    code: 'ru-RU', 
-    name: 'Russian', 
-    nativeText: 'Русский', 
-    nativeName: 'Russian'
-  },
-  { 
-    id: 'zh-CN', 
-    code: 'zh-CN', 
-    name: 'Chinese (Simplified)', 
-    nativeText: '简体中文', 
-    nativeName: 'Chinese (Simplified)'
-  },
+  { id: 'en-US', code: 'en-US', name: 'English (US)', nativeText: 'English (US)', nativeName: 'English (US)' },
+  { id: 'en-GB', code: 'en-GB', name: 'English (UK)', nativeText: 'English (UK)', nativeName: 'English (UK)' },
+  { id: 'es-ES', code: 'es-ES', name: 'Spanish', nativeText: 'Español', nativeName: 'Spanish' },
+  { id: 'fr-FR', code: 'fr-FR', name: 'French', nativeText: 'Français', nativeName: 'French' },
+  { id: 'de-DE', code: 'de-DE', name: 'German', nativeText: 'Deutsch', nativeName: 'German' },
+  { id: 'it-IT', code: 'it-IT', name: 'Italian', nativeText: 'Italiano', nativeName: 'Italian' },
+  { id: 'ja-JP', code: 'ja-JP', name: 'Japanese', nativeText: '日本語', nativeName: 'Japanese' },
+  { id: 'ko-KR', code: 'ko-KR', name: 'Korean', nativeText: '한국어', nativeName: 'Korean' },
+  { id: 'pt-BR', code: 'pt-BR', name: 'Portuguese (Brazil)', nativeText: 'Português (Brasil)', nativeName: 'Portuguese (Brazil)' },
+  { id: 'ru-RU', code: 'ru-RU', name: 'Russian', nativeText: 'Русский', nativeName: 'Russian' },
+  { id: 'zh-CN', code: 'zh-CN', name: 'Chinese (Simplified)', nativeText: '简体中文', nativeName: 'Chinese (Simplified)' },
 ];
 
 // Default voices for fallback
@@ -137,7 +70,7 @@ export function getAvailableVoices(languageCode: string): VoiceOption[] {
   return getVoicesForLanguage(languageCode);
 }
 
-// Function to fetch and set Google TTS languages and voices
+// Function to fetch and set Google TTS languages and voices from API
 export async function initializeGoogleVoices(): Promise<void> {
   try {
     const response = await fetch('/api/get-google-voices');
@@ -199,9 +132,19 @@ export async function initializeGoogleVoices(): Promise<void> {
 function formatVoiceName(voiceName: string, gender?: string): string {
   const nameParts = voiceName.split('-');
   const voiceId = nameParts[nameParts.length - 1];
-  const voiceType = voiceName.includes('Wavenet') ? 'Wavenet' : 
-                   voiceName.includes('Neural2') ? 'Neural2' : 
-                   voiceName.includes('Standard') ? 'Standard' : '';
+  
+  let voiceType = '';
+  if (voiceName.includes('Wavenet')) {
+    voiceType = 'Wavenet';
+  } else if (voiceName.includes('Neural2')) {
+    voiceType = 'Neural2';
+  } else if (voiceName.includes('Standard')) {
+    voiceType = 'Standard';
+  } else if (voiceName.includes('Polyglot')) {
+    voiceType = 'Polyglot';
+  } else if (voiceName.includes('Studio')) {
+    voiceType = 'Studio';
+  }
   
   return `${voiceType} ${voiceId} (${gender === 'female' ? 'Female' : 'Male'})`;
 }
