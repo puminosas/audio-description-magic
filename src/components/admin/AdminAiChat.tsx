@@ -8,7 +8,7 @@ import FilePreviewPanel from './ai-chat/FilePreviewPanel';
 import AdminActionsPanel from './ai-chat/AdminActionsPanel';
 import ChatSessionsList from './ai-chat/ChatSessionsList';
 import { useChatLogic } from './ai-chat/hooks/useChatLogic';
-import { useFileManagement } from './ai-chat/hooks/useFileManagement';
+import { useFileManagement } from './ai-chat/hooks/file-management';  // Updated import path
 import ChatInput from './ai-chat/ChatInput';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
