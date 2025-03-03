@@ -1,8 +1,11 @@
 
-import React, { RefObject } from 'react';
-import { Loader2, Info, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { RefObject, useEffect, useRef } from 'react';
+import { VariableSizeList as List } from 'react-window';
 import { Message, TypingStatus } from './types';
+import MessageItem from './MessageItem';
+import TypingIndicator from './TypingIndicator';
+import ErrorMessage from './ErrorMessage';
+import EmptyChat from './EmptyChat';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -21,80 +24,101 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
   error,
   retryLastMessage
 }) => {
+  const listRef = useRef<List>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sizeMap = useRef<{[key: number]: number}>({});
+  
+  // Set initial item size
+  const setSize = (index: number, size: number) => {
+    sizeMap.current = { ...sizeMap.current, [index]: size };
+    if (listRef.current) {
+      listRef.current.resetAfterIndex(index);
+    }
+  };
+
+  // Get item size for virtualization
+  const getSize = (index: number) => {
+    return sizeMap.current[index] || 100; // Default height
+  };
+
+  // Reset list when messages change
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.resetAfterIndex(0);
+      
+      // Scroll to bottom after a brief delay
+      setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [messages.length]);
+
+  if (messages.length === 0) {
+    return <EmptyChat />;
+  }
+
+  // Calculate if we need virtualization (only for larger message sets)
+  const useVirtualization = messages.length > 20;
+  
   return (
-    <div className="flex-1 overflow-y-auto">
-      {messages.length === 0 ? (
-        <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
-          <Info className="mb-2 h-12 w-12 opacity-50" />
-          <h3 className="mb-1 text-lg font-medium">AI Assistant</h3>
-          <p className="max-w-md text-sm">
-            Ask me anything about your project, users, or administrative tasks.
-            I can help with troubleshooting, data analysis, and task automation.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4 pb-4">
-          {messages.map((msg, index) => (
-            <div
-              key={msg.id || index}
-              className={`flex ${
-                msg.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}
+    <div 
+      ref={containerRef}
+      className="flex-1 overflow-y-auto h-full"
+    >
+      {useVirtualization ? (
+        <List
+          ref={listRef}
+          height={containerRef.current?.clientHeight || 500}
+          width="100%"
+          itemCount={messages.length}
+          itemSize={getSize}
+          layout="vertical"
+          overscanCount={5}
+        >
+          {({ index, style }) => (
+            <div style={style}>
+              <div 
+                ref={el => {
+                  if (el) {
+                    // Measure and update item size after rendering
+                    const height = el.getBoundingClientRect().height;
+                    if (height > 0 && height !== getSize(index)) {
+                      setSize(index, height);
+                    }
+                  }
+                }}
               >
-                <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
-                {msg.createdAt && (
-                  <div className="mt-1 text-right text-xs opacity-50">
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                )}
+                <MessageItem 
+                  message={messages[index]} 
+                  isLast={index === messages.length - 1} 
+                />
               </div>
             </div>
+          )}
+        </List>
+      ) : (
+        // For smaller message counts, use standard rendering for simplicity
+        <div className="space-y-1 pb-4">
+          {messages.map((msg, index) => (
+            <MessageItem 
+              key={msg.id || index} 
+              message={msg} 
+              isLast={index === messages.length - 1} 
+            />
           ))}
-          <div ref={messagesEndRef} />
-          
-          {/* Typing indicator */}
-          {typingStatus === 'processing' && (
-            <div className="flex justify-start">
-              <div className="flex max-w-[80%] items-center rounded-lg bg-muted px-4 py-2">
-                <div className="mr-2 flex space-x-1">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{animationDelay: '0ms'}}></div>
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{animationDelay: '300ms'}}></div>
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{animationDelay: '600ms'}}></div>
-                </div>
-                <span className="text-sm text-muted-foreground">AI is thinking...</span>
-              </div>
-            </div>
-          )}
-          
-          {/* Error message with retry option */}
-          {typingStatus === 'error' && error && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg bg-destructive/10 px-4 py-2 text-destructive">
-                <div className="mb-2 flex items-center">
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  <span className="font-medium">Error</span>
-                </div>
-                <p className="text-sm">{error}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={retryLastMessage}
-                >
-                  Retry message
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       )}
+      
+      {/* Invisible div for scrolling to bottom */}
+      <div ref={messagesEndRef} />
+      
+      {/* Typing indicator */}
+      {typingStatus === 'processing' && <TypingIndicator />}
+      
+      {/* Error message with retry option */}
+      {typingStatus === 'error' && error && <ErrorMessage error={error} retryLastMessage={retryLastMessage} />}
     </div>
   );
 };
