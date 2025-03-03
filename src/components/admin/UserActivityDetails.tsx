@@ -33,6 +33,13 @@ const UserActivityDetails = ({
   audioFiles,
   loading
 }: UserActivityDetailsProps) => {
+  // Create a function that returns a Promise to satisfy the type requirement
+  const handleDelete = async (id: string): Promise<void> => {
+    // In this context, we don't actually want to delete anything
+    // but we need to return a Promise to satisfy the type
+    return Promise.resolve();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -75,7 +82,7 @@ const UserActivityDetails = ({
             ) : (
               <AudioFilesTable 
                 audioFiles={audioFiles}
-                onDelete={() => {}} // No delete functionality in the dialog
+                onDelete={handleDelete} // Now passing a function that returns a Promise
               />
             )}
           </div>
