@@ -13,6 +13,7 @@ import Generator from '@/pages/Generator';
 import ApiDocs from '@/pages/ApiDocs';
 import ApiClient from '@/pages/ApiClient';
 import Pricing from '@/pages/Pricing';
+import Contact from '@/pages/Contact';
 import NotFound from '@/pages/NotFound';
 import Admin from '@/pages/Admin';
 import '@/App.css';
@@ -45,6 +46,7 @@ function App() {
                 <Route path="/api" element={<Navigate to="/api-docs" replace />} />
                 <Route path="/api-client" element={<ApiClient />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/contact" element={<Contact />} />
                 <Route path="/admin/*" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

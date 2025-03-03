@@ -110,7 +110,7 @@ const ApiDocs = () => {
                   </p>
                   <div className="bg-secondary/50 p-4 rounded-md font-mono text-sm mb-6">
                     <p className="mb-2 text-primary">// Example request using cURL</p>
-                    <p className="whitespace-pre-wrap">curl -X POST "https://api.audiodescriptions.com/generate"<br />  -H "Authorization: Bearer YOUR_API_KEY"<br />  -H "Content-Type: application/json"<br />  -d '{'{'}
+                    <p className="whitespace-pre-wrap">curl -X POST "https://api.audiodescriptions.online/generate"<br />  -H "Authorization: Bearer YOUR_API_KEY"<br />  -H "Content-Type: application/json"<br />  -d '{'{'}
   "text": "Your product description here",
   "language": "en",
   "voice": "female"
