@@ -3,7 +3,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Code, Save, X, Wand2 } from 'lucide-react';
+import { Code, Save, X, Wand2, FileText } from 'lucide-react';
 
 interface FilePreviewPanelProps {
   selectedFile: string;
@@ -24,11 +24,21 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   handleSaveFile,
   handleAnalyzeWithAI
 }) => {
+  // Determine file type from extension for syntax highlighting (can be expanded)
+  const getFileType = () => {
+    const ext = selectedFile.split('.').pop()?.toLowerCase();
+    if (['js', 'jsx', 'ts', 'tsx'].includes(ext)) return 'JavaScript/TypeScript';
+    if (['html', 'css', 'scss'].includes(ext)) return 'HTML/CSS';
+    if (['json'].includes(ext)) return 'JSON';
+    return 'Text';
+  };
+
   return (
     <Card className="p-4">
       <h3 className="mb-3 flex items-center text-lg font-medium">
         <Code className="mr-2 h-5 w-5" />
         File: {selectedFile}
+        <span className="ml-2 text-xs text-muted-foreground">({getFileType()})</span>
       </h3>
       {isLoadingContent ? (
         <div className="flex items-center justify-center py-8">
@@ -39,7 +49,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         <Textarea
           value={fileContent}
           onChange={(e) => setFileContent(e.target.value)}
-          className="min-h-[200px] font-mono text-sm"
+          className="min-h-[300px] font-mono text-sm"
         />
       )}
       <div className="mt-4 flex justify-between">
@@ -52,6 +62,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             variant="outline" 
             size="sm" 
             onClick={handleAnalyzeWithAI}
+            disabled={isLoadingContent || !fileContent}
           >
             <Wand2 className="mr-2 h-4 w-4" />
             Analyze with AI
@@ -59,6 +70,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           <Button 
             size="sm" 
             onClick={handleSaveFile}
+            disabled={isLoadingContent}
           >
             <Save className="mr-2 h-4 w-4" />
             Save Changes
@@ -66,7 +78,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         </div>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Note: File editing may be restricted based on your permissions
+        File content will be provided to the AI for analysis when using the "Analyze with AI" button
       </p>
     </Card>
   );

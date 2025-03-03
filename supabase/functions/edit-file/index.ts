@@ -2,50 +2,64 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-serve(async (req: Request) => {
-  // Handle CORS preflight requests
+const isValidFilePath = (path: string): boolean => {
+  // Basic security check to prevent access to sensitive files
+  const forbiddenPatterns = [
+    /\.env/i,
+    /config\.toml/i,
+    /password/i,
+    /secret/i,
+    /\.git/i,
+    /node_modules/i
+  ];
+  
+  return !forbiddenPatterns.some(pattern => pattern.test(path));
+};
+
+serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify admin role using RLS policies
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Get file path and content from request body
     const { filePath, newContent } = await req.json();
     
-    if (!filePath || !newContent) {
-      return new Response(JSON.stringify({ error: 'Missing file path or content' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    if (!filePath || newContent === undefined) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'File path and content are required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    // For security reasons, we're simulating file editing
-    console.log(`Simulating edit for file: ${filePath}`);
-    
-    // In a real implementation, this would securely write to the actual file
-    // For demo purposes, we're just returning success
-    return new Response(JSON.stringify({ 
-      success: true,
-      message: 'File updated successfully',
-      filePath: filePath
-    }), { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-    
+    // Security check
+    if (!isValidFilePath(filePath)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Access to this file is restricted' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+    // In a real implementation, this would write to the actual file
+    // For security and demo purposes, we just simulate success
+    console.log(`Simulating file edit for: ${filePath}`);
+    console.log(`Content length: ${newContent.length} characters`);
+
+    // Simulate a delay to make it feel realistic
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: "File updated successfully! (This is a simulated response for demo purposes)" 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error("Error in edit-file function:", error);
-    return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    console.error("Error editing file:", error);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message || 'Failed to edit file' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
   }
 });

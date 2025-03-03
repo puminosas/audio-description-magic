@@ -59,10 +59,21 @@ export const useChatLogic = () => {
   const sendFileAnalysisRequest = async (filePath: string, fileContent: string) => {
     if (isProcessing) return;
     
-    // Create a user message about the file analysis request
+    // Create a context message about the file type
+    const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+    let fileType = 'text file';
+    
+    if (['js', 'jsx'].includes(fileExtension)) fileType = 'JavaScript file';
+    if (['ts', 'tsx'].includes(fileExtension)) fileType = 'TypeScript file';
+    if (['css', 'scss'].includes(fileExtension)) fileType = 'CSS/SCSS file';
+    if (['html'].includes(fileExtension)) fileType = 'HTML file';
+    if (['json'].includes(fileExtension)) fileType = 'JSON file';
+    
+    // Create a user message with the file analysis request
+    // Format to make it clear in the chat that this is a file
     const userMessage: Message = {
       role: 'user',
-      content: `Please analyze this file: ${filePath}\n\`\`\`\n${fileContent}\n\`\`\``,
+      content: `Please analyze this ${fileType} located at \`${filePath}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString()
     };
