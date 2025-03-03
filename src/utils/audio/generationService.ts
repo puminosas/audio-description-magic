@@ -39,9 +39,11 @@ export const generateAudioDescription = async (
       } : undefined
     });
 
+    // Log the response in a type-safe way
     console.log("Edge function response:", {
-      status: response.status !== undefined ? response.status : 'N/A',
-      statusText: response.statusText !== undefined ? response.statusText : 'N/A',
+      // Use optional chaining for potentially missing properties
+      status: 'status' in response ? response.status : 'N/A',
+      statusText: 'statusText' in response ? response.statusText : 'N/A',
       error: response.error,
       hasData: !!response.data
     });
