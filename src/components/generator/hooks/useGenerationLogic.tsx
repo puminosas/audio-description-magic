@@ -8,6 +8,9 @@ import {
   updateGenerationCount, 
   LanguageOption,
   VoiceOption,
+  AudioGenerationResult,
+  AudioSuccessResult,
+  AudioErrorResult,
 } from '@/utils/audio';
 
 export interface GeneratedAudio {
@@ -57,7 +60,7 @@ export const useGenerationLogic = () => {
       }
       
       // Add a timeout to prevent long-running requests
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<AudioErrorResult>((_, reject) => 
         setTimeout(() => reject(new Error('The request took too long to complete. Try with a shorter text.')), 60000) // Increased timeout for Google TTS
       );
       
@@ -74,7 +77,7 @@ export const useGenerationLogic = () => {
       if ('error' in result) {
         const errorMessage = result.error;
         
-        if (errorMessage.includes('Authentication required') || errorMessage.includes('authentication')) {
+        if (typeof errorMessage === 'string' && (errorMessage.includes('Authentication required') || errorMessage.includes('authentication'))) {
           setError('You need to be signed in to generate audio. Please sign in and try again.');
           toast({
             title: 'Authentication Required',
@@ -83,10 +86,10 @@ export const useGenerationLogic = () => {
           });
         } else {
           console.error("Audio generation error:", errorMessage);
-          setError(errorMessage);
+          setError(typeof errorMessage === 'string' ? errorMessage : 'Unknown error occurred');
           toast({
             title: 'Generation Failed',
-            description: errorMessage,
+            description: typeof errorMessage === 'string' ? errorMessage : 'Unknown error occurred',
             variant: 'destructive',
           });
         }
@@ -112,7 +115,7 @@ export const useGenerationLogic = () => {
       
       console.log("Audio generation successful:", {
         url: result.audioUrl.substring(0, 50) + '...',
-        text: result.text
+        text: result.text || formData.text
       });
       
       // Set audio with a small delay to ensure DOM is ready

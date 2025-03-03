@@ -3,17 +3,83 @@ import { LanguageOption, VoiceOption } from './types';
 
 // Default language options (will be replaced with actual data from Google TTS API)
 export const LANGUAGES: LanguageOption[] = [
-  { code: 'en-US', name: 'English (US)' },
-  { code: 'en-GB', name: 'English (UK)' },
-  { code: 'es-ES', name: 'Spanish' },
-  { code: 'fr-FR', name: 'French' },
-  { code: 'de-DE', name: 'German' },
-  { code: 'it-IT', name: 'Italian' },
-  { code: 'ja-JP', name: 'Japanese' },
-  { code: 'ko-KR', name: 'Korean' },
-  { code: 'pt-BR', name: 'Portuguese (Brazil)' },
-  { code: 'ru-RU', name: 'Russian' },
-  { code: 'zh-CN', name: 'Chinese (Simplified)' },
+  { 
+    id: 'en-US', 
+    code: 'en-US', 
+    name: 'English (US)', 
+    nativeText: 'English (US)', 
+    nativeName: 'English (US)'
+  },
+  { 
+    id: 'en-GB', 
+    code: 'en-GB', 
+    name: 'English (UK)', 
+    nativeText: 'English (UK)', 
+    nativeName: 'English (UK)'
+  },
+  { 
+    id: 'es-ES', 
+    code: 'es-ES', 
+    name: 'Spanish', 
+    nativeText: 'Español', 
+    nativeName: 'Spanish'
+  },
+  { 
+    id: 'fr-FR', 
+    code: 'fr-FR', 
+    name: 'French', 
+    nativeText: 'Français', 
+    nativeName: 'French'
+  },
+  { 
+    id: 'de-DE', 
+    code: 'de-DE', 
+    name: 'German', 
+    nativeText: 'Deutsch', 
+    nativeName: 'German'
+  },
+  { 
+    id: 'it-IT', 
+    code: 'it-IT', 
+    name: 'Italian', 
+    nativeText: 'Italiano', 
+    nativeName: 'Italian'
+  },
+  { 
+    id: 'ja-JP', 
+    code: 'ja-JP', 
+    name: 'Japanese', 
+    nativeText: '日本語', 
+    nativeName: 'Japanese'
+  },
+  { 
+    id: 'ko-KR', 
+    code: 'ko-KR', 
+    name: 'Korean', 
+    nativeText: '한국어', 
+    nativeName: 'Korean'
+  },
+  { 
+    id: 'pt-BR', 
+    code: 'pt-BR', 
+    name: 'Portuguese (Brazil)', 
+    nativeText: 'Português (Brasil)', 
+    nativeName: 'Portuguese (Brazil)'
+  },
+  { 
+    id: 'ru-RU', 
+    code: 'ru-RU', 
+    name: 'Russian', 
+    nativeText: 'Русский', 
+    nativeName: 'Russian'
+  },
+  { 
+    id: 'zh-CN', 
+    code: 'zh-CN', 
+    name: 'Chinese (Simplified)', 
+    nativeText: '简体中文', 
+    nativeName: 'Chinese (Simplified)'
+  },
 ];
 
 // Default voices (will be replaced with actual data from Google TTS API)
