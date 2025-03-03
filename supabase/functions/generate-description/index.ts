@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts"; // Required for fetch in Deno
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,85 +13,109 @@ serve(async (req) => {
   }
 
   try {
-    // Get request body
-    const { product_name, language = 'en', voice_name = 'default' } = await req.json();
-
-    if (!product_name) {
-      throw new Error('Missing required field: product_name');
-    }
-
-    console.log(`Generating description for product: ${product_name}, language: ${language}`);
-
-    // Set up a simple default description if OpenAI fails
-    const defaultDescription = `${product_name} is a high-quality product designed to meet your needs. It features excellent craftsmanship and reliable performance.`;
-
-    // Try to generate with OpenAI
-    try {
-      const openAIKey = Deno.env.get('OPENAI_API_KEY');
-      
-      if (!openAIKey) {
-        console.log('No OpenAI API key found, returning default description');
-        return new Response(
-          JSON.stringify({ success: true, generated_text: defaultDescription }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an AI product description generator. Create a concise, engaging product description for "${product_name}" in ${language} language.
-              The description should be 2-3 sentences highlighting key features and benefits. Make it sound natural for text-to-speech conversion.`
-            },
-            { 
-              role: 'user', 
-              content: `Write a product description for: ${product_name}` 
-            }
-          ],
-          max_tokens: 250,
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'OpenAI API key is not configured',
         }),
-      });
-
-      const data = await response.json();
-      
-      if (data.error || !data.choices || !data.choices[0]) {
-        console.error('OpenAI API error:', data.error || 'No choices returned');
-        throw new Error('Failed to generate description using AI');
-      }
-
-      const generatedText = data.choices[0].message.content.trim();
-      console.log('Successfully generated description with OpenAI');
-
-      return new Response(
-        JSON.stringify({ success: true, generated_text: generatedText }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (openAiError) {
-      console.error('Error with OpenAI description generation:', openAiError);
-      // Fall back to default description
-      return new Response(
-        JSON.stringify({ success: true, generated_text: defaultDescription }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
       );
     }
-  } catch (error) {
-    console.error('Error in generate-description function:', error);
+
+    const { product_name, language, voice_name } = await req.json();
+    
+    if (!product_name) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Product name is required',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    console.log(`Generating description for: ${product_name} in ${language} with voice ${voice_name}`);
+
+    const systemPrompt = `You are a professional product description writer that creates engaging, concise descriptions for e-commerce products.
+Create a description for "${product_name}" that is:
+- Engaging and persuasive, but not overly sales-y
+- Around 2-3 sentences long (for voice readability)
+- Using natural, conversational language that sounds good when read aloud
+- Highlighting key features and benefits
+- Appropriate for the language: ${language || 'English'}`;
+
+    // Call OpenAI API directly using fetch instead of the SDK
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini", // Using smaller, faster model
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Write a brief, engaging description for this product: ${product_name}` }
+        ],
+        temperature: 0.7,
+        max_tokens: 200
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("OpenAI API error:", errorData);
+      
+      // Return fallback description if OpenAI fails
+      const fallbackText = `Introducing the ${product_name}. This high-quality product offers exceptional performance and value. Discover what makes ${product_name} a favorite choice among customers.`;
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          generated_text: fallbackText,
+          note: "Used fallback description due to API error"
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const data = await response.json();
+    const generatedText = data.choices[0].message.content.trim();
+
+    console.log("Successfully generated description");
+    
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      JSON.stringify({
+        success: true,
+        generated_text: generatedText,
       }),
-      { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error) {
+    console.error("Error generating description:", error);
+    
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: `Error generating description: ${error.message || error}`,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     );
   }
