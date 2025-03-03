@@ -36,13 +36,14 @@ const AudioPlayer = ({
       
       // Check if the data URL is too short or potentially truncated
       // Data URLs for audio need to be quite long to contain actual audio data
+      // Increase minimum size to 20KB for better reliability
       const isValidLength = 
-        (audioUrl.startsWith('data:audio/') && audioUrl.length > 10000) || 
+        (audioUrl.startsWith('data:audio/') && audioUrl.length > 20000) || 
         (audioUrl.startsWith('http'));
       
       // Check if the base64 part seems valid
       const hasValidBase64 = !audioUrl.startsWith('data:audio/') || 
-        (audioUrl.split('base64,')[1]?.length > 1000);
+        (audioUrl.split('base64,')[1]?.length > 5000);
       
       const validationDetails = {
         isValidDataUrl,
@@ -51,7 +52,8 @@ const AudioPlayer = ({
         urlLength: audioUrl.length,
         startsWithDataAudio: audioUrl.startsWith('data:audio/'),
         includesBase64: audioUrl.includes('base64,'),
-        base64Length: audioUrl.split('base64,')[1]?.length
+        base64Length: audioUrl.split('base64,')[1]?.length,
+        minimumRequired: 20000
       };
       
       return { 

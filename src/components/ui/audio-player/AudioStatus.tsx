@@ -43,7 +43,14 @@ const AudioStatus = ({
       <Alert variant="destructive" className="mb-4">
         <XCircle className="h-4 w-4" />
         <AlertTitle>Audio Playback Error</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
+        <AlertDescription>
+          {error}
+          {validationDetails && validationDetails.urlLength && (
+            <span className="block mt-1 text-xs opacity-70">
+              Audio data may be truncated. Size: {Math.round(validationDetails.urlLength / 1024)}KB
+            </span>
+          )}
+        </AlertDescription>
       </Alert>
     );
   }
@@ -57,7 +64,7 @@ const AudioStatus = ({
           The audio file appears to be invalid or incomplete. The data may be truncated.
           {validationDetails && validationDetails.urlLength && (
             <span className="block mt-1 text-xs opacity-70">
-              Audio data size: {Math.round(validationDetails.urlLength / 1024)}KB
+              Audio data size: {Math.round(validationDetails.urlLength / 1024)}KB (minimum 20KB required)
             </span>
           )}
         </AlertDescription>

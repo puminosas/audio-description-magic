@@ -30,8 +30,9 @@ export const useGenerationLogic = () => {
       
       const base64Part = url.split('base64,')[1];
       
-      // Audio data needs to be substantial - at least 10KB for a valid audio file
-      return base64Part && base64Part.length > 10000;
+      // Audio data needs to be substantial - at least 20KB for a valid audio file
+      // This helps prevent issues with truncated responses
+      return base64Part && base64Part.length > 20000;
     }
     
     if (url.startsWith('http')) {
@@ -57,11 +58,20 @@ export const useGenerationLogic = () => {
         throw new Error('Please sign in to generate audio descriptions.');
       }
       
-      const result = await generateAudioDescription(
-        formData.text,
-        formData.language,
-        formData.voice
+      // Add a timeout to prevent long-running requests
+      const timeoutPromise = new Promise<{error: string}>((_, reject) => 
+        setTimeout(() => reject({error: 'The request took too long to complete. Try with a shorter text.'}), 30000)
       );
+      
+      // Race the generation with a timeout
+      const result = await Promise.race([
+        generateAudioDescription(
+          formData.text,
+          formData.language,
+          formData.voice
+        ),
+        timeoutPromise
+      ]);
       
       if (result.error || !result.audioUrl) {
         const errorMessage = result.error || 'Failed to generate audio. Please try again.';
@@ -93,13 +103,14 @@ export const useGenerationLogic = () => {
           urlLength: result.audioUrl?.length,
           hasBase64: result.audioUrl?.includes('base64,'),
           dataType: result.audioUrl?.includes('data:audio/') ? 'audio' : 'unknown',
-          base64Length: result.audioUrl?.split('base64,')[1]?.length || 0
+          base64Length: result.audioUrl?.split('base64,')[1]?.length || 0,
+          minimumRequired: 20000
         });
         
-        setError('Generated audio appears to be invalid or truncated. Please try again with a shorter text.');
+        setError('Generated audio appears to be invalid or truncated. Please try again with a shorter text (recommended: under 500 characters).');
         toast({
           title: 'Generation Error',
-          description: 'Failed to generate valid audio. The response may have been truncated.',
+          description: 'Failed to generate valid audio. The response may have been truncated. Try with shorter text.',
           variant: 'destructive',
         });
         return;
@@ -150,11 +161,17 @@ export const useGenerationLogic = () => {
       const errorMessage = error instanceof Error 
         ? error.message 
         : 'Failed to generate audio';
+      
+      // Provide more user-friendly error message
+      let userMessage = errorMessage;
+      if (errorMessage.includes('timeout') || errorMessage.includes('took too long')) {
+        userMessage = 'The generation timed out. Please try with shorter text (under 500 characters).';
+      }
         
-      setError(errorMessage);
+      setError(userMessage);
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: userMessage,
         variant: 'destructive',
       });
     } finally {

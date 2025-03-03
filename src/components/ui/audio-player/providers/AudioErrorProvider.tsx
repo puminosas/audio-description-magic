@@ -30,9 +30,9 @@ export const AudioErrorProvider = ({
       return;
     }
     
-    // Check that data URLs have a minimum valid length
+    // Check that data URLs have a minimum valid length (20KB)
     if (audioUrl.startsWith('data:audio/') && 
-        (!audioUrl.includes('base64,') || audioUrl.length < 10000)) {
+        (!audioUrl.includes('base64,') || audioUrl.length < 20000)) {
       setError("Invalid or truncated audio data");
       setIsLoading(false);
       return;
@@ -57,7 +57,7 @@ export const AudioErrorProvider = ({
             errorMessage = "Network error occurred while loading audio.";
             break;
           case MediaError.MEDIA_ERR_DECODE:
-            errorMessage = "Audio decoding failed. The file might be corrupted.";
+            errorMessage = "Audio decoding failed. The file might be corrupted or incomplete.";
             break;
           case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
             errorMessage = "Audio format is not supported by your browser.";
@@ -68,13 +68,13 @@ export const AudioErrorProvider = ({
       // For data URLs, check if they're potentially truncated
       if (audioUrl.startsWith('data:audio/')) {
         const base64Part = audioUrl.split('base64,')[1] || '';
-        if (base64Part.length < 10000) {
-          errorMessage = "The audio data appears to be truncated or incomplete.";
+        if (base64Part.length < 20000) {
+          errorMessage = "The audio data appears to be truncated or incomplete. Try generating a shorter description.";
         }
         
         // Check if base64 data ends properly
-        if (!base64Part.endsWith('==') && !base64Part.endsWith('=')) {
-          errorMessage = "The audio data is incomplete (improper base64 padding).";
+        if (!base64Part.endsWith('==') && !base64Part.endsWith('=') && base64Part.length % 4 !== 0) {
+          errorMessage = "The audio data is incomplete (improper base64 padding). Try with a shorter text.";
         }
       }
       
@@ -103,7 +103,7 @@ export const AudioErrorProvider = ({
       // Test the audio data before setting it as a source
       if (audioUrl.startsWith('data:audio/')) {
         const base64Part = audioUrl.split('base64,')[1];
-        if (!base64Part || base64Part.length < 1000) {
+        if (!base64Part || base64Part.length < 5000) {
           throw new Error("Invalid base64 audio data");
         }
       }
@@ -115,7 +115,7 @@ export const AudioErrorProvider = ({
       audio.load();
     } catch (err) {
       console.error("Error setting audio source:", err);
-      setError("Failed to initialize audio player. Please try again.");
+      setError("Failed to initialize audio player. Please try again with a shorter text.");
       setIsLoading(false);
     }
     

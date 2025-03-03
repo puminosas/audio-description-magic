@@ -14,11 +14,10 @@ interface AudioOutputProps {
 const AudioOutput = ({ isGenerating, audioUrl, generatedText, error }: AudioOutputProps) => {
   if (!isGenerating && !audioUrl && !error) return null;
   
-  // Enhanced validation for audio URL
+  // Enhanced validation for audio URL - increase the required base64 length for better reliability
   const isAudioUrlInvalid = audioUrl && (
-    (audioUrl.startsWith('data:audio/') && audioUrl.length < 10000) ||
-    (audioUrl.startsWith('data:audio/') && !audioUrl.includes('base64,')) ||
-    (audioUrl.startsWith('data:audio/') && audioUrl.split('base64,')[1]?.length < 10000)
+    !audioUrl.includes('base64,') || 
+    (audioUrl.startsWith('data:audio/') && audioUrl.split('base64,')[1]?.length < 20000)
   );
   
   // Calculate size of audio data for debugging
@@ -44,7 +43,7 @@ const AudioOutput = ({ isGenerating, audioUrl, generatedText, error }: AudioOutp
           <AlertTitle>Audio Format Error</AlertTitle>
           <AlertDescription>
             The audio file appears to be invalid or incomplete. Please try generating again with shorter text.
-            {audioDataSize && <span className="block mt-1 text-xs opacity-70">Audio data size: {audioDataSize}KB</span>}
+            {audioDataSize && <span className="block mt-1 text-xs opacity-70">Audio data size: {audioDataSize}KB (minimum 20KB required)</span>}
           </AlertDescription>
         </Alert>
       ) : (

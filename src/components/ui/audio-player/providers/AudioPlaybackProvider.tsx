@@ -25,6 +25,24 @@ export const AudioPlaybackProvider = ({
     setPlayAttemptFailed(false);
   }, [audioUrl]);
   
+  // Handle audio playback errors
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    const handleError = (e: Event) => {
+      console.error("Audio playback error:", e);
+      setIsPlaying(false);
+      setPlayAttemptFailed(true);
+    };
+    
+    audio.addEventListener('error', handleError);
+    
+    return () => {
+      audio.removeEventListener('error', handleError);
+    };
+  }, [audioRef]);
+  
   // Controls
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -36,6 +54,7 @@ export const AudioPlaybackProvider = ({
     } else {
       // Play with proper error handling
       try {
+        setPlayAttemptFailed(false);
         const playPromise = audio.play();
         
         if (playPromise !== undefined) {
@@ -93,6 +112,7 @@ export const AudioPlaybackProvider = ({
     
     // Play with proper error handling
     try {
+      setPlayAttemptFailed(false);
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
@@ -133,7 +153,7 @@ export const AudioPlaybackProvider = ({
     }
   };
   
-  // Additional controls (kept for interface compatibility)
+  // Additional controls
   const toggleLoop = () => setLoop(!loop);
   
   const changePlaybackSpeed = () => {

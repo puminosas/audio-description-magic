@@ -16,7 +16,12 @@ export const generateAudioDescription = async (
     const languageId = typeof language === 'string' ? language : language.id;
     const voiceId = typeof voice === 'string' ? voice : voice.id;
     
-    console.log(`Generating description for: ${productText} in language: ${languageId} with voice: ${voiceId}`);
+    console.log(`Generating description for: ${productText.substring(0, 50)}${productText.length > 50 ? '...' : ''} in language: ${languageId} with voice: ${voiceId}`);
+
+    // Check if text is too long - long texts may cause truncation issues
+    if (productText.length > 1000) {
+      console.warn('Text is very long which may lead to truncated audio output. Length:', productText.length);
+    }
 
     // Check if we have an active session
     const { data: { session } } = await supabase.auth.getSession();
@@ -34,7 +39,12 @@ export const generateAudioDescription = async (
       } : undefined
     });
 
-    console.log("Edge function response:", response);
+    console.log("Edge function response:", {
+      status: response.status,
+      statusText: response.statusText,
+      error: response.error,
+      hasData: !!response.data
+    });
 
     // Check for Edge Function errors
     if (response.error) {
@@ -65,16 +75,33 @@ export const generateAudioDescription = async (
       return { error: 'Failed to generate audio. No audio URL returned.' };
     }
 
-    // Validate the audio URL format
+    // Validate the audio URL format and size
     if (data.audioUrl.startsWith('data:audio/')) {
       const parts = data.audioUrl.split('base64,');
-      if (parts.length !== 2 || parts[1].length < 100) {
-        console.error('Invalid audio data format', parts.length, parts[1]?.length);
+      
+      // Check basic format
+      if (parts.length !== 2) {
+        console.error('Invalid audio data format, missing base64 separator');
         return { error: 'Invalid audio data format received' };
+      }
+      
+      // Check data length - audio files shouldn't be tiny
+      if (parts[1].length < 5000) {
+        console.error('Audio data appears to be too small:', parts[1].length, 'bytes');
+        return { error: 'Generated audio file is too small to be valid' };
+      }
+      
+      // Check for truncation (minimum 20KB for a usable MP3)
+      if (parts[1].length < 20000) {
+        console.warn('Audio data may be truncated, size is only:', Math.round(parts[1].length/1024), 'KB');
       }
     }
 
-    console.log('Successfully generated audio:', data);
+    console.log('Successfully generated audio:', {
+      audioLength: data.audioUrl?.length,
+      textLength: data.text?.length,
+      id: data.id
+    });
     
     return {
       audioUrl: data.audioUrl,
@@ -94,6 +121,10 @@ export const generateAudioDescription = async (
     
     if (errorMessage.includes('timeout')) {
       return { error: 'The audio generation service timed out. Please try with shorter text or try again later.' };
+    }
+
+    if (error instanceof TypeError && errorMessage.includes('JSON')) {
+      return { error: 'Error processing the server response. The generated audio may be too large.' };
     }
     
     return { error: errorMessage };
