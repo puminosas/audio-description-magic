@@ -1,12 +1,19 @@
 
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.5rem;
   text-align: center;
 }
 
 @media (min-width: 768px) {
+  #root {
+    max-width: 1280px;
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
   #root {
     padding: 2rem;
   }
@@ -51,13 +58,15 @@
 /* Responsive adjustments */
 .container {
   width: 100%;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 @media (min-width: 640px) {
   .container {
     max-width: 640px;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 
@@ -81,11 +90,37 @@
 
 /* Fix for mobile padding */
 main {
-  padding-top: 80px;
+  padding-top: 60px;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 @media (min-width: 768px) {
   main {
-    padding-top: 100px;
+    padding-top: 80px;
   }
+}
+
+/* Glassmorphism utility class */
+.glassmorphism {
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-in-out;
 }

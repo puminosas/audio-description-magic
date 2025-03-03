@@ -34,6 +34,18 @@ const AudioPlayer = ({
         audioUrl.startsWith('https://') || 
         audioUrl.startsWith('http://');
       
+      // If it's not a data URL, assume it's a valid external URL
+      if (!audioUrl.startsWith('data:audio/')) {
+        return {
+          hasValidUrl: isValidDataUrl,
+          isValidUrl: isValidDataUrl,
+          validationDetails: {
+            isExternalUrl: true,
+            url: audioUrl.substring(0, 30) + '...'
+          }
+        };
+      }
+      
       const parts = audioUrl.split('base64,');
       const base64Data = parts.length === 2 ? parts[1] : '';
       
@@ -41,28 +53,26 @@ const AudioPlayer = ({
       let hasValidDataFormat = true;
       let hasValidHeader = true;
       
-      if (audioUrl.startsWith('data:audio/')) {
-        // Check if base64 data is substantial enough
-        const isValidLength = base64Data.length >= 20000;
-        
-        // Check if base64 has valid padding
-        const hasValidPadding = base64Data.length % 4 === 0;
-        
-        // Try to check MP3 header (basic validation)
-        try {
-          if (base64Data.length > 8) {
-            const headerBytes = atob(base64Data.substring(0, 8));
-            hasValidHeader = headerBytes.indexOf('ID3') === 0 || headerBytes.charCodeAt(0) === 0xFF;
-          } else {
-            hasValidHeader = false;
-          }
-        } catch (err) {
-          console.error("Error checking MP3 header:", err);
+      // Check if base64 data is substantial enough
+      const isValidLength = base64Data.length >= 20000;
+      
+      // Check if base64 has valid padding
+      const hasValidPadding = base64Data.length % 4 === 0;
+      
+      // Try to check MP3 header (basic validation)
+      try {
+        if (base64Data.length > 8) {
+          const headerBytes = atob(base64Data.substring(0, 8));
+          hasValidHeader = headerBytes.indexOf('ID3') === 0 || headerBytes.charCodeAt(0) === 0xFF;
+        } else {
           hasValidHeader = false;
         }
-        
-        hasValidDataFormat = isValidLength && hasValidPadding && hasValidHeader;
+      } catch (err) {
+        console.error("Error checking MP3 header:", err);
+        hasValidHeader = false;
       }
+      
+      hasValidDataFormat = isValidLength && hasValidPadding && hasValidHeader;
       
       const validationDetails = {
         isValidDataUrl,
@@ -92,13 +102,6 @@ const AudioPlayer = ({
       };
     }
   }, [audioUrl, isGenerating]);
-
-  // Add logging to help debug issues
-  React.useEffect(() => {
-    if (audioUrl && !hasValidUrl) {
-      console.log("Audio URL validation failed:", validationDetails);
-    }
-  }, [audioUrl, hasValidUrl, validationDetails]);
 
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">

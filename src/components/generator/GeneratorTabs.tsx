@@ -32,9 +32,9 @@ const GeneratorTabs = ({
     <Card className="overflow-hidden">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full rounded-none bg-muted/50 flex-wrap justify-center md:justify-start">
-          <TabsTrigger value="generate" className="flex-1 max-w-[150px]">Generate</TabsTrigger>
-          <TabsTrigger value="text-to-audio" className="flex-1 max-w-[150px]">Text to Audio</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1 max-w-[150px]">History</TabsTrigger>
+          <TabsTrigger value="generate" className="flex-1 max-w-[150px] text-xs sm:text-sm">Generate</TabsTrigger>
+          <TabsTrigger value="text-to-audio" className="flex-1 max-w-[150px] text-xs sm:text-sm">Text to Audio</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1 max-w-[150px] text-xs sm:text-sm">History</TabsTrigger>
         </TabsList>
         
         <TabsContent value="generate" className="p-4 md:p-6">

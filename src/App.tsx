@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -42,7 +42,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/generator" element={<Generator />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
-                <Route path="/api" element={<ApiDocs />} /> {/* Add redirect for /api */}
+                <Route path="/api" element={<Navigate to="/api-docs" replace />} />
                 <Route path="/api-client" element={<ApiClient />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/admin/*" element={<Admin />} />

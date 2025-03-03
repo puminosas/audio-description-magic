@@ -31,6 +31,8 @@ export const AudioPlaybackProvider = ({
         // Completely reset the audio element
         audio.pause();
         audio.currentTime = 0;
+        
+        // Set the new source and force reload
         audio.src = audioUrl;
         audio.load();
       } catch (err) {
@@ -61,10 +63,16 @@ export const AudioPlaybackProvider = ({
       }
     };
     
+    const handleCanPlay = () => {
+      setPlayAttemptFailed(false);
+    };
+    
     audio.addEventListener('error', handleError);
+    audio.addEventListener('canplay', handleCanPlay);
     
     return () => {
       audio.removeEventListener('error', handleError);
+      audio.removeEventListener('canplay', handleCanPlay);
     };
   }, [audioRef]);
   
@@ -200,6 +208,16 @@ export const AudioPlaybackProvider = ({
     const nextIndex = (currentIndex + 1) % speeds.length;
     setPlaybackSpeed(speeds[nextIndex]);
   };
+  
+  // Update audio element when settings change
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    audio.playbackRate = playbackSpeed;
+    audio.volume = volume / 100;
+    audio.loop = loop;
+  }, [playbackSpeed, volume, loop, audioRef]);
   
   const playbackState: AudioPlaybackState = {
     isPlaying,

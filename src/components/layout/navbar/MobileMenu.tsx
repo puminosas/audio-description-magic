@@ -32,7 +32,7 @@ const MobileMenu = ({ isOpen, links, onLinkClick }: MobileMenuProps) => {
   };
 
   return (
-    <nav className="md:hidden py-4 px-4 glassmorphism animate-fade-in">
+    <nav className="md:hidden fixed top-16 left-0 right-0 z-50 py-4 px-4 glassmorphism animate-fade-in">
       <div className="flex flex-col space-y-4">
         <NavLinks links={links} variant="mobile" onLinkClick={handleLinkClick} />
         
