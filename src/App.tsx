@@ -29,6 +29,20 @@ function ScrollToTop() {
 }
 
 function App() {
+  useEffect(() => {
+    // Initialize any global services here
+    // For example, pre-fetching Google TTS voices data
+    const preloadServices = async () => {
+      try {
+        // Any initialization code can go here
+      } catch (error) {
+        console.error('Error initializing services:', error);
+      }
+    };
+    
+    preloadServices();
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>

@@ -12,6 +12,7 @@ import AdminAnalytics from './AdminAnalytics';
 import AdminAudioFiles from './AdminAudioFiles';
 import AdminUserManagement from './AdminUserManagement';
 import AdminUserUpdate from './AdminUserUpdate';
+import AdminUserActivity from './AdminUserActivity';
 import AdminFeedback from './AdminFeedback';
 import AdminSettings from './AdminSettings';
 import AdminAiChatPage from './AdminAiChat';
@@ -29,6 +30,7 @@ const Admin = () => {
       case 'audio-files': return 'audio-files';
       case 'users': return 'users';
       case 'user-update': return 'user-update';
+      case 'user-activity': return 'user-activity';
       case 'feedback': return 'feedback';
       case 'ai-chat': return 'ai-chat';
       case 'settings': return 'settings';
@@ -82,6 +84,7 @@ const Admin = () => {
       case 'audio-files': navigate('/admin/audio-files'); break;
       case 'users': navigate('/admin/users'); break;
       case 'user-update': navigate('/admin/user-update'); break;
+      case 'user-activity': navigate('/admin/user-activity'); break;
       case 'feedback': navigate('/admin/feedback'); break;
       case 'ai-chat': navigate('/admin/ai-chat'); break;
       case 'settings': navigate('/admin/settings'); break;
@@ -122,6 +125,13 @@ const Admin = () => {
                 Users
               </TabsTrigger>
               <TabsTrigger 
+                value="user-activity" 
+                onClick={() => handleTabClick('user-activity')} 
+                className="flex-shrink-0"
+              >
+                User Activity
+              </TabsTrigger>
+              <TabsTrigger 
                 value="user-update" 
                 onClick={() => handleTabClick('user-update')} 
                 className="flex-shrink-0"
@@ -156,6 +166,7 @@ const Admin = () => {
             <Route path="/" element={<AdminAnalytics />} />
             <Route path="/audio-files" element={<AdminAudioFiles />} />
             <Route path="/users" element={<AdminUserManagement />} />
+            <Route path="/user-activity" element={<AdminUserActivity />} />
             <Route path="/user-update" element={<AdminUserUpdate />} />
             <Route path="/feedback" element={<AdminFeedback />} />
             <Route path="/ai-chat" element={<AdminAiChatPage />} />
