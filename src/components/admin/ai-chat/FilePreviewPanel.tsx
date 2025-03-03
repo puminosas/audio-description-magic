@@ -3,7 +3,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Code, Save, X, Wand2, FileText, AlertCircle, Clipboard } from 'lucide-react';
+import { Code, Save, X, Wand2, FileText, AlertCircle, Clipboard, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
@@ -57,6 +57,8 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     }
   };
 
+  const isFileContentError = fileContent && fileContent.startsWith('// Error loading content');
+
   return (
     <Card className="p-4">
       <h3 className="mb-3 flex items-center text-lg font-medium">
@@ -68,6 +70,21 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         <div className="flex items-center justify-center py-8">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           <span className="ml-2">Loading file content...</span>
+        </div>
+      ) : isFileContentError ? (
+        <div className="space-y-4">
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load file content. The file may be inaccessible or the service may be unavailable.
+            </AlertDescription>
+          </Alert>
+          <Textarea
+            value={fileContent}
+            onChange={(e) => setFileContent(e.target.value)}
+            className="min-h-[200px] font-mono text-sm bg-muted/50"
+            readOnly
+          />
         </div>
       ) : fileContent ? (
         <Textarea
@@ -89,36 +106,51 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           Close
         </Button>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={copyToClipboard}
-            disabled={isLoadingContent || !fileContent}
-          >
-            <Clipboard className="mr-2 h-4 w-4" />
-            Copy Content
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleAnalyzeWithAI}
-            disabled={isLoadingContent || !fileContent}
-          >
-            <Wand2 className="mr-2 h-4 w-4" />
-            Analyze with AI
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={handleSaveFile}
-            disabled={isLoadingContent || !fileContent}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save Changes
-          </Button>
+          {isFileContentError ? (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleAnalyzeWithAI}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry Loading
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={copyToClipboard}
+                disabled={isLoadingContent || !fileContent}
+              >
+                <Clipboard className="mr-2 h-4 w-4" />
+                Copy Content
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAnalyzeWithAI}
+                disabled={isLoadingContent || !fileContent}
+              >
+                <Wand2 className="mr-2 h-4 w-4" />
+                Analyze with AI
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleSaveFile}
+                disabled={isLoadingContent || !fileContent || isFileContentError}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </Button>
+            </>
+          )}
         </div>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        File content will be provided to the AI for analysis when using the "Analyze with AI" button
+        {isFileContentError 
+          ? "You may need to ensure your Supabase Edge Functions are properly configured for file access."
+          : "File content will be provided to the AI for analysis when using the \"Analyze with AI\" button"}
       </p>
     </Card>
   );

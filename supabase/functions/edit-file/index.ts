@@ -1,4 +1,5 @@
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import * as path from "https://deno.land/std@0.168.0/path/mod.ts";
 
@@ -7,25 +8,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Define safe directories that can be edited
+// Define safe directories that can be modified
 const SAFE_DIRECTORIES = [
   '/src',
   '/public',
   '/supabase/functions',
 ];
 
-// Define files that should not be editable
+// Define files that should never be modified
 const FORBIDDEN_FILES = [
   '.env',
-  'env.local',
+  '.env.local',
   '.env.production',
   '.env.development',
-  'serviceAccount.json',
-  'firebase-admin.json',
   'package.json',
   'package-lock.json',
-  'bun.lockb',
-  'yarn.lock',
+  'serviceAccount.json',
+  'firebase-admin.json',
 ];
 
 function isSafePath(filePath: string): boolean {
@@ -65,7 +64,7 @@ serve(async (req) => {
       );
     }
 
-    // Get the file path and new content from the request
+    // Get the file path and content from the request
     const { filePath, newContent } = await req.json();
     
     if (!filePath || newContent === undefined) {
@@ -78,13 +77,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Editing file: ${filePath}`);
+    console.log(`Writing to file: ${filePath}`);
     
     // Security check for file path
     if (!isSafePath(filePath)) {
-      console.error(`Access denied to edit file: ${filePath}`);
+      console.error(`Access denied to file: ${filePath}`);
       return new Response(
-        JSON.stringify({ error: 'Access denied to edit this file path' }),
+        JSON.stringify({ error: 'Access denied to this file path. Cannot edit restricted files.' }),
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -92,14 +91,23 @@ serve(async (req) => {
       );
     }
 
-    // Try to write to the file
+    // Make sure the directory exists
+    const directory = path.dirname(filePath);
+    try {
+      await Deno.mkdir(directory, { recursive: true });
+    } catch (error) {
+      if (!(error instanceof Deno.errors.AlreadyExists)) {
+        throw error;
+      }
+    }
+
+    // Write the file
     try {
       await Deno.writeTextFile(filePath, newContent);
-      console.log(`Successfully updated file: ${filePath}`);
     } catch (error) {
       console.error(`Error writing to file ${filePath}:`, error);
       return new Response(
-        JSON.stringify({ error: `File could not be written: ${error.message}` }),
+        JSON.stringify({ error: `Failed to write to file: ${error.message}` }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -110,7 +118,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'File updated successfully' 
+        message: `File ${filePath} updated successfully`,
+        filePath 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

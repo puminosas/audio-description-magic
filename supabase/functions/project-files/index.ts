@@ -1,4 +1,5 @@
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import * as path from "https://deno.land/std@0.168.0/path/mod.ts";
 
@@ -7,101 +8,96 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Define safe directories that can be accessed
-const SAFE_DIRECTORIES = [
+// Define base directories to scan
+const BASE_DIRECTORIES = [
   '/src',
   '/public',
   '/supabase/functions',
 ];
 
-// Define files that should not be visible
-const FORBIDDEN_FILES = [
-  '.env',
-  'env.local',
-  '.env.production',
-  '.env.development',
-  'serviceAccount.json',
-  'firebase-admin.json',
+// Define file patterns to exclude
+const EXCLUDE_PATTERNS = [
+  /node_modules/,
+  /\.git/,
+  /\.env/,
+  /\.DS_Store/,
+  /\.vscode/,
+  /\.idea/,
+  /build/,
+  /dist/,
 ];
 
-// Define file extensions to categorize files
-const FILE_TYPES = {
-  // Code files
-  'code': ['.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.c', '.cpp', '.go', '.rb', '.php', '.vue'],
-  // Markup and style files
-  'markup': ['.html', '.xml', '.css', '.scss', '.sass', '.less'],
-  // Data files
-  'data': ['.json', '.yaml', '.yml', '.toml', '.csv', '.xlsx', '.xls'],
-  // Media files
-  'media': ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.mp3', '.wav', '.ogg', '.flac', '.mp4', '.webm', '.avi', '.mov'],
-  // Document files
-  'doc': ['.md', '.mdx', '.txt', '.pdf', '.doc', '.docx'],
-  // Config files
-  'config': ['.env.example', '.gitignore', '.prettierrc', '.eslintrc', 'tsconfig.json', 'vite.config.ts']
-};
+interface FileInfo {
+  path: string;
+  type: string;
+  size?: number;
+}
+
+function shouldExcludeFile(filePath: string): boolean {
+  return EXCLUDE_PATTERNS.some(pattern => pattern.test(filePath));
+}
 
 function getFileType(filePath: string): string {
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path.extname(filePath).toLowerCase().substring(1);
   
-  for (const [type, extensions] of Object.entries(FILE_TYPES)) {
-    if (extensions.includes(ext)) {
-      return type;
-    }
-  }
+  // Group by type
+  if (['js', 'jsx', 'ts', 'tsx'].includes(ext)) return 'script';
+  if (['css', 'scss', 'sass', 'less'].includes(ext)) return 'style';
+  if (['html', 'htm', 'xml', 'svg'].includes(ext)) return 'markup';
+  if (['json', 'yaml', 'yml', 'toml'].includes(ext)) return 'data';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) return 'image';
+  if (['md', 'txt', 'pdf', 'doc', 'docx'].includes(ext)) return 'document';
   
-  return 'other';
+  return ext || 'unknown';
 }
 
-function isSafePath(filePath: string): boolean {
-  // Normalize and clean the path
-  const normalizedPath = path.normalize(filePath);
+async function scanDirectory(dir: string): Promise<FileInfo[]> {
+  const files: FileInfo[] = [];
   
-  // Check if the path is within allowed directories
-  const isInSafeDir = SAFE_DIRECTORIES.some(dir => 
-    normalizedPath.startsWith(dir) || normalizedPath.startsWith(`.${dir}`)
-  );
-  
-  // Check if the file is not in the forbidden list
-  const fileName = path.basename(normalizedPath);
-  const isNotForbidden = !FORBIDDEN_FILES.some(forbiddenFile => 
-    fileName === forbiddenFile || fileName.endsWith(`.${forbiddenFile}`)
-  );
-  
-  return isInSafeDir && isNotForbidden;
-}
-
-async function listDirectory(dirPath: string): Promise<any[]> {
   try {
-    const files = [];
+    // Check if directory exists
+    try {
+      await Deno.stat(dir);
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        console.log(`Directory does not exist: ${dir}`);
+        return files;
+      }
+      throw error;
+    }
     
-    for await (const entry of Deno.readDir(dirPath)) {
-      const entryPath = path.join(dirPath, entry.name);
+    // Scan the directory
+    for await (const entry of Deno.readDir(dir)) {
+      const filePath = path.join(dir, entry.name);
       
-      // Skip hidden files and directories
-      if (entry.name.startsWith('.')) {
+      // Skip excluded files
+      if (shouldExcludeFile(filePath)) {
         continue;
       }
       
       if (entry.isDirectory) {
         // Recursively scan subdirectories
-        const subFiles = await listDirectory(entryPath);
-        files.push(...subFiles);
-      } else if (entry.isFile && isSafePath(entryPath)) {
-        // Add file to the list if it passes the safety check
-        const fileType = getFileType(entryPath);
-        files.push({
-          path: entryPath,
-          type: fileType,
-          size: (await Deno.stat(entryPath)).size
-        });
+        const subDirFiles = await scanDirectory(filePath);
+        files.push(...subDirFiles);
+      } else if (entry.isFile) {
+        // Get file info
+        try {
+          const fileInfo = await Deno.stat(filePath);
+          files.push({
+            path: filePath,
+            type: getFileType(filePath),
+            size: fileInfo.size,
+          });
+        } catch (error) {
+          console.error(`Error getting file info for ${filePath}:`, error);
+        }
       }
     }
-    
-    return files;
   } catch (error) {
-    console.error(`Error reading directory ${dirPath}:`, error);
-    return [];
+    console.error(`Error scanning directory ${dir}:`, error);
   }
+  
+  return files;
 }
 
 serve(async (req) => {
@@ -123,27 +119,18 @@ serve(async (req) => {
       );
     }
 
-    console.log("Scanning project files...");
+    let files: FileInfo[] = [];
     
-    // Scan all safe directories
-    let allFiles = [];
-    for (const dir of SAFE_DIRECTORIES) {
-      try {
-        const dirFiles = await listDirectory(dir);
-        allFiles = [...allFiles, ...dirFiles];
-      } catch (error) {
-        console.error(`Error reading directory ${dir}:`, error);
-        // Continue with next directory
-      }
+    // Scan all base directories
+    for (const dir of BASE_DIRECTORIES) {
+      const dirFiles = await scanDirectory(dir);
+      files = [...files, ...dirFiles];
     }
     
-    // Sort files by path
-    allFiles.sort((a, b) => a.path.localeCompare(b.path));
-    
-    console.log(`Found ${allFiles.length} files`);
-    
+    console.log(`Found ${files.length} files in project`);
+
     return new Response(
-      JSON.stringify(allFiles),
+      JSON.stringify(files),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }

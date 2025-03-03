@@ -22,45 +22,59 @@ export async function generateAudioDescription(
     let finalText = text;
     
     if (text.length < 20) {
-      // This is likely a product name, so generate a description
-      const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-description', {
+      try {
+        // This is likely a product name, so generate a description
+        const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-description', {
+          body: {
+            product_name: text,
+            language: language.code,
+            voice_name: voice.name
+          }
+        });
+
+        if (descriptionError) {
+          console.error('Error generating description:', descriptionError);
+          // Continue with original text if description generation fails
+        } else if (descriptionData && descriptionData.success) {
+          finalText = descriptionData.generated_text;
+        }
+      } catch (descError) {
+        console.error('Failed to connect to description service:', descError);
+        // Continue with original text if connection fails
+      }
+    }
+
+    try {
+      // Now generate the audio using Google TTS
+      const { data, error } = await supabase.functions.invoke('generate-google-tts', {
         body: {
-          product_name: text,
+          text: finalText,
           language: language.code,
-          voice_name: voice.name
+          voice: voice.id,
+          user_id: session.user.id
         }
       });
 
-      if (descriptionError || !descriptionData.success) {
-        console.error('Error generating description:', descriptionError || descriptionData.error);
-        return { error: 'Failed to generate product description' };
+      if (error) {
+        console.error('Error generating audio:', error);
+        return { error: error.message || 'Failed to generate audio' };
       }
 
-      finalText = descriptionData.generated_text;
-    }
+      if (!data || !data.success) {
+        return { error: data?.error || 'Failed to generate audio, invalid response from server' };
+      }
 
-    // Now generate the audio using Google TTS
-    const { data, error } = await supabase.functions.invoke('generate-google-tts', {
-      body: {
+      // Return success response
+      const result: AudioSuccessResult = {
+        audioUrl: data.audio_url,
         text: finalText,
-        language: language.code,
-        voice: voice.id,
-        user_id: session.user.id
-      }
-    });
+      };
 
-    if (error || !data.success) {
-      console.error('Error generating audio:', error || data.error);
-      return { error: error?.message || data?.error || 'Failed to generate audio' };
+      return result;
+    } catch (audioError) {
+      console.error('Connection error with audio generation service:', audioError);
+      return { error: 'Unable to connect to audio generation service. Please try again later.' };
     }
-
-    // Return success response
-    const result: AudioSuccessResult = {
-      audioUrl: data.audio_url,
-      text: finalText,
-    };
-
-    return result;
   } catch (error) {
     console.error('Error in generateAudioDescription:', error);
     return { error: error.message || 'Failed to generate audio description' };
@@ -82,6 +96,16 @@ export async function fetchGoogleVoices() {
     return data;
   } catch (error) {
     console.error('Error in fetchGoogleVoices:', error);
-    throw error;
+    
+    // Return fallback voice data if API call fails
+    return {
+      "en-US": {
+        display_name: "English (US)",
+        voices: {
+          MALE: [{ name: "en-US-Wavenet-A", ssml_gender: "MALE" }],
+          FEMALE: [{ name: "en-US-Wavenet-C", ssml_gender: "FEMALE" }]
+        }
+      }
+    };
   }
 }

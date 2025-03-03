@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,10 @@ import {
   FileImage,
   FileAudio,
   FileVideo,
-  File 
+  File,
+  AlertOctagon 
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface FileInfo {
   path: string;
@@ -54,6 +56,17 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
   fetchFiles,
   handleFileSelect
 }) => {
+  const { toast } = useToast();
+
+  // Attempt to load files on mount if there are none
+  useEffect(() => {
+    if (files.length === 0 && !isLoadingFiles && !isRefreshingFiles) {
+      fetchFiles().catch(err => {
+        console.error("Error auto-loading files:", err);
+      });
+    }
+  }, [files.length, isLoadingFiles, isRefreshingFiles, fetchFiles]);
+
   // Determine appropriate icon based on file extension
   const getFileIcon = (filePath: string) => {
     const extension = filePath.split('.').pop()?.toLowerCase() || '';
@@ -103,6 +116,24 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
     return extension ? `.${extension}` : '';
   };
 
+  // Handle refresh with error handling
+  const handleRefresh = async () => {
+    try {
+      await fetchFiles();
+      toast({
+        title: "Files Refreshed",
+        description: "Project files list has been updated",
+      });
+    } catch (error) {
+      console.error("Error refreshing files:", error);
+      toast({
+        title: "Refresh Failed",
+        description: "Could not refresh file list. Please try again later.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Card className="p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -113,7 +144,7 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={fetchFiles}
+          onClick={handleRefresh}
           disabled={isRefreshingFiles}
           className="h-8 w-8 p-0"
           title="Refresh files list"
@@ -172,6 +203,23 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             <span>Loading files...</span>
           </div>
+        ) : files.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+            <AlertOctagon className="h-8 w-8 text-amber-500 mb-2" />
+            <p className="text-sm font-medium">Could not load project files</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              There might be an issue connecting to the file service.
+            </p>
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className="mt-3"
+            >
+              <RefreshCw className="mr-1 h-3 w-3" />
+              Try Again
+            </Button>
+          </div>
         ) : filteredFiles.length > 0 ? (
           <ul className="divide-y">
             {filteredFiles.map((file, index) => (
@@ -194,17 +242,8 @@ const ProjectFilesPanel: React.FC<ProjectFilesPanelProps> = ({
           </ul>
         ) : (
           <div className="flex items-center justify-center py-8 text-center text-sm text-muted-foreground">
-            {files.length === 0 ? (
-              <>
-                <AlertCircle className="mr-2 h-4 w-4" />
-                No files available
-              </>
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                No matching files found
-              </>
-            )}
+            <Search className="mr-2 h-4 w-4" />
+            No matching files found
           </div>
         )}
       </div>
