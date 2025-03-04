@@ -58,11 +58,6 @@ export async function generateAudioDescription(
           language: language.code,
           voice: voice.id,
           user_id: session.user.id
-        },
-        // Add retry and timeout options
-        options: {
-          retries: 3,
-          timeout: 60000 // 60 second timeout
         }
       });
 
@@ -109,13 +104,7 @@ export async function generateAudioDescription(
 export async function fetchGoogleVoices() {
   try {
     console.log('Fetching Google TTS voices...');
-    const { data, error } = await supabase.functions.invoke('get-google-voices', {
-      // Add retry and timeout options
-      options: {
-        retries: 2,
-        timeout: 30000 // 30 second timeout
-      }
-    });
+    const { data, error } = await supabase.functions.invoke('get-google-voices');
     
     if (error) {
       console.error('Error fetching Google voices:', error);

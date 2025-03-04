@@ -22,6 +22,21 @@ const GeneratorContainer = () => {
     voice: VoiceOption;
   }) => {
     try {
+      if (!formData.text || formData.text.trim() === '') {
+        setError('Please enter text to generate audio');
+        return;
+      }
+      
+      if (!formData.language) {
+        setError('Please select a language');
+        return;
+      }
+      
+      if (!formData.voice) {
+        setError('Please select a voice');
+        return;
+      }
+      
       await handleGenerate(formData, activeTab, fetchGenerationStats);
     } catch (err) {
       console.error("Error during generation:", err);
