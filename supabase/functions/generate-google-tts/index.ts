@@ -81,6 +81,7 @@ async function getGoogleAccessToken(credentials) {
       
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
+        console.error(`Failed to get access token: ${errorText}`);
         throw new Error(`Failed to get access token: ${errorText}`);
       }
       
@@ -104,8 +105,11 @@ serve(async (req) => {
   }
 
   try {
-    const { text, language, voice, user_id } = await req.json();
+    // Parse request
+    const requestData = await req.json();
+    const { text, language, voice, user_id } = requestData;
 
+    // Validate request parameters
     if (!text) {
       throw new Error('Text is required');
     }
@@ -122,123 +126,169 @@ serve(async (req) => {
       throw new Error('User ID is required');
     }
 
-    // Initialize Supabase client for storage operations
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    console.log(`Processing TTS request for "${text.substring(0, 50)}..." in language: ${language}, voice: ${voice}`);
 
-    console.log(`Generating TTS for: "${text.substring(0, 50)}..." in language: ${language} with voice: ${voice}`);
+    // Initialize Supabase client for storage operations
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing Supabase configuration');
+    }
+
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
+    // Load Google credentials
+    const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+    if (!credentialsJson) {
+      throw new Error("Missing Google credentials");
+    }
+    
+    // Parse credentials
+    let credentials;
     try {
-      // Load Google credentials
-      const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
-      if (!credentialsJson) {
-        throw new Error("Missing Google credentials");
-      }
-      
-      // Parse credentials
-      const credentials = JSON.parse(credentialsJson);
+      credentials = JSON.parse(credentialsJson);
       if (!credentials.client_email || !credentials.private_key) {
         throw new Error("Invalid Google credentials format");
       }
-      
-      console.log("Getting access token for Google API");
-      // Get access token using the credentials
-      const accessToken = await getGoogleAccessToken(credentials);
-      
-      // Prepare the TTS request body
-      const ttsRequestBody = {
-        input: { text },
-        voice: {
-          languageCode: language,
-          name: voice,
-        },
-        audioConfig: {
-          audioEncoding: "MP3",
-        },
-      };
-
-      console.log("Calling Google TTS API");
-      // Call the TTS API
-      const ttsResponse = await fetch(
-        "https://texttospeech.googleapis.com/v1beta1/text:synthesize",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(ttsRequestBody),
-        }
-      );
-
-      if (!ttsResponse.ok) {
-        const error = await ttsResponse.text();
-        console.error("TTS API error:", error);
-        throw new Error(`Failed to generate speech: ${ttsResponse.status}`);
-      }
-
-      const ttsResult = await ttsResponse.json();
-      
-      // Create a buffer from the base64 audio content
-      const audioContent = ttsResult.audioContent;
-      const binaryAudio = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
-      
-      // Store the audio in Supabase Storage
-      // Create user folder if it doesn't exist
-      const userFolderPath = `audio-files/${user_id}`;
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const sanitizedText = text.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
-      const fileName = `${sanitizedText}_${language}_${timestamp}.mp3`;
-      const filePath = `${userFolderPath}/${fileName}`;
-      
-      console.log("Uploading audio to Supabase Storage");
-      
-      // Upload to Storage
-      const { data: uploadData, error: uploadError } = await supabaseAdmin
-        .storage
-        .from('public')
-        .upload(filePath, binaryAudio, {
-          contentType: 'audio/mpeg',
-          cacheControl: '3600',
-          upsert: false
-        });
-      
-      if (uploadError) {
-        console.error("Storage upload error:", uploadError);
-        throw new Error(`Failed to upload audio: ${uploadError.message}`);
-      }
-      
-      // Get the public URL
-      const { data: publicUrlData } = supabaseAdmin
-        .storage
-        .from('public')
-        .getPublicUrl(filePath);
-      
-      // Get the folder public URL
-      const { data: folderUrlData } = supabaseAdmin
-        .storage
-        .from('public')
-        .getPublicUrl(userFolderPath);
-      
-      console.log(`Successfully generated and stored audio file: ${fileName}`);
-      
-      return new Response(
-        JSON.stringify({
-          success: true, 
-          audio_url: publicUrlData.publicUrl,
-          folder_url: folderUrlData.publicUrl,
-          fileName: fileName
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     } catch (error) {
-      console.error("Error generating speech:", error);
-      throw error;  // Re-throw for outer error handler
+      console.error("Failed to parse Google credentials:", error);
+      throw new Error("Invalid Google credentials JSON format");
     }
+    
+    console.log("Getting access token for Google API");
+    // Get access token using the credentials
+    const accessToken = await getGoogleAccessToken(credentials);
+    console.log("Access token obtained successfully");
+    
+    // Prepare the TTS request body
+    const ttsRequestBody = {
+      input: { text },
+      voice: {
+        languageCode: language,
+        name: voice,
+      },
+      audioConfig: {
+        audioEncoding: "MP3",
+      },
+    };
+
+    console.log("Calling Google TTS API with parameters:", {
+      language, 
+      voice, 
+      textLength: text.length
+    });
+    
+    // Call the TTS API
+    const ttsResponse = await fetch(
+      "https://texttospeech.googleapis.com/v1/text:synthesize",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(ttsRequestBody),
+      }
+    );
+
+    // Check if TTS API call was successful
+    if (!ttsResponse.ok) {
+      const errorBody = await ttsResponse.text();
+      console.error("TTS API error response:", errorBody);
+      throw new Error(`Failed to generate speech: ${ttsResponse.status} - ${errorBody}`);
+    }
+
+    // Parse TTS response
+    const ttsResult = await ttsResponse.json();
+    
+    if (!ttsResult.audioContent) {
+      console.error("TTS API returned no audio content:", ttsResult);
+      throw new Error("No audio content returned from TTS API");
+    }
+    
+    console.log("Successfully received audio content from Google TTS API");
+    
+    // Create a buffer from the base64 audio content
+    const audioContent = ttsResult.audioContent;
+    const binaryAudio = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
+    
+    // Create user folder path for storage
+    const userFolderPath = `audio-files/${user_id}`;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const sanitizedText = text.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `${sanitizedText}_${language}_${timestamp}.mp3`;
+    const filePath = `${userFolderPath}/${fileName}`;
+    
+    console.log(`Uploading ${binaryAudio.length} bytes of audio to Supabase Storage: ${filePath}`);
+    
+    // Check if bucket exists, if not create it
+    const { data: buckets, error: bucketsError } = await supabaseAdmin
+      .storage
+      .listBuckets();
+      
+    if (bucketsError) {
+      console.error("Error listing buckets:", bucketsError);
+      throw new Error(`Failed to list storage buckets: ${bucketsError.message}`);
+    }
+    
+    // If 'public' bucket doesn't exist, create it
+    const publicBucket = buckets?.find(b => b.name === 'public');
+    if (!publicBucket) {
+      console.log("Creating 'public' bucket");
+      const { error: createBucketError } = await supabaseAdmin
+        .storage
+        .createBucket('public', { public: true });
+        
+      if (createBucketError) {
+        console.error("Error creating bucket:", createBucketError);
+        throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
+      }
+    }
+    
+    // Upload to Storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin
+      .storage
+      .from('public')
+      .upload(filePath, binaryAudio, {
+        contentType: 'audio/mpeg',
+        cacheControl: '3600',
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      throw new Error(`Failed to upload audio: ${uploadError.message}`);
+    }
+    
+    console.log("Successfully uploaded audio to storage");
+    
+    // Get the public URL
+    const { data: publicUrlData } = supabaseAdmin
+      .storage
+      .from('public')
+      .getPublicUrl(filePath);
+    
+    // Get the folder public URL
+    const { data: folderUrlData } = supabaseAdmin
+      .storage
+      .from('public')
+      .getPublicUrl(userFolderPath);
+    
+    console.log(`Successfully generated and stored audio file: ${fileName}`);
+    
+    return new Response(
+      JSON.stringify({
+        success: true, 
+        audio_url: publicUrlData.publicUrl,
+        folder_url: folderUrlData.publicUrl,
+        fileName: fileName
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+    
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in generate-google-tts:", error);
     
     return new Response(
       JSON.stringify({
