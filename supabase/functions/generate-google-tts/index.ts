@@ -7,6 +7,96 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Function to create JWT token for Google API authentication
+async function getGoogleAccessToken(credentials) {
+  try {
+    // Create JWT claims
+    const now = Math.floor(Date.now() / 1000);
+    const expTime = now + 3600; // 1 hour
+    
+    const claims = {
+      iss: credentials.client_email,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      aud: "https://www.googleapis.com/oauth2/v4/token",
+      exp: expTime,
+      iat: now
+    };
+    
+    // Create JWT header
+    const header = { alg: "RS256", typ: "JWT" };
+    
+    // Encode header and claims
+    const encodedHeader = btoa(JSON.stringify(header));
+    const encodedClaims = btoa(JSON.stringify(claims));
+    
+    // Create signature base
+    const signatureBase = `${encodedHeader}.${encodedClaims}`;
+    
+    // Import private key for signing
+    const privateKey = credentials.private_key;
+    const textEncoder = new TextEncoder();
+    const signData = textEncoder.encode(signatureBase);
+    
+    try {
+      // Convert PEM format to ArrayBuffer format that crypto API can use
+      const pemHeader = "-----BEGIN PRIVATE KEY-----";
+      const pemFooter = "-----END PRIVATE KEY-----";
+      const pemContents = privateKey.substring(
+        privateKey.indexOf(pemHeader) + pemHeader.length,
+        privateKey.indexOf(pemFooter)
+      ).replace(/\s/g, '');
+      
+      const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+      
+      // Import the key
+      const cryptoKey = await crypto.subtle.importKey(
+        "pkcs8",
+        binaryDer,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+      
+      // Create signature
+      const signatureArrayBuffer = await crypto.subtle.sign(
+        { name: "RSASSA-PKCS1-v1_5" },
+        cryptoKey,
+        signData
+      );
+      
+      // Convert signature to base64url
+      const signature = btoa(String.fromCharCode(
+        ...new Uint8Array(signatureArrayBuffer)
+      )).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      
+      // Create JWT
+      const jwt = `${signatureBase}.${signature}`;
+      
+      // Exchange JWT for access token
+      const tokenResponse = await fetch("https://www.googleapis.com/oauth2/v4/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+      });
+      
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        throw new Error(`Failed to get access token: ${errorText}`);
+      }
+      
+      const tokenData = await tokenResponse.json();
+      return tokenData.access_token;
+      
+    } catch (err) {
+      console.error("Error signing JWT:", err);
+      throw err;
+    }
+  } catch (error) {
+    console.error("Error in getGoogleAccessToken:", error);
+    throw error;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -42,69 +132,20 @@ serve(async (req) => {
     
     try {
       // Load Google credentials
-      const googleCredentials = JSON.parse(Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON") || "{}");
-      
-      if (!googleCredentials.client_email) {
-        throw new Error("Missing Google Cloud credentials");
+      const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+      if (!credentialsJson) {
+        throw new Error("Missing Google credentials");
       }
-
-      // Create a JWT token for authenticating with Google's API
-      const now = Math.floor(Date.now() / 1000);
-      const expTime = now + 3600; // 1 hour
-
-      const jwtHeader = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-      const jwtClaimSet = btoa(JSON.stringify({
-        iss: googleCredentials.client_email,
-        scope: "https://www.googleapis.com/auth/cloud-platform",
-        aud: "https://www.googleapis.com/oauth2/v4/token",
-        exp: expTime,
-        iat: now
-      }));
       
-      // Sign the JWT using the private key from credentials
-      const textEncoder = new TextEncoder();
-      const toSign = textEncoder.encode(`${jwtHeader}.${jwtClaimSet}`);
-      const privateKey = googleCredentials.private_key;
-      
-      // Convert PEM private key to CryptoKey
-      const importedKey = await crypto.subtle.importKey(
-        "pkcs8",
-        Uint8Array.from(atob(privateKey.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g, "")), c => c.charCodeAt(0)),
-        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-        false,
-        ["sign"]
-      );
-      
-      const signatureBuffer = await crypto.subtle.sign(
-        { name: "RSASSA-PKCS1-v1_5" },
-        importedKey,
-        toSign
-      );
-      
-      const signatureBytes = new Uint8Array(signatureBuffer);
-      const signature = btoa(String.fromCharCode(...signatureBytes))
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
-      
-      const jwt = `${jwtHeader}.${jwtClaimSet}.${signature}`;
-
-      // Get an access token first
-      const tokenResponse = await fetch("https://www.googleapis.com/oauth2/v4/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-      });
-
-      if (!tokenResponse.ok) {
-        const error = await tokenResponse.text();
-        console.error("Token response error:", error);
-        throw new Error(`Failed to get access token: ${tokenResponse.status}`);
+      // Parse credentials
+      const credentials = JSON.parse(credentialsJson);
+      if (!credentials.client_email || !credentials.private_key) {
+        throw new Error("Invalid Google credentials format");
       }
-
-      const tokenData = await tokenResponse.json();
+      
+      console.log("Getting access token for Google API");
+      // Get access token using the credentials
+      const accessToken = await getGoogleAccessToken(credentials);
       
       // Prepare the TTS request body
       const ttsRequestBody = {
@@ -118,13 +159,14 @@ serve(async (req) => {
         },
       };
 
+      console.log("Calling Google TTS API");
       // Call the TTS API
       const ttsResponse = await fetch(
         "https://texttospeech.googleapis.com/v1beta1/text:synthesize",
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${tokenData.access_token}`,
+            "Authorization": `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(ttsRequestBody),
@@ -150,6 +192,8 @@ serve(async (req) => {
       const sanitizedText = text.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `${sanitizedText}_${language}_${timestamp}.mp3`;
       const filePath = `${userFolderPath}/${fileName}`;
+      
+      console.log("Uploading audio to Supabase Storage");
       
       // Upload to Storage
       const { data: uploadData, error: uploadError } = await supabaseAdmin
@@ -182,7 +226,7 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({
-          success: true,
+          success: true, 
           audio_url: publicUrlData.publicUrl,
           folder_url: folderUrlData.publicUrl,
           fileName: fileName

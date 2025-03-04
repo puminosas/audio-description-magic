@@ -6,93 +6,135 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Since the googleapis.deno.dev import is failing, we'll create a function 
-// to fetch the voices directly from the Google API
-async function fetchGoogleVoices() {
+// Function to create JWT token for Google API authentication
+async function getGoogleAccessToken(credentials) {
   try {
-    // Load Google credentials
-    const googleCredentials = JSON.parse(Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON") || "{}");
-    
-    if (!googleCredentials.client_email) {
-      throw new Error("Missing Google Cloud credentials");
-    }
-
-    // Create a JWT token for authenticating with Google's API
+    // Create JWT claims
     const now = Math.floor(Date.now() / 1000);
     const expTime = now + 3600; // 1 hour
-
-    const jwtHeader = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-    const jwtClaimSet = btoa(JSON.stringify({
-      iss: googleCredentials.client_email,
+    
+    const claims = {
+      iss: credentials.client_email,
       scope: "https://www.googleapis.com/auth/cloud-platform",
       aud: "https://www.googleapis.com/oauth2/v4/token",
       exp: expTime,
       iat: now
-    }));
+    };
     
-    // Sign the JWT using the private key from credentials
+    // Create JWT header
+    const header = { alg: "RS256", typ: "JWT" };
+    
+    // Encode header and claims
+    const encodedHeader = btoa(JSON.stringify(header));
+    const encodedClaims = btoa(JSON.stringify(claims));
+    
+    // Create signature base
+    const signatureBase = `${encodedHeader}.${encodedClaims}`;
+    
+    // Import private key for signing
+    const privateKey = credentials.private_key;
     const textEncoder = new TextEncoder();
-    const toSign = textEncoder.encode(`${jwtHeader}.${jwtClaimSet}`);
-    const privateKey = googleCredentials.private_key;
+    const signData = textEncoder.encode(signatureBase);
     
-    // Convert PEM private key to CryptoKey
-    const importedKey = await crypto.subtle.importKey(
-      "pkcs8",
-      Uint8Array.from(atob(privateKey.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g, "")), c => c.charCodeAt(0)),
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-    
-    const signatureBuffer = await crypto.subtle.sign(
-      { name: "RSASSA-PKCS1-v1_5" },
-      importedKey,
-      toSign
-    );
-    
-    const signatureBytes = new Uint8Array(signatureBuffer);
-    const signature = btoa(String.fromCharCode(...signatureBytes))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-    
-    const jwt = `${jwtHeader}.${jwtClaimSet}.${signature}`;
-
-    // Get an access token first
-    const tokenResponse = await fetch("https://www.googleapis.com/oauth2/v4/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-    });
-
-    if (!tokenResponse.ok) {
-      const error = await tokenResponse.text();
-      console.error("Token response error:", error);
-      throw new Error(`Failed to get access token: ${tokenResponse.status}`);
+    try {
+      // Convert PEM format to ArrayBuffer format that crypto API can use
+      const pemHeader = "-----BEGIN PRIVATE KEY-----";
+      const pemFooter = "-----END PRIVATE KEY-----";
+      const pemContents = privateKey.substring(
+        privateKey.indexOf(pemHeader) + pemHeader.length,
+        privateKey.indexOf(pemFooter)
+      ).replace(/\s/g, '');
+      
+      const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+      
+      // Import the key
+      const cryptoKey = await crypto.subtle.importKey(
+        "pkcs8",
+        binaryDer,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+      
+      // Create signature
+      const signatureArrayBuffer = await crypto.subtle.sign(
+        { name: "RSASSA-PKCS1-v1_5" },
+        cryptoKey,
+        signData
+      );
+      
+      // Convert signature to base64url
+      const signature = btoa(String.fromCharCode(
+        ...new Uint8Array(signatureArrayBuffer)
+      )).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      
+      // Create JWT
+      const jwt = `${signatureBase}.${signature}`;
+      
+      // Exchange JWT for access token
+      const tokenResponse = await fetch("https://www.googleapis.com/oauth2/v4/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+      });
+      
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        throw new Error(`Failed to get access token: ${errorText}`);
+      }
+      
+      const tokenData = await tokenResponse.json();
+      return tokenData.access_token;
+      
+    } catch (err) {
+      console.error("Error signing JWT:", err);
+      throw err;
     }
+  } catch (error) {
+    console.error("Error in getGoogleAccessToken:", error);
+    throw error;
+  }
+}
 
-    const tokenData = await tokenResponse.json();
+// Fetch voices from Google TTS API
+async function fetchGoogleVoices() {
+  try {
+    // Get credentials from environment variable
+    const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+    if (!credentialsJson) {
+      throw new Error("Missing Google credentials");
+    }
     
-    // Call Google Text-to-Speech API to list voices
+    // Parse credentials
+    const credentials = JSON.parse(credentialsJson);
+    if (!credentials.client_email || !credentials.private_key) {
+      throw new Error("Invalid Google credentials format");
+    }
+    
+    console.log("Getting access token for Google API");
+    // Get access token
+    const accessToken = await getGoogleAccessToken(credentials);
+    
+    console.log("Fetching voices from Google TTS API");
+    // Call Google TTS API to list voices
     const response = await fetch(
       "https://texttospeech.googleapis.com/v1beta1/voices",
       {
         headers: {
-          "Authorization": `Bearer ${tokenData.access_token}`,
+          "Authorization": `Bearer ${accessToken}`,
         },
       }
     );
 
     if (!response.ok) {
-      console.error("Google API error:", await response.text());
+      const errorText = await response.text();
+      console.error("Google API error:", errorText);
       throw new Error(`Google API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     
-    // Process the raw voices data into our preferred format - matching the Python example
+    // Process voices to match the Python example format
     const voicesByLanguage = {};
     
     if (data.voices && Array.isArray(data.voices)) {
@@ -106,9 +148,9 @@ async function fetchGoogleVoices() {
               };
             }
             
-            // Determine the gender category - exactly like the Python example
+            // Map SSML gender to the expected format
             if (voice.ssmlGender === "MALE" || voice.ssmlGender === "FEMALE") {
-              const gender = voice.ssmlGender; // Already "MALE" or "FEMALE"
+              const gender = voice.ssmlGender;
               
               voicesByLanguage[languageCode].voices[gender].push({
                 name: voice.name,
@@ -235,6 +277,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Fetching Google TTS voices");
+    
     // Fetch Google TTS voices
     const voices = await fetchGoogleVoices();
     
