@@ -25,7 +25,7 @@ async function fetchGoogleVoices() {
     const jwtClaimSet = btoa(JSON.stringify({
       iss: googleCredentials.client_email,
       scope: "https://www.googleapis.com/auth/cloud-platform",
-      aud: "https://texttospeech.googleapis.com/",
+      aud: "https://www.googleapis.com/oauth2/v4/token",
       exp: expTime,
       iat: now
     }));
@@ -58,23 +58,41 @@ async function fetchGoogleVoices() {
     
     const jwt = `${jwtHeader}.${jwtClaimSet}.${signature}`;
 
+    // Get an access token first
+    const tokenResponse = await fetch("https://www.googleapis.com/oauth2/v4/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      console.error("Token response error:", error);
+      throw new Error(`Failed to get access token: ${tokenResponse.status}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    
     // Call Google Text-to-Speech API to list voices
     const response = await fetch(
       "https://texttospeech.googleapis.com/v1beta1/voices",
       {
         headers: {
-          "Authorization": `Bearer ${jwt}`,
+          "Authorization": `Bearer ${tokenData.access_token}`,
         },
       }
     );
 
     if (!response.ok) {
+      console.error("Google API error:", await response.text());
       throw new Error(`Google API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     
-    // Process the raw voices data into our preferred format
+    // Process the raw voices data into our preferred format - matching the Python example
     const voicesByLanguage = {};
     
     if (data.voices && Array.isArray(data.voices)) {
@@ -84,18 +102,19 @@ async function fetchGoogleVoices() {
             if (!voicesByLanguage[languageCode]) {
               voicesByLanguage[languageCode] = {
                 display_name: getLanguageDisplayName(languageCode),
-                voices: { MALE: [], FEMALE: [], NEUTRAL: [] }
+                voices: { MALE: [], FEMALE: [] }
               };
             }
             
-            // Determine the gender category
-            const gender = voice.ssmlGender || "NEUTRAL";
-            
-            voicesByLanguage[languageCode].voices[gender].push({
-              name: voice.name,
-              ssml_gender: gender,
-              naturalSampleRateHertz: voice.naturalSampleRateHertz
-            });
+            // Determine the gender category - exactly like the Python example
+            if (voice.ssmlGender === "MALE" || voice.ssmlGender === "FEMALE") {
+              const gender = voice.ssmlGender; // Already "MALE" or "FEMALE"
+              
+              voicesByLanguage[languageCode].voices[gender].push({
+                name: voice.name,
+                ssml_gender: voice.ssmlGender
+              });
+            }
           }
         }
       }
@@ -151,8 +170,7 @@ function getFallbackVoices() {
           { name: "en-US-Standard-E", ssml_gender: "FEMALE" },
           { name: "en-US-Wavenet-C", ssml_gender: "FEMALE" },
           { name: "en-US-Wavenet-E", ssml_gender: "FEMALE" }
-        ],
-        NEUTRAL: []
+        ]
       }
     },
     "en-GB": {
@@ -165,8 +183,7 @@ function getFallbackVoices() {
         FEMALE: [
           { name: "en-GB-Standard-A", ssml_gender: "FEMALE" },
           { name: "en-GB-Wavenet-A", ssml_gender: "FEMALE" }
-        ],
-        NEUTRAL: []
+        ]
       }
     },
     "fr-FR": {
@@ -179,8 +196,7 @@ function getFallbackVoices() {
         FEMALE: [
           { name: "fr-FR-Standard-A", ssml_gender: "FEMALE" },
           { name: "fr-FR-Wavenet-A", ssml_gender: "FEMALE" }
-        ],
-        NEUTRAL: []
+        ]
       }
     },
     "de-DE": {
@@ -193,8 +209,7 @@ function getFallbackVoices() {
         FEMALE: [
           { name: "de-DE-Standard-A", ssml_gender: "FEMALE" },
           { name: "de-DE-Wavenet-A", ssml_gender: "FEMALE" }
-        ],
-        NEUTRAL: []
+        ]
       }
     },
     "ja-JP": {
@@ -207,8 +222,7 @@ function getFallbackVoices() {
         FEMALE: [
           { name: "ja-JP-Standard-A", ssml_gender: "FEMALE" },
           { name: "ja-JP-Wavenet-A", ssml_gender: "FEMALE" }
-        ],
-        NEUTRAL: []
+        ]
       }
     }
   };
@@ -235,7 +249,6 @@ serve(async (req) => {
       JSON.stringify({ 
         error: error.message || 'Failed to fetch voices',
         fallback: true,
-        // Return the fallback data if the main request fails
         data: getFallbackVoices()
       }),
       { 

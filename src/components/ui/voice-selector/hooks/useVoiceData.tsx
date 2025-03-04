@@ -35,18 +35,22 @@ export function useVoiceData(
         
         // Format the voices for our component
         if (isMounted && data[language]) {
-          const formattedVoices: VoiceOption[] = [
-            ...(data[language].voices.MALE || []).map((v: any) => ({
-              id: v.name,
-              name: formatVoiceName(v.name),
-              gender: 'male' as const
-            })),
-            ...(data[language].voices.FEMALE || []).map((v: any) => ({
-              id: v.name,
-              name: formatVoiceName(v.name, 'female'),
-              gender: 'female' as const
-            }))
-          ];
+          // This now matches the format returned by the Edge Function
+          // Which follows the structure from the Python example
+          
+          const maleVoices = (data[language].voices.MALE || []).map((v: any) => ({
+            id: v.name,
+            name: formatVoiceName(v.name),
+            gender: 'male' as const
+          }));
+          
+          const femaleVoices = (data[language].voices.FEMALE || []).map((v: any) => ({
+            id: v.name,
+            name: formatVoiceName(v.name, 'female'),
+            gender: 'female' as const
+          }));
+          
+          const formattedVoices = [...maleVoices, ...femaleVoices];
           
           // Sort voices by name
           formattedVoices.sort((a, b) => a.name.localeCompare(b.name));
