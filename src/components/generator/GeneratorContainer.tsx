@@ -21,7 +21,12 @@ const GeneratorContainer = () => {
     language: LanguageOption;
     voice: VoiceOption;
   }) => {
-    await handleGenerate(formData, activeTab, fetchGenerationStats);
+    try {
+      await handleGenerate(formData, activeTab, fetchGenerationStats);
+    } catch (err) {
+      console.error("Error during generation:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+    }
   };
 
   return (

@@ -59,34 +59,55 @@ The description should be approximately 2-3 sentences, highlighting key features
 Make it suitable for an audio description that will be read aloud by a text-to-speech service.
 Write in a conversational, friendly tone. Don't include bullet points or formatting that wouldn't work well in audio.`;
 
-    // Generate completion
-    const completion = await openai.createCompletion({
-      model: "text-davinci-003",
-      prompt,
-      max_tokens: 300,
-      temperature: 0.7,
-    });
-
-    const generatedText = completion.data.choices?.[0]?.text?.trim() || '';
+    console.log(`Generating description for "${product_name}" in ${languagePrompt}`);
     
-    if (!generatedText) {
-      console.error("No text generated from OpenAI");
+    try {
+      // Generate completion
+      const completion = await openai.createCompletion({
+        model: "text-davinci-003",
+        prompt,
+        max_tokens: 300,
+        temperature: 0.7,
+      });
+
+      const generatedText = completion.data.choices?.[0]?.text?.trim() || '';
+      
+      if (!generatedText) {
+        console.error("No text generated from OpenAI");
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate description' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log("Successfully generated description");
+
+      // Return success response
       return new Response(
-        JSON.stringify({ error: 'Failed to generate description' }),
+        JSON.stringify({ 
+          success: true, 
+          generated_text: generatedText
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (openaiError) {
+      console.error("OpenAI API error:", openaiError);
+      
+      // Check if it's a rate limit error
+      const errorMsg = openaiError.message || '';
+      if (errorMsg.includes('rate limit') || openaiError.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'OpenAI rate limit exceeded. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // For other OpenAI errors
+      return new Response(
+        JSON.stringify({ error: 'OpenAI service error: ' + errorMsg }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    console.log("Successfully generated description");
-
-    // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        generated_text: generatedText
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
     
   } catch (error) {
     console.error('Error generating description:', error);
