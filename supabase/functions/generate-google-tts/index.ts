@@ -220,9 +220,9 @@ serve(async (req) => {
     const fileName = `${sanitizedText}_${language}_${timestamp}.mp3`;
     const filePath = `${userFolderPath}/${fileName}`;
     
-    console.log(`Uploading ${binaryAudio.length} bytes of audio to Supabase Storage: ${filePath}`);
+    console.log(`Preparing to upload ${binaryAudio.length} bytes of audio to Supabase Storage`);
     
-    // Check if bucket exists, if not create it
+    // Check if any buckets exist at all
     const { data: buckets, error: bucketsError } = await supabaseAdmin
       .storage
       .listBuckets();
@@ -232,24 +232,35 @@ serve(async (req) => {
       throw new Error(`Failed to list storage buckets: ${bucketsError.message}`);
     }
     
-    // If 'public' bucket doesn't exist, create it
-    const publicBucket = buckets?.find(b => b.name === 'public');
-    if (!publicBucket) {
-      console.log("Creating 'public' bucket");
+    console.log("Available buckets:", buckets ? buckets.map(b => b.name).join(", ") : "none");
+    
+    // Check if "users_generated_files" bucket exists, create it if not
+    const bucketName = "users_generated_files";
+    const bucket = buckets?.find(b => b.name === bucketName);
+
+    if (!bucket) {
+      console.log(`Creating '${bucketName}' bucket`);
       const { error: createBucketError } = await supabaseAdmin
         .storage
-        .createBucket('public', { public: true });
+        .createBucket(bucketName, { 
+          public: true,
+          fileSizeLimit: 50000000 // 50MB
+        });
         
       if (createBucketError) {
         console.error("Error creating bucket:", createBucketError);
         throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
       }
+      console.log(`Successfully created bucket: ${bucketName}`);
+    } else {
+      console.log(`Bucket '${bucketName}' already exists`);
     }
     
     // Upload to Storage
+    console.log(`Uploading file to path: ${filePath} in bucket: ${bucketName}`);
     const { data: uploadData, error: uploadError } = await supabaseAdmin
       .storage
-      .from('public')
+      .from(bucketName)
       .upload(filePath, binaryAudio, {
         contentType: 'audio/mpeg',
         cacheControl: '3600',
@@ -261,21 +272,22 @@ serve(async (req) => {
       throw new Error(`Failed to upload audio: ${uploadError.message}`);
     }
     
-    console.log("Successfully uploaded audio to storage");
+    console.log("Successfully uploaded audio to storage:", uploadData);
     
     // Get the public URL
     const { data: publicUrlData } = supabaseAdmin
       .storage
-      .from('public')
+      .from(bucketName)
       .getPublicUrl(filePath);
     
     // Get the folder public URL
     const { data: folderUrlData } = supabaseAdmin
       .storage
-      .from('public')
+      .from(bucketName)
       .getPublicUrl(userFolderPath);
     
     console.log(`Successfully generated and stored audio file: ${fileName}`);
+    console.log(`Public URL: ${publicUrlData?.publicUrl}`);
     
     return new Response(
       JSON.stringify({
