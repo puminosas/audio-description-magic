@@ -21,6 +21,7 @@ export interface AudioSuccessResult {
   audioUrl: string;
   text?: string;
   id?: string;
+  folderUrl?: string | null;
 }
 
 export interface AudioErrorResult {

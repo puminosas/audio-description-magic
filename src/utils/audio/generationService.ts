@@ -36,11 +36,11 @@ export async function generateAudioDescription(
         if (descriptionError) {
           console.error('Error generating description:', descriptionError);
           // Continue with original text if description generation fails
-        } else if (descriptionData && descriptionData.success) {
+        } else if (descriptionData && descriptionData.success && descriptionData.generated_text) {
           finalText = descriptionData.generated_text;
           console.log('Successfully generated description:', finalText.substring(0, 50) + '...');
         } else {
-          // Fallback if we got a response but no success flag
+          // Fallback if we got a response but no success flag or text
           console.warn('Description generation returned unexpected format:', descriptionData);
         }
       } catch (descError) {
@@ -75,6 +75,7 @@ export async function generateAudioDescription(
       const result: AudioSuccessResult = {
         audioUrl: data.audio_url,
         text: finalText,
+        folderUrl: data.folder_url || null
       };
 
       return result;

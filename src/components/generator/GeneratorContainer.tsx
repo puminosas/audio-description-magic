@@ -47,6 +47,7 @@ const GeneratorContainer = () => {
                 generatedText={generatedAudio?.text || null} 
                 isGenerating={loading}
                 error={error}
+                folderUrl={generatedAudio?.folderUrl || null}
               />
             </div>
           )}

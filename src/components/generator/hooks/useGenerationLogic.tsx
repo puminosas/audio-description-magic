@@ -16,6 +16,7 @@ import {
 export interface GeneratedAudio {
   audioUrl: string;
   text: string;
+  folderUrl?: string | null;
 }
 
 export const useGenerationLogic = () => {
@@ -115,14 +116,16 @@ export const useGenerationLogic = () => {
       
       console.log("Audio generation successful:", {
         url: result.audioUrl.substring(0, 50) + '...',
-        text: result.text || formData.text
+        text: result.text || formData.text,
+        folderUrl: result.folderUrl || 'No folder URL'
       });
       
       // Set audio with a small delay to ensure DOM is ready
       setTimeout(() => {
         setGeneratedAudio({
           audioUrl: result.audioUrl,
-          text: result.text || formData.text
+          text: result.text || formData.text,
+          folderUrl: result.folderUrl || null
         });
       }, 100);
       
