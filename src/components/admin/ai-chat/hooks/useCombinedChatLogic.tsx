@@ -1,19 +1,18 @@
 
-import { useRef } from 'react';
-import { useFileState } from './file-management/useFileState';
-import { useFileOperations } from './file-management/useFileOperations';
-import useChatLogic from './useChatLogic';
-import useChatSessions from './useChatSessions';
-import useMessageHandling from './useMessageHandling';
-import useScrollHandling from './useScrollHandling';
+import { useRef, useEffect } from 'react';
+import { useFileManagement } from './file-management';
+import { useChatLogic } from './useChatLogic';
+import { useChatSessions } from './useChatSessions';
+import { useMessageHandling } from './useMessageHandling';
+import { useScrollHandling } from './useScrollHandling';
+import { Message } from '../types';
 
 export const useCombinedChatLogic = () => {
   // Chat references
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // File management
-  const fileState = useFileState();
-  const fileOperations = useFileOperations();
+  const fileManagement = useFileManagement();
   
   // Chat logic
   const chatLogic = useChatLogic();
@@ -21,24 +20,17 @@ export const useCombinedChatLogic = () => {
   const messageHandling = useMessageHandling();
   const scrollHandling = useScrollHandling(messagesEndRef);
   
-  // Handle file selection
-  const handleFileSelect = async (filePath: string) => {
-    // Save current file content if it's being edited
-    if (fileState.selectedFile && fileState.isEditing) {
-      await fileOperations.saveFileContent(fileState.selectedFile, fileState.fileContent);
-    }
-    
-    fileState.setSelectedFile(filePath);
-    const content = await fileOperations.fetchFileContent(filePath);
-    fileState.setFileContent(content);
-  };
+  // Initialize files on component mount
+  useEffect(() => {
+    fileManagement.initializeFiles();
+  }, []);
   
   // Analyze file with AI
   const analyzeFileWithAI = () => {
-    if (!fileState.selectedFile || !fileState.fileContent) return;
+    if (!fileManagement.selectedFile || !fileManagement.fileContent) return;
     
     // Get file extension
-    const fileExtension = fileState.selectedFile.split('.').pop()?.toLowerCase() || '';
+    const fileExtension = fileManagement.selectedFile.split('.').pop()?.toLowerCase() || '';
     let fileType = 'text file';
     
     if (['js', 'jsx'].includes(fileExtension)) fileType = 'JavaScript file';
@@ -48,7 +40,7 @@ export const useCombinedChatLogic = () => {
     if (['json'].includes(fileExtension)) fileType = 'JSON file';
     
     // Create analysis message
-    const analysisPrompt = `Please analyze this ${fileType} located at \`${fileState.selectedFile}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileState.fileContent}\n\`\`\``;
+    const analysisPrompt = `Please analyze this ${fileType} located at \`${fileManagement.selectedFile}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileManagement.fileContent}\n\`\`\``;
     
     // Send the message
     messageHandling.sendMessage(analysisPrompt);
@@ -59,9 +51,7 @@ export const useCombinedChatLogic = () => {
     messagesEndRef,
     
     // File state and operations
-    ...fileState,
-    ...fileOperations,
-    handleFileSelect,
+    ...fileManagement,
     analyzeWithAI: analyzeFileWithAI,
     
     // Chat state and operations

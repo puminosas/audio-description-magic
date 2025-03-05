@@ -1,156 +1,91 @@
-import { useState, useCallback, useEffect } from 'react';
+
+import { useFileState } from './useFileState';
 import { useFileOperations } from './useFileOperations';
 import { useFileFilters } from './useFileFilters';
-import { useFileState } from './useFileState';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 import { FileInfo } from '../../types';
 
 export const useFileManagement = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { state, updateState } = useFileState();
-  const { fetchFiles, fetchFileContent, saveFileContent, isLoadingContent } = useFileOperations();
-  const [filesLoaded, setFilesLoaded] = useState(false);
-
-  const { 
-    searchTerm, 
-    setSearchTerm, 
-    fileTypeFilters, 
-    setFileTypeFilters,
-    uniqueFileTypes, 
-    filteredFiles,
-    toggleFileTypeFilter
-  } = useFileFilters(state.files);
-
-  // Load files on component mount - ONCE
-  const loadFiles = useCallback(async () => {
-    if (!user || filesLoaded || state.isRefreshingFiles) return;
-    
-    updateState({ 
-      isLoadingFiles: true,
-      isRefreshingFiles: true
-    });
-    
-    const files = await fetchFiles();
-    
-    updateState({ 
-      files,
-      isLoadingFiles: false,
-      isRefreshingFiles: false
-    });
-    
-    setFilesLoaded(true);
-  }, [fetchFiles, updateState, user, filesLoaded, state.isRefreshingFiles]);
-
-  // Manual refresh - only when explicitly called
-  const refreshFiles = useCallback(async () => {
-    if (!user || state.isRefreshingFiles) return;
-    
-    updateState({ 
-      isRefreshingFiles: true
-    });
-    
-    const files = await fetchFiles();
-    
-    updateState({ 
-      files,
-      isRefreshingFiles: false
-    });
-  }, [fetchFiles, updateState, user, state.isRefreshingFiles]);
-
-  // On component mount, fetch files ONCE
-  useEffect(() => {
-    if (user && !filesLoaded) {
-      loadFiles();
+  const {
+    state,
+    updateState,
+    setSelectedFile,
+    setFileContent,
+    setIsEditing,
+    setError,
+    setFileError
+  } = useFileState();
+  
+  const fileOperations = useFileOperations();
+  const { activeFilters, setSearchQuery, toggleFileTypeFilter, clearFilters, applyFilters } = useFileFilters();
+  
+  // Initialize files on component mount
+  const initializeFiles = async () => {
+    updateState({ isLoadingFiles: true, error: null });
+    try {
+      const files = await fileOperations.fetchFiles();
+      const filteredFiles = applyFilters(files);
+      
+      updateState({ 
+        files, 
+        filteredFiles,
+        isLoadingFiles: false 
+      });
+    } catch (error) {
+      updateState({ 
+        isLoadingFiles: false, 
+        error: `Failed to fetch files: ${error.message}` 
+      });
     }
-  }, [loadFiles, user, filesLoaded]);
-
-  // Get file content
+  };
+  
+  // Handle file selection
   const handleFileSelect = async (filePath: string) => {
-    updateState({
-      selectedFile: filePath,
-      isEditing: true,
-      isLoadingContent: true
-    });
+    // Save current file if it's being edited
+    if (state.selectedFile && state.isEditing) {
+      await fileOperations.saveFileContent(state.selectedFile, state.fileContent);
+    }
     
-    const content = await fetchFileContent(filePath);
+    setSelectedFile(filePath);
+    updateState({ isLoadingContent: true, fileError: null });
     
-    if (content) {
-      updateState({ 
-        fileContent: content,
-        isLoadingContent: false
-      });
-    } else {
-      // Fallback message if content can't be loaded
-      updateState({ 
-        fileContent: `// Error loading content for ${filePath}\n// This may be due to permission restrictions or file access limitations.`,
-        isLoadingContent: false
-      });
+    try {
+      const content = await fileOperations.fetchFileContent(filePath);
+      setFileContent(content);
+      setIsEditing(false);
+      updateState({ isLoadingContent: false });
+    } catch (error) {
+      setFileError(`Failed to load file content: ${error.message}`);
+      updateState({ isLoadingContent: false });
     }
   };
-
-  // Save file content
-  const handleSaveFile = async () => {
-    if (!state.selectedFile) return;
-    
-    const success = await saveFileContent(state.selectedFile, state.fileContent);
-    
-    if (success) {
-      // Optional: Refresh the file list after saving
-      // loadFiles();
-    }
-  };
-
-  // Ask AI to analyze the file content
-  const handleAnalyzeWithAI = async () => {
-    if (!state.selectedFile || !state.fileContent) return;
-    
-    toast({
-      title: 'AI Analysis Requested',
-      description: 'Analyzing file content with AI...',
-    });
-    
-    // This functionality is implemented in the chat handling logic
-    console.log('AI analysis requested for file:', state.selectedFile);
-  };
-
-  // Sync filter states with the main state
-  useEffect(() => {
-    updateState({ 
-      searchTerm, 
-      fileTypeFilters 
-    });
-  }, [searchTerm, fileTypeFilters, updateState]);
-
+  
   return {
-    // Files and state
-    files: state.files,
-    filteredFiles,
-    isLoadingFiles: state.isLoadingFiles,
+    // State
     selectedFile: state.selectedFile,
     fileContent: state.fileContent,
     isEditing: state.isEditing,
-    isLoadingContent,
+    isLoadingFiles: state.isLoadingFiles,
+    isLoadingContent: state.isLoadingContent,
+    files: state.files,
+    filteredFiles: state.filteredFiles,
     error: state.error,
-    isRefreshingFiles: state.isRefreshingFiles,
+    fileError: state.fileError,
+    
+    // File operations
+    ...fileOperations,
+    
+    // State updaters
+    setSelectedFile,
+    setFileContent,
+    setIsEditing,
+    initializeFiles,
+    handleFileSelect,
     
     // Filters
-    searchTerm,
-    fileTypeFilters,
-    uniqueFileTypes,
-    
-    // State update methods
-    setSearchTerm,
-    setFileContent: (content: string) => updateState({ fileContent: content }),
-    setIsEditing: (isEditing: boolean) => updateState({ isEditing }),
-    setFileTypeFilters,
-    
-    // Operations
-    fetchFiles: refreshFiles,
-    handleFileSelect,
-    handleSaveFile,
-    handleAnalyzeWithAI,
-    toggleFileTypeFilter
+    activeFilters,
+    setSearchQuery,
+    toggleFileTypeFilter,
+    clearFilters,
+    applyFilters
   };
 };

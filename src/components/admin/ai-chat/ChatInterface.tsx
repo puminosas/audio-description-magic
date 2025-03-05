@@ -5,9 +5,10 @@ import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 import EmptyChat from './EmptyChat';
 import ErrorMessage from './ErrorMessage';
+import { Message } from './types';
 
 interface ChatInterfaceProps {
-  messages: any[];
+  messages: Message[];
   isTyping: boolean;
   chatError: string | null;
   sendMessage: (message: string) => void;

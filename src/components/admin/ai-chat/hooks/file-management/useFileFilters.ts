@@ -1,56 +1,61 @@
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { FileInfo } from '../../types';
-import { FileFilters } from './types';
+import { FileFilters, FileFiltersReturn } from './types';
 
-export const useFileFilters = (files: FileInfo[]) => {
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [fileTypeFilters, setFileTypeFilters] = useState<string[]>([]);
+const initialFilters: FileFilters = {
+  types: [],
+  searchQuery: ''
+};
 
-  // Extract unique file types from the files array
-  const uniqueFileTypes = useMemo(() => 
-    Array.from(new Set(files.map(file => file.type))).filter(type => type), 
-    [files]
-  );
+export const useFileFilters = (): FileFiltersReturn => {
+  const [activeFilters, setActiveFilters] = useState<FileFilters>(initialFilters);
 
-  // Filter files by type and search term
-  const filteredFiles = useMemo(() => 
-    files.filter(file => {
-      const matchesSearch = file.path.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = fileTypeFilters.length === 0 || fileTypeFilters.includes(file.type);
-      return matchesSearch && matchesType;
-    }),
-    [files, searchTerm, fileTypeFilters]
-  );
+  const setSearchQuery = (query: string) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      searchQuery: query
+    }));
+  };
 
-  // Toggle a file type filter
   const toggleFileTypeFilter = (type: string) => {
-    setFileTypeFilters(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type) 
-        : [...prev, type]
-    );
+    setActiveFilters(prev => {
+      const types = prev.types.includes(type)
+        ? prev.types.filter(t => t !== type)
+        : [...prev.types, type];
+      
+      return {
+        ...prev,
+        types
+      };
+    });
   };
 
-  const resetFilters = () => {
-    setSearchTerm('');
-    setFileTypeFilters([]);
+  const clearFilters = () => {
+    setActiveFilters(initialFilters);
   };
 
-  const filters: FileFilters = {
-    searchTerm,
-    fileTypeFilters
+  const applyFilters = (files: FileInfo[]): FileInfo[] => {
+    return files.filter(file => {
+      // Apply search filter
+      const matchesSearch = activeFilters.searchQuery
+        ? file.path.toLowerCase().includes(activeFilters.searchQuery.toLowerCase())
+        : true;
+
+      // Apply type filter
+      const matchesType = activeFilters.types.length > 0
+        ? activeFilters.types.includes(file.type)
+        : true;
+
+      return matchesSearch && matchesType;
+    });
   };
 
   return {
-    searchTerm,
-    setSearchTerm,
-    fileTypeFilters,
-    setFileTypeFilters,
-    uniqueFileTypes,
-    filteredFiles,
+    activeFilters,
+    setSearchQuery,
     toggleFileTypeFilter,
-    resetFilters,
-    filters
+    clearFilters,
+    applyFilters
   };
 };

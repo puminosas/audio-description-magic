@@ -35,3 +35,27 @@ export interface FileContent {
   content: string;
   language?: string;
 }
+
+// Error handling interfaces
+export interface ApiError {
+  message: string;
+  status?: number;
+  code?: string;
+}
+
+// UI component props
+export interface ErrorMessageProps {
+  error: string;
+  retryLastMessage: () => void;
+}
+
+export interface ChatMessagesProps {
+  messages: Message[];
+  isTyping: boolean;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+}
+
+export interface ChatInputProps {
+  onSendMessage: (message: string) => void;
+  isLoading: boolean;
+}

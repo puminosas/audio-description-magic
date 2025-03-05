@@ -1,29 +1,66 @@
 
 import { useState } from 'react';
-import { FileManagementState } from './types';
+import { FileManagementState, FileStateReturn } from './types';
 
-export const useFileState = () => {
-  const initialState: FileManagementState = {
-    files: [],
-    isLoadingFiles: true,
-    selectedFile: null,
-    fileContent: '',
-    isEditing: false,
-    isLoadingContent: false,
-    error: null,
-    searchTerm: '',
-    isRefreshingFiles: false,
-    fileTypeFilters: []
-  };
-  
+const initialState: FileManagementState = {
+  files: [],
+  filteredFiles: [],
+  isLoadingFiles: false,
+  selectedFile: null,
+  fileContent: '',
+  isEditing: false,
+  isLoadingContent: false,
+  error: null,
+  fileError: null,
+  activeFilters: {
+    types: [],
+    searchQuery: ''
+  }
+};
+
+export const useFileState = (): FileStateReturn => {
   const [state, setState] = useState<FileManagementState>(initialState);
-  
+
   const updateState = (updates: Partial<FileManagementState>) => {
-    setState(prev => ({ ...prev, ...updates }));
+    setState(prevState => ({
+      ...prevState,
+      ...updates
+    }));
   };
-  
+
+  const setSelectedFile = (filePath: string | null) => {
+    updateState({ 
+      selectedFile: filePath,
+      fileError: null
+    });
+  };
+
+  const setFileContent = (content: string) => {
+    updateState({ 
+      fileContent: content,
+      fileError: null
+    });
+  };
+
+  const setIsEditing = (isEditing: boolean) => {
+    updateState({ isEditing });
+  };
+
+  const setError = (error: string | null) => {
+    updateState({ error });
+  };
+
+  const setFileError = (fileError: string | null) => {
+    updateState({ fileError });
+  };
+
   return {
     state,
-    updateState
+    updateState,
+    setSelectedFile,
+    setFileContent,
+    setIsEditing,
+    setError,
+    setFileError
   };
 };

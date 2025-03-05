@@ -1,225 +1,153 @@
-
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { FileInfo } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
+import { FileInfo } from '../../types';
+import { FileOperationsReturn } from './types';
+import { GetFilesResponse, GetFileContentResponse, SaveFileContentResponse } from '../../types/api';
 
-export const useFileOperations = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fetchCount, setFetchCount] = useState(0);
+export const useFileOperations = (): FileOperationsReturn => {
   const { toast } = useToast();
 
-  // Fetch project files
-  const fetchFiles = useCallback(async (): Promise<FileInfo[]> => {
-    setFetchCount(prev => prev + 1);
-    
-    if (fetchCount > 5) {
-      console.warn('Too many file fetch attempts, throttling...');
-      return [];
-    }
-    
-    setError(null);
-    setIsLoading(true);
-    
+  const fetchFiles = async (): Promise<FileInfo[]> => {
     try {
-      console.log('Fetching project files...');
-      
-      // First try using Supabase Edge Function
-      try {
-        const result = await supabase.functions.invoke('project-files', {
-          method: 'GET',
-        });
-        
-        if (!result.error && result.data) {
-          return result.data;
-        }
-      } catch (supabaseError) {
-        console.error('Supabase function error:', supabaseError);
-        // Continue with fallback approach
-      }
-      
-      // Fallback to direct API call
       const response = await fetch('/api/files');
       
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        throw new Error(`Error fetching files: ${response.status}`);
       }
       
-      const data = await response.json();
-      return data;
+      const data: GetFilesResponse = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch files');
+      }
+      
+      return data.files.map(file => ({
+        ...file,
+        type: determineFileType(file.path)
+      }));
     } catch (error) {
       console.error('Error fetching files:', error);
-      setError('Failed to fetch project files');
       toast({
         title: 'Error',
-        description: 'Failed to fetch project files',
+        description: `Failed to fetch project files: ${error.message}`,
         variant: 'destructive'
       });
       return [];
-    } finally {
-      setIsLoading(false);
     }
-  }, [fetchCount, toast]);
+  };
 
-  // Fetch file content
-  const fetchFileContent = useCallback(async (filePath: string): Promise<string> => {
-    setError(null);
-    setIsLoadingContent(true);
-    
+  const fetchFileContent = async (filePath: string): Promise<string> => {
     try {
-      // First try using Supabase Edge Function
-      try {
-        const result = await supabase.functions.invoke('file-content', {
-          body: { filePath }
-        });
-        
-        if (!result.error && result.data?.content) {
-          return result.data.content;
-        }
-      } catch (supabaseError) {
-        console.error('Supabase function error:', supabaseError);
-        // Continue with fallback approach
-      }
-      
-      // Fallback to direct API call
-      const response = await fetch(`/api/file-content?filePath=${encodeURIComponent(filePath)}`);
+      const response = await fetch(`/api/file-content?path=${encodeURIComponent(filePath)}`);
       
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        throw new Error(`Error fetching file content: ${response.status}`);
       }
       
-      const data = await response.json();
+      const data: GetFileContentResponse = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch file content');
+      }
+      
       return data.content;
     } catch (error) {
-      console.error('Error fetching file content:', error);
-      setError(`Failed to fetch content for ${filePath}`);
+      console.error(`Error fetching content for ${filePath}:`, error);
       toast({
         title: 'Error',
-        description: `Failed to load file content for ${filePath}`,
+        description: `Failed to fetch file content: ${error.message}`,
         variant: 'destructive'
       });
-      return `// Error loading content for ${filePath}\n// ${error}`;
-    } finally {
-      setIsLoadingContent(false);
+      return '';
     }
-  }, [toast]);
+  };
 
-  // Save file content
-  const saveFileContent = useCallback(async (filePath: string, content: string): Promise<boolean> => {
-    setError(null);
-    setIsLoading(true);
-    
+  const saveFileContent = async (filePath: string, content: string): Promise<boolean> => {
     try {
-      // First try using Supabase Edge Function
-      try {
-        const result = await supabase.functions.invoke('save-file', {
-          body: { filePath, content }
-        });
-        
-        if (!result.error) {
-          toast({
-            title: 'Success',
-            description: 'File saved successfully'
-          });
-          return true;
-        }
-      } catch (supabaseError) {
-        console.error('Supabase function error:', supabaseError);
-        // Continue with fallback approach
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData.session) {
+        throw new Error('Authentication required');
       }
       
-      // Fallback to direct API call
       const response = await fetch('/api/edit-file', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`
         },
-        body: JSON.stringify({ filePath, newContent: content })
+        body: JSON.stringify({
+          filePath,
+          newContent: content
+        })
       });
       
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        throw new Error(`Error saving file: ${response.status}`);
+      }
+      
+      const data: SaveFileContentResponse = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to save file');
       }
       
       toast({
-        title: 'Success',
-        description: 'File saved successfully'
+        description: data.message || 'File saved successfully'
       });
+      
       return true;
     } catch (error) {
-      console.error('Error saving file:', error);
-      setError(`Failed to save ${filePath}`);
+      console.error(`Error saving content for ${filePath}:`, error);
       toast({
         title: 'Error',
-        description: 'Failed to save file changes',
+        description: `Failed to save file: ${error.message}`,
         variant: 'destructive'
       });
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [toast]);
+  };
 
-  // Analyze file with AI
-  const analyzeFileWithAI = useCallback(async (filePath: string, content: string): Promise<string> => {
-    setError(null);
-    setIsLoading(true);
-    
+  const analyzeFileWithAI = async (filePath: string, content: string): Promise<string> => {
     try {
-      // First try using Supabase Edge Function
-      try {
-        const result = await supabase.functions.invoke('analyze-code', {
-          body: { filePath, content }
-        });
-        
-        if (!result.error && result.data?.result) {
-          return result.data.result;
-        }
-      } catch (supabaseError) {
-        console.error('Supabase function error:', supabaseError);
-        // Continue with fallback approach
-      }
+      // This is a placeholder for actual implementation
+      // In a real app, this would call an AI endpoint
+      const fileExtension = filePath.split('.').pop()?.toLowerCase();
       
-      // Fallback to direct API call
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ filePath, content })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data.result;
+      // For now, just return a simple message
+      return `Analysis for ${filePath} would be performed by calling the AI service`;
     } catch (error) {
-      console.error('Error analyzing file:', error);
-      setError(`Failed to analyze ${filePath}`);
-      toast({
-        title: 'Error',
-        description: 'Failed to analyze file with AI',
-        variant: 'destructive'
-      });
-      return `Analysis failed: ${error.message}`;
-    } finally {
-      setIsLoading(false);
+      console.error(`Error analyzing file ${filePath}:`, error);
+      return `Error analyzing file: ${error.message}`;
     }
-  }, [toast]);
+  };
+
+  const refreshFiles = async (): Promise<void> => {
+    await fetchFiles();
+  };
+
+  const determineFileType = (filePath: string): 'script' | 'document' | 'style' | 'config' | 'unknown' => {
+    const extension = filePath.split('.').pop()?.toLowerCase();
+    
+    if (['js', 'jsx', 'ts', 'tsx'].includes(extension)) {
+      return 'script';
+    } else if (['md', 'txt', 'html'].includes(extension)) {
+      return 'document';
+    } else if (['css', 'scss', 'less'].includes(extension)) {
+      return 'style';
+    } else if (['json', 'yml', 'yaml', 'toml', 'config'].includes(extension)) {
+      return 'config';
+    } else {
+      return 'unknown';
+    }
+  };
 
   return {
-    isLoading,
-    isLoadingContent,
-    error,
     fetchFiles,
     fetchFileContent,
     saveFileContent,
-    analyzeFileWithAI
+    analyzeFileWithAI,
+    refreshFiles
   };
 };
-
-export default useFileOperations;
