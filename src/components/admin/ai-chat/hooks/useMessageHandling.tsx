@@ -8,7 +8,7 @@ export const useMessageHandling = () => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [typingStatus, setTypingStatus] = useState<TypingStatus>('idle');
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   const sendMessage = async (content: string, customMessages?: Message[]) => {
     if (!content.trim() || isProcessing) return;
@@ -28,7 +28,7 @@ export const useMessageHandling = () => {
     
     setIsProcessing(true);
     setTypingStatus('typing');
-    setError('');
+    setError(null);
     
     try {
       const response = await fetch('/api/chat', {
