@@ -5,132 +5,51 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Message, TypingStatus } from '../types';
 
-export const useMessageHandling = (
-  messages: Message[],
-  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-  userId?: string | null
-) => {
+export const useMessageHandling = ({
+  sendMessage,
+  analyzeFileWithAI,
+  selectedFile,
+  fileContent,
+}) => {
   const { toast } = useToast();
-  const [input, setInput] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [typingStatus, setTypingStatus] = useState<TypingStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
 
-  // Send a message to the AI
-  const sendMessage = async (customMessages?: Message[]) => {
-    if ((!input.trim() && !customMessages) || isProcessing) return;
+  // Handle sending a normal message
+  const handleSendMessage = (message: string) => {
+    if (!message.trim()) return;
+    sendMessage(message);
+  };
 
-    // Use custom messages if provided, otherwise create a new user message
-    let updatedMessages: Message[];
-    
-    if (customMessages) {
-      updatedMessages = customMessages;
-    } else {
-      const userMessage: Message = { 
-        role: 'user', 
-        content: input,
-        id: uuidv4(),
-        createdAt: new Date().toISOString()
-      };
-      updatedMessages = [...messages, userMessage];
-      setInput('');
-    }
-    
-    setMessages(updatedMessages);
-    setIsProcessing(true);
-    setTypingStatus('processing');
-    setError(null);
-
-    try {
-      console.log('Sending message to AI...');
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { 
-          messages: updatedMessages,
-          userId: userId
-        },
-      });
-
-      if (error) {
-        console.error('Error invoking ai-chat function:', error);
-        throw new Error(error.message || 'Failed to get response from AI');
-      }
-
-      if (!data || !data.content) {
-        console.error('Invalid response from ai-chat function:', data);
-        throw new Error('Invalid response from AI');
-      }
-
-      console.log('AI response received');
-      
-      // Create assistant message
-      const assistantMessage: Message = {
-        ...data,
-        id: uuidv4(),
-        createdAt: new Date().toISOString()
-      };
-      
-      // Update messages with AI response
-      const newMessages = [...updatedMessages, assistantMessage];
-      setMessages(newMessages);
-      setTypingStatus('idle');
-      
-      return newMessages;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setError(`Failed to get response from AI: ${error.message}`);
-      setTypingStatus('error');
+  // Handle sending a file analysis request
+  const handleSendFileAnalysisPrompt = () => {
+    if (!selectedFile || !fileContent) {
       toast({
         title: 'Error',
-        description: 'Failed to get response from AI',
+        description: 'No file selected for analysis',
         variant: 'destructive',
       });
-      return null;
-    } finally {
-      setIsProcessing(false);
+      return;
     }
-  };
 
-  // Try sending the message again after an error
-  const retryLastMessage = () => {
-    if (messages.length > 0) {
-      const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.role === 'user');
-      if (lastUserMessageIndex !== -1) {
-        const lastUserMessage = messages[messages.length - 1 - lastUserMessageIndex];
-        setInput(lastUserMessage.content);
-        // Remove the last user message and any subsequent messages
-        setMessages(messages.slice(0, messages.length - 1 - lastUserMessageIndex));
-        setError(null);
-      }
-    }
-  };
-
-  // Clear the chat
-  const handleClearChat = () => {
-    setMessages([]);
-    setError(null);
-    toast({
-      title: 'Chat Cleared',
-      description: 'All chat messages have been cleared',
-    });
-  };
-
-  // Handle "Enter" key press
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    // Get file extension for context
+    const fileExtension = selectedFile.split('.').pop()?.toLowerCase() || '';
+    let fileType = 'text file';
+    
+    if (['js', 'jsx'].includes(fileExtension)) fileType = 'JavaScript file';
+    if (['ts', 'tsx'].includes(fileExtension)) fileType = 'TypeScript file';
+    if (['css', 'scss'].includes(fileExtension)) fileType = 'CSS/SCSS file';
+    if (['html'].includes(fileExtension)) fileType = 'HTML file';
+    if (['json'].includes(fileExtension)) fileType = 'JSON file';
+    
+    // Create analysis message
+    const analysisPrompt = `Please analyze this ${fileType} located at \`${selectedFile}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``;
+    
+    sendMessage(analysisPrompt);
   };
 
   return {
-    input,
-    setInput,
-    isProcessing,
-    typingStatus,
-    error,
-    sendMessage,
-    handleKeyDown,
-    handleClearChat,
-    retryLastMessage
+    handleSendMessage,
+    handleSendFileAnalysisPrompt
   };
 };
+
+export default useMessageHandling;

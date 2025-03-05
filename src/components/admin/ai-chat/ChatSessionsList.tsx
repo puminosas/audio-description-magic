@@ -17,16 +17,20 @@ interface ChatSessionsListProps {
   sessions: ChatSession[];
   currentSessionId: string | null;
   isLoading: boolean;
-  onSessionSelect: (sessionId: string) => void;
-  onNewChat: () => void;
+  onCreateNewSession: () => void;
+  onLoadSession: (sessionId: string) => void;
+  onDeleteSession: (sessionId: string) => void;
+  onRenameSession: (sessionId: string, newTitle: string) => void;
 }
 
 const ChatSessionsList: React.FC<ChatSessionsListProps> = ({
   sessions,
   currentSessionId,
   isLoading,
-  onSessionSelect,
-  onNewChat
+  onCreateNewSession,
+  onLoadSession,
+  onDeleteSession,
+  onRenameSession
 }) => {
   if (isLoading) {
     return (
@@ -46,7 +50,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({
           variant="ghost" 
           size="sm" 
           className="h-8 w-8 p-0"
-          onClick={onNewChat}
+          onClick={onCreateNewSession}
         >
           <PlusIcon className="h-4 w-4" />
           <span className="sr-only">New Chat</span>
@@ -62,7 +66,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({
               variant="link" 
               size="sm" 
               className="mt-2"
-              onClick={onNewChat}
+              onClick={onCreateNewSession}
             >
               Start a new chat
             </Button>
@@ -75,7 +79,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({
                 className={`group flex cursor-pointer items-center justify-between rounded-md p-2 text-sm hover:bg-accent ${
                   currentSessionId === session.id ? 'bg-accent' : ''
                 }`}
-                onClick={() => onSessionSelect(session.id)}
+                onClick={() => onLoadSession(session.id)}
               >
                 <div className="flex flex-col overflow-hidden">
                   <span className="truncate font-medium">{session.title}</span>
@@ -98,7 +102,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({
                   <DropdownMenuContent align="end" className="w-[160px]">
                     <DropdownMenuItem onClick={(e) => {
                       e.stopPropagation();
-                      onSessionSelect(session.id);
+                      onLoadSession(session.id);
                     }}>
                       Open
                     </DropdownMenuItem>
@@ -107,8 +111,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({
                       className="text-destructive focus:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Delete functionality can be added later
-                        console.log('Delete session:', session.id);
+                        onDeleteSession(session.id);
                       }}
                     >
                       Delete

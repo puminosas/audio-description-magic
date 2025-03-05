@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import ChatMessages from './ai-chat/ChatMessages';
@@ -10,71 +10,192 @@ import EmptyChat from './ai-chat/EmptyChat';
 import ErrorMessage from './ai-chat/ErrorMessage';
 import ChatInput from './ai-chat/ChatInput';
 import ChatSessionsList from './ai-chat/ChatSessionsList';
-
-import { useFileManagement } from './ai-chat/hooks/file-management';
-import { useChatLogic } from './ai-chat/hooks/useChatLogic';
-import { useChatSessions } from './ai-chat/hooks/useChatSessions';
-import { useScrollHandling } from './ai-chat/hooks/useScrollHandling';
-import { useMessageHandling } from './ai-chat/hooks/useMessageHandling';
+import { useToast } from '@/hooks/use-toast';
 
 const AdminAiChat: React.FC = () => {
-  // File management hooks
-  const {
-    files,
-    isLoadingFiles,
-    selectedFile,
-    fileContent,
-    isEditing,
-    isLoadingContent,
-    error: fileError,
-    searchTerm,
-    fileTypeFilters,
-    setSearchTerm,
-    setFileTypeFilters,
-    setSelectedFile,
-    setFileContent,
-    setIsEditing,
-    fetchFiles,
-    fetchFileContent,
-    saveFileContent,
-    refreshFiles,
-  } = useFileManagement();
+  const { toast } = useToast();
 
-  // Chat hooks
-  const {
-    messages,
-    isTyping,
-    error: chatError,
-    analyzeFileWithAI,
-    sendMessage,
-    clearMessages,
-    setMessages,
-  } = useChatLogic({
-    selectedFile,
-    fileContent,
-  });
+  // File state
+  const [files, setFiles] = useState([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
-  // Chat sessions hooks
-  const {
-    sessions,
-    currentSession,
-    isLoadingSessions,
-    createNewSession,
-    loadSession,
-    deleteSession,
-    renameSession,
-  } = useChatSessions();
+  // Chat state
+  const [messages, setMessages] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  // Message handling hooks
-  const { handleSendMessage, handleSendFileAnalysisPrompt } = useMessageHandling({
-    sendMessage,
-    analyzeFileWithAI,
-    selectedFile,
-    fileContent,
-  });
+  // Sessions state
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
-  // Scroll handling hooks
-  const { messagesEndRef } = useScrollHandling(messages, isTyping);
+  // Fetch files on component mount
+  useEffect(() => {
+    fetchFiles();
+  }, []);
+
+  // Fetch project files
+  const fetchFiles = async () => {
+    setIsLoadingFiles(true);
+    setFileError(null);
+    
+    try {
+      const response = await fetch('/api/files');
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setFiles(data);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      setFileError('Failed to load project files');
+    } finally {
+      setIsLoadingFiles(false);
+    }
+  };
+
+  // Fetch file content
+  const fetchFileContent = async (filePath: string) => {
+    setIsLoadingContent(true);
+    setFileError(null);
+    
+    try {
+      const response = await fetch(`/api/file-content?filePath=${encodeURIComponent(filePath)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setFileContent(data.content);
+    } catch (error) {
+      console.error('Error fetching file content:', error);
+      setFileError(`Failed to load content for ${filePath}`);
+      setFileContent(`// Error loading content for ${filePath}\n// ${error}`);
+    } finally {
+      setIsLoadingContent(false);
+    }
+  };
+
+  // Save file content
+  const saveFileContent = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      const response = await fetch('/api/edit-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ filePath: selectedFile, newContent: fileContent })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'File saved successfully'
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving file:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save file changes',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Send message to AI
+  const sendMessage = async (message: string) => {
+    if (!message.trim() || isTyping) return;
+    
+    const userMessage = { 
+      role: 'user', 
+      content: message, 
+      id: crypto.randomUUID(), 
+      createdAt: new Date().toISOString() 
+    };
+    
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setIsTyping(true);
+    setChatError(null);
+    
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: updatedMessages }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get response from AI');
+      }
+      
+      const data = await response.json();
+      
+      const assistantMessage = {
+        role: 'assistant',
+        content: data.content,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString()
+      };
+      
+      setMessages([...updatedMessages, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setChatError(`Error: ${error.message}`);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  // Analyze file with AI
+  const analyzeWithAI = () => {
+    if (!selectedFile || !fileContent) return;
+    
+    // Get file extension
+    const fileExtension = selectedFile.split('.').pop()?.toLowerCase() || '';
+    let fileType = 'text file';
+    
+    if (['js', 'jsx'].includes(fileExtension)) fileType = 'JavaScript file';
+    if (['ts', 'tsx'].includes(fileExtension)) fileType = 'TypeScript file';
+    if (['css', 'scss'].includes(fileExtension)) fileType = 'CSS/SCSS file';
+    if (['html'].includes(fileExtension)) fileType = 'HTML file';
+    if (['json'].includes(fileExtension)) fileType = 'JSON file';
+    
+    // Create analysis message
+    const analysisPrompt = `Please analyze this ${fileType} located at \`${selectedFile}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``;
+    
+    // Send the message
+    sendMessage(analysisPrompt);
+  };
+
+  // Retry last message
+  const retryLastMessage = () => {
+    if (messages.length > 0) {
+      const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.role === 'user');
+      if (lastUserMessageIndex !== -1) {
+        const lastUserMessage = messages[messages.length - 1 - lastUserMessageIndex];
+        // Remove messages after the last user message
+        setMessages(messages.slice(0, messages.length - lastUserMessageIndex));
+        // Resend the last user message
+        sendMessage(lastUserMessage.content);
+      }
+    }
+  };
 
   // Handle when user selects a file
   const handleFileSelect = async (filePath: string) => {
@@ -85,17 +206,6 @@ const AdminAiChat: React.FC = () => {
     
     setSelectedFile(filePath);
     await fetchFileContent(filePath);
-  };
-
-  // Handle file analysis
-  const handleAnalyzeWithAI = () => {
-    if (!selectedFile) return;
-    handleSendFileAnalysisPrompt();
-  };
-
-  // Handle saving the file
-  const handleSaveFile = async () => {
-    await saveFileContent();
   };
 
   return (
@@ -114,12 +224,22 @@ const AdminAiChat: React.FC = () => {
             <div className="md:col-span-1">
               <ChatSessionsList 
                 sessions={sessions}
-                currentSession={currentSession}
+                currentSessionId={currentSessionId}
                 isLoading={isLoadingSessions}
-                onCreateNewSession={createNewSession}
-                onLoadSession={loadSession}
-                onDeleteSession={deleteSession}
-                onRenameSession={renameSession}
+                onCreateNewSession={() => {
+                  setMessages([]);
+                  setCurrentSessionId(null);
+                }}
+                onLoadSession={(sessionId) => {
+                  setCurrentSessionId(sessionId);
+                  // Load session messages implementation
+                }}
+                onDeleteSession={(sessionId) => {
+                  // Delete session implementation
+                }}
+                onRenameSession={(sessionId, newTitle) => {
+                  // Rename session implementation
+                }}
               />
               
               <div className="mt-4">
@@ -142,13 +262,13 @@ const AdminAiChat: React.FC = () => {
                       />
                     )}
                     
-                    {chatError && <ErrorMessage error={chatError} />}
+                    {chatError && <ErrorMessage error={chatError} retryLastMessage={retryLastMessage} />}
                   </div>
                   
                   <div className="p-4 border-t">
                     <ChatInput 
-                      onSendMessage={handleSendMessage}
-                      isTyping={isTyping}
+                      onSendMessage={sendMessage}
+                      isLoading={isTyping}
                     />
                   </div>
                 </CardContent>
@@ -176,8 +296,8 @@ const AdminAiChat: React.FC = () => {
                   isLoadingContent={isLoadingContent}
                   setFileContent={setFileContent}
                   setIsEditing={setIsEditing}
-                  handleSaveFile={handleSaveFile}
-                  handleAnalyzeWithAI={handleAnalyzeWithAI}
+                  handleSaveFile={saveFileContent}
+                  handleAnalyzeWithAI={analyzeWithAI}
                 />
               ) : (
                 <Card className="p-8 text-center text-muted-foreground">
@@ -186,9 +306,10 @@ const AdminAiChat: React.FC = () => {
               )}
               
               {fileError && (
-                <div className="mt-4">
-                  <ErrorMessage error={fileError} />
-                </div>
+                <ErrorMessage 
+                  error={fileError} 
+                  retryLastMessage={retryLastMessage}
+                />
               )}
             </div>
           </div>

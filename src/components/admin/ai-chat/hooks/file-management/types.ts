@@ -1,4 +1,3 @@
-import { FileInfo } from '../../types';
 
 export interface FileManagementState {
   files: FileInfo[];
@@ -22,7 +21,7 @@ export interface FileInfo {
   name: string;
   path: string;
   file: string;
-  type?: 'script' | 'document' | 'style' | 'config' | 'unknown';
+  type: 'script' | 'document' | 'style' | 'config' | 'unknown';
 }
 
 export interface FileContent {

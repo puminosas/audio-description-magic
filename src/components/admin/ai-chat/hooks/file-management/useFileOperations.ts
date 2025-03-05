@@ -1,10 +1,12 @@
+
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { FileInfo } from './types';
+import { FileInfo } from '../../types';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useFileOperations = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchCount, setFetchCount] = useState(0);
   const { toast } = useToast();
@@ -64,7 +66,7 @@ export const useFileOperations = () => {
   // Fetch file content
   const fetchFileContent = useCallback(async (filePath: string): Promise<string> => {
     setError(null);
-    setIsLoading(true);
+    setIsLoadingContent(true);
     
     try {
       // First try using Supabase Edge Function
@@ -100,7 +102,7 @@ export const useFileOperations = () => {
       });
       return `// Error loading content for ${filePath}\n// ${error}`;
     } finally {
-      setIsLoading(false);
+      setIsLoadingContent(false);
     }
   }, [toast]);
 
@@ -211,6 +213,7 @@ export const useFileOperations = () => {
 
   return {
     isLoading,
+    isLoadingContent,
     error,
     fetchFiles,
     fetchFileContent,
