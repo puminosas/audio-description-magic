@@ -1,4 +1,6 @@
 
+import { FileInfo } from '../types';
+
 // File system API responses
 export interface GetFilesResponse {
   success: boolean;

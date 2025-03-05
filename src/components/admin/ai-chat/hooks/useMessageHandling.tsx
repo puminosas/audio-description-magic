@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Message, TypingStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
-const useMessageHandling = () => {
+export const useMessageHandling = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -102,5 +102,3 @@ const useMessageHandling = () => {
     retryLastMessage
   };
 };
-
-export default useMessageHandling;

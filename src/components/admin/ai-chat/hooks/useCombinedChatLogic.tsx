@@ -15,10 +15,19 @@ export const useCombinedChatLogic = () => {
   const fileManagement = useFileManagement();
   
   // Chat logic
-  const chatLogic = useChatLogic();
-  const chatSessions = useChatSessions();
+  const chatLogic = useChatLogic({
+    selectedFile: fileManagement.selectedFile,
+    fileContent: fileManagement.fileContent
+  });
+  
   const messageHandling = useMessageHandling();
   const scrollHandling = useScrollHandling(messagesEndRef);
+  
+  // Chat sessions
+  const chatSessions = useChatSessions(
+    messageHandling.messages,
+    messageHandling.setMessages
+  );
   
   // Initialize files on component mount
   useEffect(() => {
@@ -26,7 +35,7 @@ export const useCombinedChatLogic = () => {
   }, []);
   
   // Analyze file with AI
-  const analyzeFileWithAI = () => {
+  const analyzeWithAI = () => {
     if (!fileManagement.selectedFile || !fileManagement.fileContent) return;
     
     // Get file extension
@@ -52,16 +61,26 @@ export const useCombinedChatLogic = () => {
     
     // File state and operations
     ...fileManagement,
-    analyzeWithAI: analyzeFileWithAI,
+    analyzeWithAI,
     
     // Chat state and operations
-    ...chatLogic,
+    messages: messageHandling.messages,
+    setMessages: messageHandling.setMessages,
+    input: messageHandling.input,
+    setInput: messageHandling.setInput,
+    isProcessing: messageHandling.isProcessing,
+    typingStatus: messageHandling.typingStatus,
+    error: messageHandling.error,
+    sendMessage: messageHandling.sendMessage,
+    handleKeyDown: messageHandling.handleKeyDown,
+    handleClearChat: messageHandling.handleClearChat,
+    retryLastMessage: messageHandling.retryLastMessage,
+    
+    // Chat session operations
     ...chatSessions,
-    ...messageHandling,
-    ...scrollHandling,
     
     // Required by the UI components
     isTyping: messageHandling.isProcessing,
-    retryLastMessage: messageHandling.retryLastMessage
+    chatError: messageHandling.error
   };
 };

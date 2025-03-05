@@ -2,8 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Message, TypingStatus } from '../../types';
-import { useScrollHandling } from '../useScrollHandling';
-import { useFileAnalysis } from './useFileAnalysis';
 
 interface UseChatLogicProps {
   selectedFile: string | null;
@@ -16,9 +14,6 @@ export const useChatLogic = ({ selectedFile, fileContent }: UseChatLogicProps) =
   const [error, setError] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Initialize scroll handling
-  const { messagesEndRef } = useScrollHandling(messages, isTyping);
 
   // Send a message to the AI
   const sendMessage = useCallback(async (messageContent?: string) => {
@@ -114,7 +109,6 @@ export const useChatLogic = ({ selectedFile, fileContent }: UseChatLogicProps) =
     isTyping,
     isProcessing,
     error,
-    messagesEndRef,
     analyzeFileWithAI,
     sendMessage,
     clearMessages

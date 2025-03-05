@@ -1,5 +1,9 @@
 
-import { FileInfo, FileContent } from '../../types';
+// Import FileInfo from parent types
+import { FileInfo as BaseFileInfo } from '../../types';
+
+// Extend the FileInfo type if needed
+export type FileInfo = BaseFileInfo;
 
 export interface FileManagementState {
   files: FileInfo[];
