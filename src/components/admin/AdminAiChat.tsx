@@ -1,162 +1,176 @@
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from '@/components/ui/card';
-import AdminActionsPanel from './ai-chat/AdminActionsPanel';
+
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import ChatMessages from './ai-chat/ChatMessages';
 import ProjectFilesPanel from './ai-chat/ProjectFilesPanel';
 import FilePreviewPanel from './ai-chat/FilePreviewPanel';
-import { MessageSquare, FileCode } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import AdminActionsPanel from './ai-chat/AdminActionsPanel';
+import EmptyChat from './ai-chat/EmptyChat';
+import ErrorMessage from './ai-chat/ErrorMessage';
+import ChatInput from './ai-chat/ChatInput';
+import ChatSessionsList from './ai-chat/ChatSessionsList';
+
+import { useFileManagement } from './ai-chat/hooks/file-management';
+import { useChatLogic } from './ai-chat/hooks/useChatLogic';
+import { useChatSessions } from './ai-chat/hooks/useChatSessions';
+import { useScrollHandling } from './ai-chat/hooks/useScrollHandling';
+import { useMessageHandling } from './ai-chat/hooks/useMessageHandling';
 
 const AdminAiChat: React.FC = () => {
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [fileContent, setFileContent] = useState<string>('');
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [isLoadingContent, setIsLoadingContent] = useState<boolean>(false);
-  const [currentTab, setCurrentTab] = useState<string>('chat');
-  const { toast } = useToast();
+  // File management hooks
+  const {
+    files,
+    isLoadingFiles,
+    selectedFile,
+    fileContent,
+    isEditing,
+    isLoadingContent,
+    error: fileError,
+    searchTerm,
+    fileTypeFilters,
+    setSearchTerm,
+    setFileTypeFilters,
+    setSelectedFile,
+    setFileContent,
+    setIsEditing,
+    fetchFiles,
+    fetchFileContent,
+    saveFileContent,
+    refreshFiles,
+  } = useFileManagement();
 
-  // Funkcija, kuri iškviečiama, kai pasirenkamas failas
+  // Chat hooks
+  const {
+    messages,
+    isTyping,
+    error: chatError,
+    analyzeFileWithAI,
+    sendMessage,
+    clearMessages,
+    setMessages,
+  } = useChatLogic({
+    selectedFile,
+    fileContent,
+  });
+
+  // Chat sessions hooks
+  const {
+    sessions,
+    currentSession,
+    isLoadingSessions,
+    createNewSession,
+    loadSession,
+    deleteSession,
+    renameSession,
+  } = useChatSessions();
+
+  // Message handling hooks
+  const { handleSendMessage, handleSendFileAnalysisPrompt } = useMessageHandling({
+    sendMessage,
+    analyzeFileWithAI,
+    selectedFile,
+    fileContent,
+  });
+
+  // Scroll handling hooks
+  const { messagesEndRef } = useScrollHandling(messages, isTyping);
+
+  // Handle when user selects a file
   const handleFileSelect = async (filePath: string) => {
+    // Save current file content if it's being edited
+    if (selectedFile && isEditing) {
+      await saveFileContent();
+    }
+    
     setSelectedFile(filePath);
-    setCurrentTab('files');
-    
-    // Pabandome nuskaityti failo turinį
-    setIsLoadingContent(true);
-    try {
-      const response = await fetch(`/api/file-content?filePath=${encodeURIComponent(filePath)}`);
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      setFileContent(data.content);
-    } catch (error) {
-      console.error('Error loading file content:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load file content",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingContent(false);
-    }
+    await fetchFileContent(filePath);
   };
 
-  // Funkcija, kuri išsaugo failo pakeitimus
+  // Handle file analysis
+  const handleAnalyzeWithAI = () => {
+    if (!selectedFile) return;
+    handleSendFileAnalysisPrompt();
+  };
+
+  // Handle saving the file
   const handleSaveFile = async () => {
-    if (!selectedFile) return;
-    
-    try {
-      const response = await fetch('/api/edit-file', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          filePath: selectedFile,
-          newContent: fileContent
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      toast({
-        title: "Success",
-        description: "File saved successfully"
-      });
-      
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving file:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save file changes",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Funkcija, kuri analizuoja failą su AI
-  const handleAnalyzeWithAI = async () => {
-    if (!selectedFile) return;
-    
-    try {
-      toast({
-        title: "Analyzing...",
-        description: "AI is analyzing the file content"
-      });
-      
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          filePath: selectedFile
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Perjungiame į chat skirtuką, kad būtų rodomas AI atsakymas
-      setCurrentTab('chat');
-      
-      // Šį rezultatą galite perduoti į ChatMessages komponentą, kad būtų rodomas kaip naujas pranešimas
-      // Pavyzdžiui: addAIMessage(data.result);
-      // Jei ChatMessages komponentas neturi tokios funkcijos, jums gali tekti atnaujinti tą komponentą
-    } catch (error) {
-      console.error('Error analyzing file with AI:', error);
-      toast({
-        title: "Error",
-        description: "Failed to analyze file with AI",
-        variant: "destructive"
-      });
-    }
+    await saveFileContent();
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <h2 className="text-2xl font-bold">AI Assistant</h2>
-        <p className="text-muted-foreground">
-          Chat with AI and manage your project files
-        </p>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="md:col-span-1">
-          <ProjectFilesPanel onFileSelect={handleFileSelect} selectedFile={selectedFile} />
-        </div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6">AI Admin Assistant</h1>
+      
+      <Tabs defaultValue="chat" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="chat">AI Chat</TabsTrigger>
+          <TabsTrigger value="files">Project Files</TabsTrigger>
+        </TabsList>
         
-        <div className="md:col-span-3">
-          <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="chat" className="flex items-center">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Chat with AI
-              </TabsTrigger>
-              <TabsTrigger value="files" className="flex items-center">
-                <FileCode className="mr-2 h-4 w-4" />
-                File Editor
-              </TabsTrigger>
-            </TabsList>
+        <TabsContent value="chat" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Sessions panel */}
+            <div className="md:col-span-1">
+              <ChatSessionsList 
+                sessions={sessions}
+                currentSession={currentSession}
+                isLoading={isLoadingSessions}
+                onCreateNewSession={createNewSession}
+                onLoadSession={loadSession}
+                onDeleteSession={deleteSession}
+                onRenameSession={renameSession}
+              />
+              
+              <div className="mt-4">
+                <AdminActionsPanel />
+              </div>
+            </div>
             
-            <TabsContent value="chat" className="mt-4 p-0">
-              <ChatMessages />
-            </TabsContent>
+            {/* Chat area */}
+            <div className="md:col-span-3 flex flex-col h-[calc(100vh-250px)]">
+              <Card className="flex-1 overflow-hidden">
+                <CardContent className="p-0 flex flex-col h-full">
+                  <div className="flex-1 overflow-y-auto p-4">
+                    {messages.length === 0 ? (
+                      <EmptyChat />
+                    ) : (
+                      <ChatMessages 
+                        messages={messages} 
+                        isTyping={isTyping} 
+                        messagesEndRef={messagesEndRef} 
+                      />
+                    )}
+                    
+                    {chatError && <ErrorMessage error={chatError} />}
+                  </div>
+                  
+                  <div className="p-4 border-t">
+                    <ChatInput 
+                      onSendMessage={handleSendMessage}
+                      isTyping={isTyping}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="files" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* File browser */}
+            <div className="md:col-span-1">
+              <ProjectFilesPanel 
+                onFileSelect={handleFileSelect} 
+                selectedFile={selectedFile}
+              />
+            </div>
             
-            <TabsContent value="files" className="mt-4 p-0">
+            {/* File preview */}
+            <div className="md:col-span-3">
               {selectedFile ? (
-                <FilePreviewPanel
+                <FilePreviewPanel 
                   selectedFile={selectedFile}
                   fileContent={fileContent}
                   isLoadingContent={isLoadingContent}
@@ -166,14 +180,20 @@ const AdminAiChat: React.FC = () => {
                   handleAnalyzeWithAI={handleAnalyzeWithAI}
                 />
               ) : (
-                <div className="text-center p-8 bg-muted rounded-md">
-                  <p>Select a file from the project files panel to view and edit</p>
+                <Card className="p-8 text-center text-muted-foreground">
+                  <p>Select a file to preview and edit</p>
+                </Card>
+              )}
+              
+              {fileError && (
+                <div className="mt-4">
+                  <ErrorMessage error={fileError} />
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

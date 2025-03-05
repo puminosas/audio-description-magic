@@ -98,6 +98,46 @@ async function getGoogleAccessToken(credentials) {
   }
 }
 
+// Function to upload file to Google Cloud Storage
+async function uploadToGoogleStorage(accessToken, bucketName, filePath, content, contentType) {
+  try {
+    console.log(`Uploading to Google Cloud Storage: gs://${bucketName}/${filePath}`);
+    
+    const uploadUrl = `https://storage.googleapis.com/upload/storage/v1/b/${bucketName}/o?uploadType=media&name=${encodeURIComponent(filePath)}`;
+    
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": contentType
+      },
+      body: content
+    });
+    
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error(`Failed to upload to Google Cloud Storage: ${errorText}`);
+      throw new Error(`Failed to upload to Google Cloud Storage: ${errorText}`);
+    }
+    
+    const uploadData = await uploadResponse.json();
+    console.log("Upload successful:", uploadData.name);
+    
+    // Generate public URL
+    const publicUrl = `https://storage.googleapis.com/${bucketName}/${encodeURIComponent(filePath)}`;
+    
+    return {
+      success: true,
+      fileName: filePath,
+      fileData: uploadData,
+      publicUrl: publicUrl
+    };
+  } catch (error) {
+    console.error("Error uploading to Google Cloud Storage:", error);
+    throw error;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -128,7 +168,7 @@ serve(async (req) => {
 
     console.log(`Processing TTS request for "${text.substring(0, 50)}..." in language: ${language}, voice: ${voice}`);
 
-    // Initialize Supabase client for storage operations
+    // Initialize Supabase client for metadata storage
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -137,6 +177,12 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    // Get Google Cloud Storage bucket name
+    const GOOGLE_STORAGE_BUCKET = Deno.env.get("GOOGLE_STORAGE_BUCKET") || "users_generated_files";
+    if (!GOOGLE_STORAGE_BUCKET) {
+      throw new Error("Missing Google Storage bucket name");
+    }
     
     // Load Google credentials
     const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
@@ -220,80 +266,47 @@ serve(async (req) => {
     const fileName = `${sanitizedText}_${language}_${timestamp}.mp3`;
     const filePath = `${userFolderPath}/${fileName}`;
     
-    console.log(`Preparing to upload ${binaryAudio.length} bytes of audio to Supabase Storage`);
+    console.log(`Preparing to upload ${binaryAudio.length} bytes of audio to Google Cloud Storage`);
     
-    // Check if any buckets exist at all
-    const { data: buckets, error: bucketsError } = await supabaseAdmin
-      .storage
-      .listBuckets();
-      
-    if (bucketsError) {
-      console.error("Error listing buckets:", bucketsError);
-      throw new Error(`Failed to list storage buckets: ${bucketsError.message}`);
-    }
+    // Upload to Google Cloud Storage
+    const uploadResult = await uploadToGoogleStorage(
+      accessToken,
+      GOOGLE_STORAGE_BUCKET,
+      filePath,
+      binaryAudio,
+      'audio/mpeg'
+    );
     
-    console.log("Available buckets:", buckets ? buckets.map(b => b.name).join(", ") : "none");
+    console.log("Successfully uploaded audio to Google Cloud Storage:", uploadResult.publicUrl);
     
-    // Check if "users_generated_files" bucket exists, create it if not
-    const bucketName = "users_generated_files";
-    const bucket = buckets?.find(b => b.name === bucketName);
-
-    if (!bucket) {
-      console.log(`Creating '${bucketName}' bucket`);
-      const { error: createBucketError } = await supabaseAdmin
-        .storage
-        .createBucket(bucketName, { 
-          public: true,
-          fileSizeLimit: 50000000 // 50MB
-        });
-        
-      if (createBucketError) {
-        console.error("Error creating bucket:", createBucketError);
-        throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
-      }
-      console.log(`Successfully created bucket: ${bucketName}`);
-    } else {
-      console.log(`Bucket '${bucketName}' already exists`);
-    }
-    
-    // Upload to Storage
-    console.log(`Uploading file to path: ${filePath} in bucket: ${bucketName}`);
-    const { data: uploadData, error: uploadError } = await supabaseAdmin
-      .storage
-      .from(bucketName)
-      .upload(filePath, binaryAudio, {
-        contentType: 'audio/mpeg',
-        cacheControl: '3600',
-        upsert: false
+    // Store metadata in Supabase
+    const { data: metadataData, error: metadataError } = await supabaseAdmin
+      .from('audio_files')
+      .insert({
+        user_id: user_id,
+        file_name: fileName,
+        file_path: filePath,
+        google_storage_url: uploadResult.publicUrl,
+        file_size: binaryAudio.length,
+        language: language,
+        voice: voice,
+        text_content: text.substring(0, 1000) // Storing first 1000 chars to keep metadata reasonable
       });
-    
-    if (uploadError) {
-      console.error("Storage upload error:", uploadError);
-      throw new Error(`Failed to upload audio: ${uploadError.message}`);
+      
+    if (metadataError) {
+      console.warn("Warning: Failed to store file metadata in Supabase:", metadataError);
+      // Continue even if metadata storage fails
+    } else {
+      console.log("Stored file metadata in Supabase");
     }
     
-    console.log("Successfully uploaded audio to storage:", uploadData);
-    
-    // Get the public URL
-    const { data: publicUrlData } = supabaseAdmin
-      .storage
-      .from(bucketName)
-      .getPublicUrl(filePath);
-    
-    // Get the folder public URL
-    const { data: folderUrlData } = supabaseAdmin
-      .storage
-      .from(bucketName)
-      .getPublicUrl(userFolderPath);
-    
-    console.log(`Successfully generated and stored audio file: ${fileName}`);
-    console.log(`Public URL: ${publicUrlData?.publicUrl}`);
+    const folderUrl = `https://storage.googleapis.com/${GOOGLE_STORAGE_BUCKET}/${userFolderPath}`;
     
     return new Response(
       JSON.stringify({
         success: true, 
-        audio_url: publicUrlData.publicUrl,
-        folder_url: folderUrlData.publicUrl,
+        audio_url: uploadResult.publicUrl,
+        folder_url: folderUrl,
         fileName: fileName
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
