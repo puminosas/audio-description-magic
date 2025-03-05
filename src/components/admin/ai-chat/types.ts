@@ -1,3 +1,4 @@
+
 export interface Message {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -10,6 +11,7 @@ export interface FileInfo {
   type: 'script' | 'document' | 'style' | 'config' | 'unknown';
   size?: number;
   name?: string;
+  file?: string; // Added for compatibility
 }
 
 export interface ChatSession {

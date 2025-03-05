@@ -1,54 +1,105 @@
 
-import { useState, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import { Message, TypingStatus } from '../types';
+import { v4 as uuidv4 } from 'uuid';
 
-export const useMessageHandling = ({
-  sendMessage,
-  analyzeFileWithAI,
-  selectedFile,
-  fileContent,
-}) => {
-  const { toast } = useToast();
+const useMessageHandling = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [typingStatus, setTypingStatus] = useState<TypingStatus>('idle');
+  const [error, setError] = useState<string>('');
 
-  // Handle sending a normal message
-  const handleSendMessage = (message: string) => {
-    if (!message.trim()) return;
-    sendMessage(message);
+  const sendMessage = async (content: string, customMessages?: Message[]) => {
+    if (!content.trim() || isProcessing) return;
+    
+    const userMessage: Message = { 
+      role: 'user', 
+      content, 
+      id: uuidv4(), 
+      createdAt: new Date().toISOString() 
+    };
+    
+    const messagesToSend = customMessages || [...messages, userMessage];
+    
+    if (!customMessages) {
+      setMessages(messagesToSend);
+    }
+    
+    setIsProcessing(true);
+    setTypingStatus('typing');
+    setError('');
+    
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messagesToSend }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get response from AI');
+      }
+      
+      const data = await response.json();
+      
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.content,
+        id: uuidv4(),
+        createdAt: new Date().toISOString()
+      };
+      
+      setMessages(customMessages 
+        ? [userMessage, assistantMessage] 
+        : [...messagesToSend, assistantMessage]
+      );
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setError(`Error: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+      setTypingStatus('idle');
+    }
   };
 
-  // Handle sending a file analysis request
-  const handleSendFileAnalysisPrompt = () => {
-    if (!selectedFile || !fileContent) {
-      toast({
-        title: 'Error',
-        description: 'No file selected for analysis',
-        variant: 'destructive',
-      });
-      return;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input);
+      setInput('');
     }
+  };
 
-    // Get file extension for context
-    const fileExtension = selectedFile.split('.').pop()?.toLowerCase() || '';
-    let fileType = 'text file';
-    
-    if (['js', 'jsx'].includes(fileExtension)) fileType = 'JavaScript file';
-    if (['ts', 'tsx'].includes(fileExtension)) fileType = 'TypeScript file';
-    if (['css', 'scss'].includes(fileExtension)) fileType = 'CSS/SCSS file';
-    if (['html'].includes(fileExtension)) fileType = 'HTML file';
-    if (['json'].includes(fileExtension)) fileType = 'JSON file';
-    
-    // Create analysis message
-    const analysisPrompt = `Please analyze this ${fileType} located at \`${selectedFile}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``;
-    
-    sendMessage(analysisPrompt);
+  const handleClearChat = () => {
+    setMessages([]);
+  };
+
+  const retryLastMessage = () => {
+    if (messages.length > 0) {
+      const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.role === 'user');
+      if (lastUserMessageIndex !== -1) {
+        const lastUserMessage = messages[messages.length - 1 - lastUserMessageIndex];
+        // Remove messages after the last user message
+        setMessages(messages.slice(0, messages.length - lastUserMessageIndex));
+        // Resend the last user message
+        sendMessage(lastUserMessage.content);
+      }
+    }
   };
 
   return {
-    handleSendMessage,
-    handleSendFileAnalysisPrompt
+    messages,
+    setMessages,
+    input,
+    setInput,
+    isProcessing,
+    typingStatus,
+    error,
+    sendMessage,
+    handleKeyDown,
+    handleClearChat,
+    retryLastMessage
   };
 };
 

@@ -1,30 +1,27 @@
 
-export interface FileManagementState {
+export interface FileInfo {
+  path: string;
+  type?: 'script' | 'document' | 'style' | 'config' | 'unknown';
+  size?: number;
+  name?: string;
+  file?: string;
+}
+
+export interface FileState {
   files: FileInfo[];
-  isLoadingFiles: boolean;
+  filteredFiles: FileInfo[];
   selectedFile: string | null;
   fileContent: string;
   isEditing: boolean;
+  isLoading: boolean;
   isLoadingContent: boolean;
   error: string | null;
-  searchTerm: string;
-  isRefreshingFiles: boolean;
-  fileTypeFilters: string[];
+  activeFilters: string[];
 }
 
-export interface FileFilters {
-  searchTerm: string;
-  fileTypeFilters: string[];
-}
-
-export interface FileInfo {
-  name: string;
-  path: string;
-  file: string;
-  type: 'script' | 'document' | 'style' | 'config' | 'unknown';
-}
-
-export interface FileContent {
-  filePath: string;
-  content: string;
+export interface FileOperations {
+  fetchFiles: () => Promise<FileInfo[]>;
+  fetchFileContent: (filePath: string) => Promise<string>;
+  saveFileContent: (filePath: string, content: string) => Promise<void>;
+  analyzeFileWithAI: (filePath: string, content: string) => Promise<void>;
 }
