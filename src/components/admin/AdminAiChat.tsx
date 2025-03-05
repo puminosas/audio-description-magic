@@ -1,165 +1,177 @@
-
-import React from 'react';
+import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from '@/components/ui/card';
-import ErrorAlert from '@/components/generator/ErrorAlert';
+import AdminActionsPanel from './ai-chat/AdminActionsPanel';
 import ChatMessages from './ai-chat/ChatMessages';
 import ProjectFilesPanel from './ai-chat/ProjectFilesPanel';
 import FilePreviewPanel from './ai-chat/FilePreviewPanel';
-import AdminActionsPanel from './ai-chat/AdminActionsPanel';
-import ChatSessionsList from './ai-chat/ChatSessionsList';
-import { useChatLogic } from './ai-chat/hooks/useChatLogic';  // Updated import path
-import { useFileManagement } from './ai-chat/hooks/file-management';
-import ChatInput from './ai-chat/ChatInput';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { MessageSquare, FileCode } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-const AdminAiChat = () => {
-  const { 
-    input, 
-    setInput, 
-    messages, 
-    isProcessing, 
-    typingStatus,
-    error, 
-    messagesEndRef, 
-    chatSessions,
-    isLoadingSessions,
-    currentSession,
-    sendMessage, 
-    handleKeyDown, 
-    handleClearChat,
-    retryLastMessage,
-    loadChatSession,
-    startNewChat,
-    sendFileAnalysisRequest
-  } = useChatLogic();
+const AdminAiChat: React.FC = () => {
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string>('');
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [isLoadingContent, setIsLoadingContent] = useState<boolean>(false);
+  const [currentTab, setCurrentTab] = useState<string>('chat');
+  const { toast } = useToast();
 
-  const {
-    files,
-    filteredFiles,
-    isLoadingFiles,
-    selectedFile,
-    fileContent,
-    isEditing,
-    isLoadingContent,
-    isRefreshingFiles,
-    searchTerm,
-    fileTypeFilters,
-    uniqueFileTypes,
-    setSearchTerm,
-    setFileContent,
-    setIsEditing,
-    setFileTypeFilters,
-    fetchFiles,
-    handleFileSelect,
-    handleSaveFile,
-    handleAnalyzeWithAI: requestFileAnalysis,
-    toggleFileTypeFilter
-  } = useFileManagement();
+  // Funkcija, kuri iškviečiama, kai pasirenkamas failas
+  const handleFileSelect = async (filePath: string) => {
+    setSelectedFile(filePath);
+    setCurrentTab('files');
+    
+    // Pabandome nuskaityti failo turinį
+    setIsLoadingContent(true);
+    try {
+      const response = await fetch(`/api/file-content?filePath=${encodeURIComponent(filePath)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setFileContent(data.content);
+    } catch (error) {
+      console.error('Error loading file content:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load file content",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingContent(false);
+    }
+  };
 
-  // Connect the file analysis request to the chat logic
-  const handleAnalyzeWithAI = () => {
-    if (selectedFile && fileContent) {
-      sendFileAnalysisRequest(selectedFile, fileContent);
-      requestFileAnalysis();
+  // Funkcija, kuri išsaugo failo pakeitimus
+  const handleSaveFile = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      const response = await fetch('/api/edit-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filePath: selectedFile,
+          newContent: fileContent
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      toast({
+        title: "Success",
+        description: "File saved successfully"
+      });
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save file changes",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Funkcija, kuri analizuoja failą su AI
+  const handleAnalyzeWithAI = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      toast({
+        title: "Analyzing...",
+        description: "AI is analyzing the file content"
+      });
+      
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filePath: selectedFile
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Perjungiame į chat skirtuką, kad būtų rodomas AI atsakymas
+      setCurrentTab('chat');
+      
+      // Šį rezultatą galite perduoti į ChatMessages komponentą, kad būtų rodomas kaip naujas pranešimas
+      // Pavyzdžiui: addAIMessage(data.result);
+      // Jei ChatMessages komponentas neturi tokios funkcijos, jums gali tekti atnaujinti tą komponentą
+    } catch (error) {
+      console.error('Error analyzing file with AI:', error);
+      toast({
+        title: "Error",
+        description: "Failed to analyze file with AI",
+        variant: "destructive"
+      });
     }
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-      {/* Left side: Chat history sidebar and chat interface */}
-      <div className="col-span-1 md:col-span-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-8">
-          {/* Chat history sidebar */}
-          <div className="col-span-1 md:col-span-2">
-            <Card className="h-[600px] overflow-hidden p-3">
-              <ChatSessionsList 
-                sessions={chatSessions}
-                currentSessionId={currentSession}
-                isLoading={isLoadingSessions}
-                onSessionSelect={loadChatSession}
-                onNewChat={startNewChat}
-              />
-            </Card>
-          </div>
-          
-          {/* Chat interface */}
-          <div className="col-span-1 md:col-span-6">
-            <Card className="flex h-[600px] flex-col overflow-hidden p-4">
-              {/* Connection error message */}
-              {!isProcessing && error && error.includes("Failed to send") && (
-                <div className="mb-4">
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Connection Error</AlertTitle>
-                    <AlertDescription>
-                      Could not connect to the AI service. Please try again later or contact support.
-                    </AlertDescription>
-                  </Alert>
+    <div className="space-y-4">
+      <Card className="p-4">
+        <h2 className="text-2xl font-bold">AI Assistant</h2>
+        <p className="text-muted-foreground">
+          Chat with AI and manage your project files
+        </p>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="md:col-span-1">
+          <ProjectFilesPanel onFileSelect={handleFileSelect} selectedFile={selectedFile} />
+        </div>
+        
+        <div className="md:col-span-3">
+          <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="chat" className="flex items-center">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Chat with AI
+              </TabsTrigger>
+              <TabsTrigger value="files" className="flex items-center">
+                <FileCode className="mr-2 h-4 w-4" />
+                File Editor
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="chat" className="mt-4 p-0">
+              <ChatMessages />
+            </TabsContent>
+            
+            <TabsContent value="files" className="mt-4 p-0">
+              {selectedFile ? (
+                <FilePreviewPanel
+                  selectedFile={selectedFile}
+                  fileContent={fileContent}
+                  isLoadingContent={isLoadingContent}
+                  setFileContent={setFileContent}
+                  setIsEditing={setIsEditing}
+                  handleSaveFile={handleSaveFile}
+                  handleAnalyzeWithAI={handleAnalyzeWithAI}
+                />
+              ) : (
+                <div className="text-center p-8 bg-muted rounded-md">
+                  <p>Select a file from the project files panel to view and edit</p>
                 </div>
               )}
-              
-              {/* Messages container */}
-              <ChatMessages 
-                messages={messages} 
-                isProcessing={isProcessing}
-                typingStatus={typingStatus}
-                messagesEndRef={messagesEndRef}
-                error={error}
-                retryLastMessage={retryLastMessage}
-              />
-
-              {/* Input area */}
-              <ChatInput
-                input={input}
-                setInput={setInput}
-                handleKeyDown={handleKeyDown}
-                sendMessage={sendMessage}
-                isProcessing={isProcessing}
-                typingStatus={typingStatus}
-                messages={messages}
-                handleClearChat={handleClearChat}
-                startNewChat={startNewChat}
-              />
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* Right side: Project files and user info */}
-      <div className="col-span-1 md:col-span-4">
-        <div className="space-y-6">
-          {/* Project files */}
-          <ProjectFilesPanel 
-            files={files}
-            filteredFiles={filteredFiles}
-            uniqueFileTypes={uniqueFileTypes}
-            fileTypeFilters={fileTypeFilters}
-            isLoadingFiles={isLoadingFiles}
-            isRefreshingFiles={isRefreshingFiles}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            toggleFileTypeFilter={toggleFileTypeFilter}
-            setFileTypeFilters={setFileTypeFilters}
-            fetchFiles={fetchFiles}
-            handleFileSelect={handleFileSelect}
-          />
-
-          {/* File editing */}
-          {isEditing && selectedFile && (
-            <FilePreviewPanel 
-              selectedFile={selectedFile}
-              fileContent={fileContent}
-              isLoadingContent={isLoadingContent}
-              setFileContent={setFileContent}
-              setIsEditing={setIsEditing}
-              handleSaveFile={handleSaveFile}
-              handleAnalyzeWithAI={handleAnalyzeWithAI}
-            />
-          )}
-
-          {/* Admin actions */}
-          <AdminActionsPanel />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
