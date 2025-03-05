@@ -1,89 +1,52 @@
 
-import { FileInfo } from '../types';
+import { FileInfo } from '../hooks/file-management/types';
 
-// File system API responses
-export interface GetFilesResponse {
-  success: boolean;
+// API Response types for file system operations
+export type FileSystemResponse = {
   files: FileInfo[];
-  error?: string;
-}
+};
 
-export interface GetFileContentResponse {
-  success: boolean;
+export type FileContentResponse = {
   content: string;
   filePath: string;
-  error?: string;
-}
+};
 
-export interface SaveFileContentResponse {
+export type FileSaveResponse = {
   success: boolean;
   message: string;
-  filePath: string;
-  error?: string;
-}
+};
 
-// Chat API responses
-export interface ChatCompletionResponse {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: {
-    index: number;
-    message: {
-      role: string;
-      content: string;
-    };
-    finish_reason: string;
-  }[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-export interface AICompletionMessage {
-  role: 'system' | 'user' | 'assistant';
+// API Response types for chat operations
+export type ChatResponse = {
+  role: string;
   content: string;
-}
+  id?: string;
+};
 
-// Session management API responses
-export interface ChatSessionResponse {
+// API Response types for chat session management
+export type ChatSessionResponse = {
   id: string;
   title: string;
   messages: any[];
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface ChatSessionsListResponse {
-  success: boolean;
+export type ChatSessionsResponse = {
   sessions: ChatSessionResponse[];
-  error?: string;
-}
+};
 
-export interface ChatSessionCreateResponse {
+export type ChatSessionCreateResponse = {
+  id: string;
   success: boolean;
-  session: ChatSessionResponse;
-  error?: string;
-}
+};
 
-export interface ChatSessionUpdateResponse {
+export type ChatSessionDeleteResponse = {
   success: boolean;
-  session: ChatSessionResponse;
-  error?: string;
-}
+};
 
-export interface ChatSessionDeleteResponse {
-  success: boolean;
-  message: string;
-  error?: string;
-}
-
-// Analysis API response
-export interface FileAnalysisResponse {
-  success: boolean;
+// API Response types for file analysis
+export type FileAnalysisResponse = {
   analysis: string;
-  error?: string;
-}
+  suggestions: string[];
+};

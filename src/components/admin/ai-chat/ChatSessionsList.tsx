@@ -20,7 +20,7 @@ interface ChatSessionsListProps {
   onCreateNewSession: () => void;
   onLoadSession: (sessionId: string) => void;
   onDeleteSession: (sessionId: string) => void;
-  onRenameSession: (sessionId: string, newTitle: string) => void;
+  onRenameSession?: (sessionId: string, newTitle: string) => void;
 }
 
 const ChatSessionsList: React.FC<ChatSessionsListProps> = ({

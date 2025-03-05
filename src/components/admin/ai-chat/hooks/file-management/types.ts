@@ -1,50 +1,43 @@
 
-// Import FileInfo from parent types
-import { FileInfo as BaseFileInfo } from '../../types';
+export interface FileInfo {
+  path: string;
+  content: string;
+}
 
-// Extend the FileInfo type if needed
-export type FileInfo = BaseFileInfo;
-
-export interface FileManagementState {
+export interface FileState {
   files: FileInfo[];
-  filteredFiles: FileInfo[];
-  isLoadingFiles: boolean;
   selectedFile: string | null;
   fileContent: string;
-  isEditing: boolean;
-  isLoadingContent: boolean;
-  error: string | null;
+  isLoading: boolean;
   fileError: string | null;
-  activeFilters: FileFilters;
+  isEditing: boolean;
 }
 
 export interface FileFilters {
-  types: string[];
-  searchQuery: string;
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  filteredFiles: FileInfo[];
 }
 
-export interface FileOperationsReturn {
-  fetchFiles: () => Promise<FileInfo[]>;
-  fetchFileContent: (filePath: string) => Promise<string>;
-  saveFileContent: (filePath: string, content: string) => Promise<boolean>;
-  analyzeFileWithAI: (filePath: string, content: string) => Promise<string>;
-  refreshFiles: () => Promise<void>;
-}
-
-export interface FileStateReturn {
-  state: FileManagementState;
-  updateState: (updates: Partial<FileManagementState>) => void;
-  setSelectedFile: (filePath: string | null) => void;
+export interface FileOperations {
+  fetchFiles: () => Promise<void>;
+  handleFileSelect: (filePath: string) => Promise<void>;
   setFileContent: (content: string) => void;
   setIsEditing: (isEditing: boolean) => void;
-  setError: (error: string | null) => void;
-  setFileError: (error: string | null) => void;
+  handleSaveFile: () => Promise<void>;
+  handleAnalyzeWithAI: () => Promise<void>;
 }
 
-export interface FileFiltersReturn {
-  activeFilters: FileFilters;
-  setSearchQuery: (query: string) => void;
-  toggleFileTypeFilter: (type: string) => void;
-  clearFilters: () => void;
-  applyFilters: (files: FileInfo[]) => FileInfo[];
-}
+export type FileSystemResponse = {
+  files: FileInfo[];
+};
+
+export type FileContentResponse = {
+  content: string;
+  filePath: string;
+};
+
+export type FileSaveResponse = {
+  success: boolean;
+  message: string;
+};

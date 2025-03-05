@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 
 export const useScrollHandling = (messagesEndRef: React.RefObject<HTMLDivElement>) => {
   useEffect(() => {
@@ -12,3 +12,5 @@ export const useScrollHandling = (messagesEndRef: React.RefObject<HTMLDivElement
   
   return { scrollToBottom };
 };
+
+export default useScrollHandling;

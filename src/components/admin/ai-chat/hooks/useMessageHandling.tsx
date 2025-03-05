@@ -56,7 +56,7 @@ export const useMessageHandling = () => {
       );
     } catch (error) {
       console.error('Error sending message:', error);
-      setError(`Error: ${error.message}`);
+      setError(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
       setTypingStatus('idle');
@@ -102,3 +102,5 @@ export const useMessageHandling = () => {
     retryLastMessage
   };
 };
+
+export default useMessageHandling;

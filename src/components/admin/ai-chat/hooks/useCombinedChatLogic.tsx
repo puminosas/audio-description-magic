@@ -1,86 +1,115 @@
 
-import { useRef, useEffect } from 'react';
-import { useFileManagement } from './file-management';
-import { useChatLogic } from './useChatLogic';
-import { useChatSessions } from './useChatSessions';
-import { useMessageHandling } from './useMessageHandling';
-import { useScrollHandling } from './useScrollHandling';
+import { useRef } from 'react';
 import { Message } from '../types';
+import { useMessageHandling } from './useMessageHandling';
+import { useChatSessions } from './useChatSessions';
+import { useScrollHandling } from './useScrollHandling';
+import { 
+  useFileState, 
+  useFileFilters, 
+  useFileOperations 
+} from './file-management';
+import { useFileAnalysis } from './useChatLogic/useFileAnalysis';
 
-export const useCombinedChatLogic = () => {
-  // Chat references
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+export const useCombinedChatLogic = (userId?: string | null) => {
+  // Messaging state and handlers
+  const {
+    messages,
+    setMessages,
+    input,
+    setInput,
+    isProcessing,
+    typingStatus,
+    error: chatError,
+    sendMessage,
+    handleKeyDown,
+    handleClearChat,
+    retryLastMessage
+  } = useMessageHandling();
+
+  // Chat sessions management
+  const {
+    chatSessions,
+    isLoadingSessions,
+    currentSession,
+    saveChatHistory,
+    loadChatSession,
+    startNewChat,
+    deleteChatSession
+  } = useChatSessions(messages, setMessages, userId);
+
   // File management
-  const fileManagement = useFileManagement();
+  const fileState = useFileState();
+  const fileFilters = useFileFilters(fileState.files);
+  const fileOperations = useFileOperations(fileState, sendMessage);
   
-  // Chat logic
-  const chatLogic = useChatLogic({
-    selectedFile: fileManagement.selectedFile,
-    fileContent: fileManagement.fileContent
-  });
-  
-  const messageHandling = useMessageHandling();
-  const scrollHandling = useScrollHandling(messagesEndRef);
-  
-  // Chat sessions
-  const chatSessions = useChatSessions(
-    messageHandling.messages,
-    messageHandling.setMessages
-  );
-  
-  // Initialize files on component mount
-  useEffect(() => {
-    fileManagement.initializeFiles();
-  }, []);
-  
-  // Analyze file with AI
-  const analyzeWithAI = () => {
-    if (!fileManagement.selectedFile || !fileManagement.fileContent) return;
-    
-    // Get file extension
-    const fileExtension = fileManagement.selectedFile.split('.').pop()?.toLowerCase() || '';
-    let fileType = 'text file';
-    
-    if (['js', 'jsx'].includes(fileExtension)) fileType = 'JavaScript file';
-    if (['ts', 'tsx'].includes(fileExtension)) fileType = 'TypeScript file';
-    if (['css', 'scss'].includes(fileExtension)) fileType = 'CSS/SCSS file';
-    if (['html'].includes(fileExtension)) fileType = 'HTML file';
-    if (['json'].includes(fileExtension)) fileType = 'JSON file';
-    
-    // Create analysis message
-    const analysisPrompt = `Please analyze this ${fileType} located at \`${fileManagement.selectedFile}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileManagement.fileContent}\n\`\`\``;
-    
-    // Send the message
-    messageHandling.sendMessage(analysisPrompt);
+  // File analysis with AI
+  const { analyzeFileWithAI } = useFileAnalysis(sendMessage);
+
+  // Enhanced file operations with AI analysis
+  const enhancedFileOperations = {
+    ...fileOperations,
+    handleAnalyzeWithAI: async () => {
+      if (fileState.selectedFile && fileState.fileContent) {
+        await analyzeFileWithAI(fileState.selectedFile, fileState.fileContent);
+      }
+    }
   };
 
+  // Scroll handling for chat
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { scrollToBottom } = useScrollHandling(messagesEndRef);
+
+  // Auto-save chat history when messages change
+  if (messages.length > 0 && currentSession) {
+    saveChatHistory();
+  }
+
   return {
-    // Refs
+    // Message handling
+    messages,
+    input,
+    setInput,
+    isProcessing,
+    isTyping: typingStatus === 'typing',
+    chatError,
+    sendMessage,
+    handleKeyDown,
+    handleClearChat,
+    retryLastMessage,
+    
+    // Chat sessions
+    chatSessions,
+    isLoadingSessions,
+    currentSession,
+    saveChatHistory,
+    loadChatSession,
+    startNewChat,
+    deleteChatSession,
+    
+    // File state
+    files: fileState.files,
+    selectedFile: fileState.selectedFile,
+    fileContent: fileState.fileContent,
+    isLoadingContent: fileState.isLoading,
+    fileError: fileState.fileError,
+    isEditing: fileState.isEditing,
+    
+    // File filters
+    searchTerm: fileFilters.searchTerm,
+    setSearchTerm: fileFilters.setSearchTerm,
+    filteredFiles: fileFilters.filteredFiles,
+    
+    // File operations
+    fetchFiles: enhancedFileOperations.fetchFiles,
+    handleFileSelect: enhancedFileOperations.handleFileSelect,
+    setFileContent: enhancedFileOperations.setFileContent,
+    setIsEditing: enhancedFileOperations.setIsEditing,
+    handleSaveFile: enhancedFileOperations.handleSaveFile,
+    handleAnalyzeWithAI: enhancedFileOperations.handleAnalyzeWithAI,
+    
+    // Scroll handling
     messagesEndRef,
-    
-    // File state and operations
-    ...fileManagement,
-    analyzeWithAI,
-    
-    // Chat state and operations
-    messages: messageHandling.messages,
-    setMessages: messageHandling.setMessages,
-    input: messageHandling.input,
-    setInput: messageHandling.setInput,
-    isProcessing: messageHandling.isProcessing,
-    typingStatus: messageHandling.typingStatus,
-    error: messageHandling.error,
-    sendMessage: messageHandling.sendMessage,
-    handleKeyDown: messageHandling.handleKeyDown,
-    handleClearChat: messageHandling.handleClearChat,
-    retryLastMessage: messageHandling.retryLastMessage,
-    
-    // Chat session operations
-    ...chatSessions,
-    
-    // Required by the UI components
-    isTyping: messageHandling.isProcessing,
-    chatError: messageHandling.error
+    scrollToBottom
   };
 };

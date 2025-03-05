@@ -1,102 +1,108 @@
 
 import React from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useCombinedChatLogic } from './ai-chat/hooks/useCombinedChatLogic';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChatInterface from './ai-chat/ChatInterface';
 import FileExplorer from './ai-chat/FileExplorer';
 import ChatSessionsList from './ai-chat/ChatSessionsList';
-import AdminActionsPanel from './ai-chat/AdminActionsPanel';
-import { useCombinedChatLogic } from './ai-chat/hooks/useCombinedChatLogic';
 
-const AdminAiChat: React.FC = () => {
+const AdminAiChat = () => {
+  const { user } = useAuth();
   const {
-    // File management
+    // Message handling
+    messages,
+    input,
+    setInput,
+    isProcessing,
+    isTyping,
+    chatError,
+    sendMessage,
+    handleKeyDown,
+    handleClearChat,
+    retryLastMessage,
+    
+    // Chat sessions
+    chatSessions,
+    isLoadingSessions,
+    currentSession,
+    loadChatSession,
+    startNewChat,
+    deleteChatSession,
+    
+    // File state and operations
     selectedFile,
     fileContent,
     isLoadingContent,
     fileError,
-    handleFileSelect,
     setFileContent,
-    isEditing,
     setIsEditing,
-    saveFileContent,
+    handleFileSelect,
+    handleSaveFile,
+    handleAnalyzeWithAI,
     
-    // Chat management
-    messages,
-    isTyping,
-    chatError,
-    messagesEndRef,
-    sendMessage,
-    retryLastMessage,
-    analyzeWithAI,
-    
-    // Session management
-    chatSessions,
-    currentSession,
-    isLoadingSessions,
-    startNewChat,
-    loadChatSession,
-    deleteChatSession
-  } = useCombinedChatLogic();
+    // Scroll handling
+    messagesEndRef
+  } = useCombinedChatLogic(user?.id);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">AI Admin Assistant</h1>
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+      {/* Chat History Sidebar */}
+      <div className="md:col-span-3">
+        <Card className="h-full">
+          <CardHeader className="py-3">
+            <CardTitle className="text-lg">Chat Sessions</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ChatSessionsList
+              sessions={chatSessions}
+              currentSessionId={currentSession}
+              isLoading={isLoadingSessions}
+              onCreateNewSession={startNewChat}
+              onLoadSession={loadChatSession}
+              onDeleteSession={deleteChatSession}
+            />
+          </CardContent>
+        </Card>
+      </div>
       
-      <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="chat">AI Chat</TabsTrigger>
-          <TabsTrigger value="files">Project Files</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="chat" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Sessions panel */}
-            <div className="md:col-span-1">
-              <ChatSessionsList 
-                sessions={chatSessions}
-                currentSessionId={currentSession}
-                isLoading={isLoadingSessions}
-                onCreateNewSession={startNewChat}
-                onLoadSession={loadChatSession}
-                onDeleteSession={deleteChatSession}
-                onRenameSession={(id, title) => console.log('Rename session', id, title)}
-              />
-              
-              <div className="mt-4">
-                <AdminActionsPanel />
-              </div>
-            </div>
-            
-            {/* Chat area */}
-            <div className="md:col-span-3 flex flex-col h-[calc(100vh-250px)]">
-              <ChatInterface 
-                messages={messages}
-                isTyping={isTyping}
-                chatError={chatError}
-                sendMessage={sendMessage}
-                retryLastMessage={retryLastMessage}
-                messagesEndRef={messagesEndRef}
-                isLoading={isTyping}
-              />
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="files" className="space-y-4">
-          <FileExplorer 
-            selectedFile={selectedFile}
-            fileContent={fileContent}
-            isLoadingContent={isLoadingContent}
-            fileError={fileError}
-            handleFileSelect={handleFileSelect}
-            setFileContent={setFileContent}
-            setIsEditing={setIsEditing}
-            handleSaveFile={() => saveFileContent(selectedFile, fileContent)}
-            handleAnalyzeWithAI={analyzeWithAI}
-            retryLastMessage={retryLastMessage}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* Main Content */}
+      <div className="md:col-span-9 space-y-4">
+        <Tabs defaultValue="chat">
+          <TabsList>
+            <TabsTrigger value="chat">Chat</TabsTrigger>
+            <TabsTrigger value="files">Files</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="chat" className="space-y-4">
+            <ChatInterface
+              messages={messages}
+              isTyping={isTyping}
+              chatError={chatError}
+              sendMessage={sendMessage}
+              retryLastMessage={retryLastMessage}
+              messagesEndRef={messagesEndRef}
+              isLoading={isProcessing}
+            />
+          </TabsContent>
+          
+          <TabsContent value="files" className="space-y-4">
+            <FileExplorer
+              selectedFile={selectedFile}
+              fileContent={fileContent}
+              isLoadingContent={isLoadingContent}
+              fileError={fileError}
+              handleFileSelect={handleFileSelect}
+              setFileContent={setFileContent}
+              setIsEditing={setIsEditing}
+              handleSaveFile={handleSaveFile}
+              handleAnalyzeWithAI={handleAnalyzeWithAI}
+              retryLastMessage={retryLastMessage}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
