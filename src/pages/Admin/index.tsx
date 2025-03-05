@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { assignAdminRole } from '@/utils/supabaseHelper';
+import AdminLayout from '@/components/layout/AdminLayout'; // Adjusted to your actual path
+import AdminAiChat from '@/components/admin/AdminAiChat'; // Import the AI chat component
 
 // Admin pages
 import AdminAnalytics from './AdminAnalytics';
@@ -93,88 +94,102 @@ const Admin = () => {
   };
   
   return (
-    <div className="container max-w-7xl mx-auto px-4 py-8 pt-20 md:pt-8">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage your application and users</p>
+    <AdminLayout>
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         </div>
         
-        <Tabs value={getCurrentTab()} className="space-y-6">
-          <div className="overflow-auto">
-            <TabsList className="flex flex-wrap">
-              <TabsTrigger 
-                value="analytics" 
-                onClick={() => handleTabClick('analytics')} 
-                className="flex-shrink-0"
-              >
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger 
-                value="audio-files" 
-                onClick={() => handleTabClick('audio-files')} 
-                className="flex-shrink-0"
-              >
-                Audio Files
-              </TabsTrigger>
-              <TabsTrigger 
-                value="users" 
-                onClick={() => handleTabClick('users')} 
-                className="flex-shrink-0"
-              >
-                Users
-              </TabsTrigger>
-              <TabsTrigger 
-                value="user-activity" 
-                onClick={() => handleTabClick('user-activity')} 
-                className="flex-shrink-0"
-              >
-                User Activity
-              </TabsTrigger>
-              <TabsTrigger 
-                value="user-update" 
-                onClick={() => handleTabClick('user-update')} 
-                className="flex-shrink-0"
-              >
-                Update User
-              </TabsTrigger>
-              <TabsTrigger 
-                value="feedback" 
-                onClick={() => handleTabClick('feedback')} 
-                className="flex-shrink-0"
-              >
-                Feedback
-              </TabsTrigger>
-              <TabsTrigger 
-                value="ai-chat" 
-                onClick={() => handleTabClick('ai-chat')} 
-                className="flex-shrink-0"
-              >
-                AI Chat
-              </TabsTrigger>
-              <TabsTrigger 
-                value="settings" 
-                onClick={() => handleTabClick('settings')} 
-                className="flex-shrink-0"
-              >
-                Settings
-              </TabsTrigger>
-            </TabsList>
+        <div className="container max-w-7xl mx-auto px-4 py-8 pt-20 md:pt-8">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+              <p className="text-muted-foreground">Manage your application and users</p>
+            </div>
+            
+            <Tabs value={getCurrentTab()} className="space-y-6">
+              <div className="overflow-auto">
+                <TabsList className="flex flex-wrap">
+                  <TabsTrigger 
+                    value="analytics" 
+                    onClick={() => handleTabClick('analytics')} 
+                    className="flex-shrink-0"
+                  >
+                    Analytics
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="audio-files" 
+                    onClick={() => handleTabClick('audio-files')} 
+                    className="flex-shrink-0"
+                  >
+                    Audio Files
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="users" 
+                    onClick={() => handleTabClick('users')} 
+                    className="flex-shrink-0"
+                  >
+                    Users
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="user-activity" 
+                    onClick={() => handleTabClick('user-activity')} 
+                    className="flex-shrink-0"
+                  >
+                    User Activity
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="user-update" 
+                    onClick={() => handleTabClick('user-update')} 
+                    className="flex-shrink-0"
+                  >
+                    Update User
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="feedback" 
+                    onClick={() => handleTabClick('feedback')} 
+                    className="flex-shrink-0"
+                  >
+                    Feedback
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="ai-chat" 
+                    onClick={() => handleTabClick('ai-chat')} 
+                    className="flex-shrink-0"
+                  >
+                    AI Chat
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="settings" 
+                    onClick={() => handleTabClick('settings')} 
+                    className="flex-shrink-0"
+                  >
+                    Settings
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <Routes>
+                <Route path="/" element={<AdminAnalytics />} />
+                <Route path="/audio-files" element={<AdminAudioFiles />} />
+                <Route path="/users" element={<AdminUserManagement />} />
+                <Route path="/user-activity" element={<AdminUserActivity />} />
+                <Route path="/user-update" element={<AdminUserUpdate />} />
+                <Route path="/feedback" element={<AdminFeedback />} />
+                <Route path="/ai-chat" element={<AdminAiChatPage />} />
+                <Route path="/settings" element={<AdminSettings />} />
+              </Routes>
+            </Tabs>
           </div>
-          
-          <Routes>
-            <Route path="/" element={<AdminAnalytics />} />
-            <Route path="/audio-files" element={<AdminAudioFiles />} />
-            <Route path="/users" element={<AdminUserManagement />} />
-            <Route path="/user-activity" element={<AdminUserActivity />} />
-            <Route path="/user-update" element={<AdminUserUpdate />} />
-            <Route path="/feedback" element={<AdminFeedback />} />
-            <Route path="/ai-chat" element={<AdminAiChatPage />} />
-            <Route path="/settings" element={<AdminSettings />} />
-          </Routes>
-        </Tabs>
+        </div>
+        
+        {/* Add the AI Chat component */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-semibold mb-4">AI Project Assistant</h2>
+          <AdminAiChat />
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

@@ -1,126 +1,111 @@
-
-import React, { RefObject, useEffect, useRef } from 'react';
-import { VariableSizeList as List } from 'react-window';
-import { Message, TypingStatus } from './types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { SendHorizonal, Loader } from 'lucide-react';
 import MessageItem from './MessageItem';
-import TypingIndicator from './TypingIndicator';
-import ErrorMessage from './ErrorMessage';
 import EmptyChat from './EmptyChat';
+import TypingIndicator from './TypingIndicator';
 
 interface ChatMessagesProps {
-  messages: Message[];
-  isProcessing: boolean;
-  typingStatus: TypingStatus;
-  messagesEndRef: RefObject<HTMLDivElement>;
-  error: string | null;
-  retryLastMessage: () => void;
+  messages: any[];
+  isLoading: boolean;
 }
 
-const ChatMessages: React.FC<ChatMessagesProps> = ({ 
-  messages, 
-  isProcessing, 
-  typingStatus,
-  messagesEndRef,
-  error,
-  retryLastMessage
-}) => {
-  const listRef = useRef<List>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const sizeMap = useRef<{[key: number]: number}>({});
-  
-  // Set initial item size
-  const setSize = (index: number, size: number) => {
-    sizeMap.current = { ...sizeMap.current, [index]: size };
-    if (listRef.current) {
-      listRef.current.resetAfterIndex(index);
-    }
-  };
+const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get item size for virtualization
-  const getSize = (index: number) => {
-    return sizeMap.current[index] || 100; // Default height
-  };
-
-  // Reset list when messages change
   useEffect(() => {
-    if (listRef.current) {
-      listRef.current.resetAfterIndex(0);
-      
-      // Scroll to bottom after a brief delay
-      setTimeout(() => {
-        if (containerRef.current) {
-          containerRef.current.scrollTop = containerRef.current.scrollHeight;
-        }
-      }, 50);
-    }
-  }, [messages.length]);
+    scrollToBottom();
+  }, [messages, isLoading]);
 
-  if (messages.length === 0) {
-    return <EmptyChat />;
-  }
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  // Calculate if we need virtualization (only for larger message sets)
-  const useVirtualization = messages.length > 20;
-  
   return (
-    <div 
-      ref={containerRef}
-      className="flex-1 overflow-y-auto h-full"
-    >
-      {useVirtualization ? (
-        <List
-          ref={listRef}
-          height={containerRef.current?.clientHeight || 500}
-          width="100%"
-          itemCount={messages.length}
-          itemSize={getSize}
-          layout="vertical"
-          overscanCount={5}
-        >
-          {({ index, style }) => (
-            <div style={style}>
-              <div 
-                ref={el => {
-                  if (el) {
-                    // Measure and update item size after rendering
-                    const height = el.getBoundingClientRect().height;
-                    if (height > 0 && height !== getSize(index)) {
-                      setSize(index, height);
-                    }
-                  }
-                }}
-              >
-                <MessageItem 
-                  message={messages[index]} 
-                  isLast={index === messages.length - 1} 
-                />
-              </div>
-            </div>
-          )}
-        </List>
+    <div className="space-y-4">
+      {messages.length === 0 ? (
+        <EmptyChat />
       ) : (
-        // For smaller message counts, use standard rendering for simplicity
-        <div className="space-y-1 pb-4">
-          {messages.map((msg, index) => (
-            <MessageItem 
-              key={msg.id || index} 
-              message={msg} 
-              isLast={index === messages.length - 1} 
-            />
-          ))}
-        </div>
+        messages.map((message, index) => (
+          <MessageItem 
+            key={index}
+            message={message}
+          />
+        ))
       )}
-      
-      {/* Invisible div for scrolling to bottom */}
+      {isLoading && <TypingIndicator />}
       <div ref={messagesEndRef} />
-      
-      {/* Typing indicator */}
-      {typingStatus === 'processing' && <TypingIndicator />}
-      
-      {/* Error message with retry option */}
-      {typingStatus === 'error' && error && <ErrorMessage error={error} retryLastMessage={retryLastMessage} />}
     </div>
   );
 };
 
+const ChatInput: React.FC = () => {
+  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // This will adjust the height of the textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [message]);
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || isLoading) return;
+
+    setIsLoading(true);
+    
+    try {
+      // Here you would send the message to your API or state management
+      console.log('Sending message:', message);
+      
+      // Placeholder for your actual send logic
+      // await sendMessage(message);
+      
+      // Clear the input after sending
+      setMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  return (
+    <div className="flex items-end gap-2">
+      <Textarea
+        ref={textareaRef}
+        placeholder="Ask a question or request help..."
+        className="min-h-[60px] flex-1 resize-none"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        onKeyDown={handleKeyDown}
+        disabled={isLoading}
+      />
+      <Button
+        className="h-10 w-10 rounded-full p-0 flex-shrink-0"
+        onClick={handleSendMessage}
+        disabled={!message.trim() || isLoading}
+      >
+        {isLoading ? (
+          <Loader className="h-4 w-4 animate-spin" />
+        ) : (
+          <SendHorizonal className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
+  );
+};
+
+export default ChatInput;
 export default ChatMessages;
