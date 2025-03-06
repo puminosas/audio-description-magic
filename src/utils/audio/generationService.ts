@@ -49,34 +49,7 @@ export async function generateAudioDescription(
     try {
       console.log(`Generating audio for ${finalText.substring(0, 30)}... with voice ${voice.id}`);
       
-      // For short descriptions, try using OpenAI first (as a fallback)
-      if (finalText.length < 500) {
-        try {
-          console.log("Attempting to generate with OpenAI TTS (faster response)...");
-          const { data: openaiData, error: openaiError } = await supabase.functions.invoke('generate-audio', {
-            body: {
-              text: finalText,
-              language: language.code,
-              voice: voice.name.toLowerCase()
-            }
-          });
-          
-          if (!openaiError && openaiData && openaiData.success && openaiData.audioUrl) {
-            console.log("Successfully generated audio with OpenAI TTS");
-            return {
-              audioUrl: openaiData.audioUrl,
-              text: finalText,
-              folderUrl: null
-            };
-          } else {
-            console.log("OpenAI TTS failed, falling back to Google TTS:", openaiError || openaiData?.error || "Unknown error");
-          }
-        } catch (openaiErr) {
-          console.log("OpenAI TTS error, falling back to Google TTS:", openaiErr);
-        }
-      }
-      
-      // Now generate the audio using Google TTS
+      // Generate the audio using Google TTS
       const { data, error } = await supabase.functions.invoke('generate-google-tts', {
         body: {
           text: finalText,

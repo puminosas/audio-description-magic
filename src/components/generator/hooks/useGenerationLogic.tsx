@@ -54,21 +54,52 @@ export const useGenerationLogic = () => {
       setError(null);
       setGeneratedAudio(null);
       
-      console.log("Generating audio with data:", formData);
+      console.log("Starting audio generation with data:", formData);
       
       if (!user && activeTab !== 'text-to-audio') {
         throw new Error('Please sign in to generate audio descriptions.');
       }
       
+      // Step 1: First, generate an enhanced product description if the text is short
+      let enhancedText = formData.text;
+      
+      if (formData.text.length < 100 && activeTab === 'generate') {
+        console.log("Input is short, generating enhanced description...");
+        
+        try {
+          // Call our Supabase Edge Function to generate a better description
+          const { data: descData, error: descError } = await supabase.functions.invoke('generate-description', {
+            body: {
+              product_name: formData.text,
+              language: formData.language.code,
+              voice_name: formData.voice.name
+            }
+          });
+          
+          if (descError) {
+            console.error("Error generating description:", descError);
+          } else if (descData?.success && descData?.generated_text) {
+            enhancedText = descData.generated_text;
+            console.log("Generated enhanced description:", enhancedText.substring(0, 100) + "...");
+          }
+        } catch (descErr) {
+          console.error("Failed to generate description:", descErr);
+          // Continue with original text if enhancement fails
+        }
+      }
+      
+      // Step 2: Generate the audio with our enhanced text
+      console.log(`Generating audio with ${enhancedText !== formData.text ? 'enhanced' : 'original'} text...`);
+      
       // Add a timeout to prevent long-running requests
       const timeoutPromise = new Promise<AudioErrorResult>((_, reject) => 
-        setTimeout(() => reject(new Error('The request took too long to complete. Try with a shorter text.')), 60000) // Increased timeout for Google TTS
+        setTimeout(() => reject(new Error('The request took too long to complete. Try with a shorter text.')), 60000)
       );
       
       // Race the generation with a timeout
       const result = await Promise.race([
         generateAudioDescription(
-          formData.text,
+          enhancedText,
           formData.language,
           formData.voice
         ),
@@ -114,17 +145,11 @@ export const useGenerationLogic = () => {
         return;
       }
       
-      console.log("Audio generation successful:", {
-        url: result.audioUrl.substring(0, 50) + '...',
-        text: result.text || formData.text,
-        folderUrl: result.folderUrl || 'No folder URL'
-      });
-      
       // Set audio with a small delay to ensure DOM is ready
       setTimeout(() => {
         setGeneratedAudio({
           audioUrl: result.audioUrl,
-          text: result.text || formData.text,
+          text: result.text || enhancedText,
           folderUrl: result.folderUrl || null
         });
       }, 100);
@@ -134,7 +159,7 @@ export const useGenerationLogic = () => {
           await Promise.all([
             saveAudioToHistory(
               result.audioUrl,
-              result.text || formData.text,
+              result.text || enhancedText,
               formData.language.name,
               formData.voice.name,
               user.id
@@ -153,7 +178,9 @@ export const useGenerationLogic = () => {
       
       toast({
         title: 'Success!',
-        description: 'Your audio description has been generated using Google Text-to-Speech.',
+        description: formData.text.length < 100 && enhancedText !== formData.text
+          ? 'Enhanced description generated and converted to audio.'
+          : 'Your audio description has been generated successfully.',
       });
       
     } catch (error) {
