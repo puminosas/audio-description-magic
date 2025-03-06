@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -11,30 +11,10 @@ import WelcomeMessage from '@/components/dashboard/WelcomeMessage';
 import TutorialCard from '@/components/dashboard/TutorialCard';
 import UpgradePlanBanner from '@/components/dashboard/UpgradePlanBanner';
 import ApiKeySection from '@/components/dashboard/ApiKeySection';
-import { Loader2 } from 'lucide-react';
-import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 const Dashboard = () => {
   const { user, loading, profile } = useAuth();
   const [showCreateApiKeyModal, setShowCreateApiKeyModal] = useState(false);
-  const { handleError } = useErrorHandler('Failed to load dashboard');
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Set a timeout to mark dashboard as loaded even if profile is delayed
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 3000); // Fallback after 3 seconds
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Set loaded when profile is ready
-  useEffect(() => {
-    if (profile) {
-      setIsLoaded(true);
-    }
-  }, [profile]);
 
   // Redirect if not logged in
   if (!loading && !user) {
@@ -42,18 +22,23 @@ const Dashboard = () => {
   }
 
   // Show loading state while authentication is being checked
-  if (loading && !isLoaded) {
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
-        </div>
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  // User is authenticated but profile might not be fully loaded yet
+  // User is authenticated but profile is not yet loaded
+  if (!profile) {
+    return (
+      <div className="container mx-auto p-4">
+        <h2 className="text-xl font-semibold">Loading your dashboard...</h2>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4">
       <DashboardHeader 

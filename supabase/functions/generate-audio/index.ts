@@ -9,19 +9,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Process base64 in chunks to prevent memory issues
+// Process base64 in chunks to prevent memory issues (stack overflow)
 function binaryToBase64(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
-  const chunks: string[] = [];
+  let base64 = '';
   const chunkSize = 1024; // Process in smaller chunks
   
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
-    const binaryString = Array.from(chunk).map(byte => String.fromCharCode(byte)).join('');
-    chunks.push(btoa(binaryString));
+    base64 += btoa(String.fromCharCode.apply(null, [...chunk]));
   }
   
-  return chunks.join('');
+  return base64;
 }
 
 serve(async (req) => {
@@ -40,7 +39,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing request for text: "${text.substring(0, 50)}...", language: ${language}, voice: ${voice}`);
+    console.log(`Processing request for text: "${text}", language: ${language}, voice: ${voice}`);
     
     if (!openaiApiKey) {
       console.error('No OpenAI API key found in environment variables');
@@ -63,9 +62,7 @@ serve(async (req) => {
         messages: [
           { role: "system", content: "You are a professional e-commerce product description writer." },
           { role: "user", content: `Write a high-quality, engaging product description for "${text}" in ${language}. Highlight its main features and benefits. Keep it under 150 words.` }
-        ],
-        max_tokens: 500, // Limit the token count
-        temperature: 0.7, // Add some randomness but not too much
+        ]
       })
     });
 
@@ -91,7 +88,7 @@ serve(async (req) => {
       throw new Error("Failed to generate a description");
     }
 
-    console.log("Generated Description:", generatedDescription.substring(0, 100) + "...");
+    console.log("Generated Description:", generatedDescription);
 
     // Step 2: Convert description into speech using OpenAI TTS
     console.log("Converting text to speech with OpenAI...");
