@@ -1,73 +1,38 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext';
 
 export interface NavLink {
-  title: string;
   href: string;
-  isExternal?: boolean;
-  requiresAuth?: boolean;
-  adminOnly?: boolean;
+  label: string;
 }
 
 interface NavLinksProps {
-  links?: NavLink[];
-  variant?: 'default' | 'mobile';
-  onLinkClick?: () => void;
+  className?: string;
 }
 
-const defaultLinks: NavLink[] = [
-  { title: 'Generator', href: '/' },
-  { title: 'Pricing', href: '/pricing' },
-  { title: 'Integration Docs', href: '/integration-docs' },
-];
-
-const NavLinks = ({ links = defaultLinks, variant = 'default', onLinkClick }: NavLinksProps) => {
-  const { user } = useAuth();
-  const isAdmin = false; // Simplified until you restore admin check
+const NavLinks = ({ className }: NavLinksProps) => {
+  const links: NavLink[] = [
+    { href: '/', label: 'Home' },
+    { href: '/pricing', label: 'Pricing' },
+    { href: '/integration-docs', label: 'Integration Docs' },
+  ];
 
   return (
-    <div className={cn(
-      variant === 'default' ? 'flex items-center space-x-1 md:space-x-2' : 'flex flex-col space-y-3'
-    )}>
-      {links.map((link) => {
-        // Skip admin-only links for non-admin users
-        if (link.adminOnly && !isAdmin) return null;
-        
-        // Skip auth-required links for non-authenticated users
-        if (link.requiresAuth && !user) return null;
-
-        return link.isExternal ? (
-          <a
-            key={link.href}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "text-sm font-medium transition-colors hover:text-primary",
-              variant === 'default' ? 'px-3 py-2' : 'px-2 py-1'
-            )}
-            onClick={onLinkClick}
-          >
-            {link.title}
-          </a>
-        ) : (
-          <Link
-            key={link.href}
-            to={link.href}
-            className={cn(
-              "text-sm font-medium transition-colors hover:text-primary",
-              variant === 'default' ? 'px-3 py-2' : 'px-2 py-1'
-            )}
-            onClick={onLinkClick}
-          >
-            {link.title}
-          </Link>
-        );
-      })}
-    </div>
+    <nav className={className}>
+      <ul className="flex space-x-8">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link
+              to={link.href}
+              className="text-gray-600 hover:text-primary transition-colors font-medium"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 };
 

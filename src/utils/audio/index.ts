@@ -1,7 +1,14 @@
 
-// Re-export all audio utility functions
-export * from './types';
-export * from './generationService';
-export * from './languageVoiceData';
-export * from './historyService';
-export * from './sessionUtils';
+import { getAvailableLanguages, getAvailableVoices, initializeGoogleVoices, getVoicesForLanguage } from './languageVoiceData';
+import { LanguageOption, VoiceOption } from './types';
+
+// Re-export types for easier importing
+export type { LanguageOption, VoiceOption };
+
+// Re-export functions for easier importing
+export {
+  getAvailableLanguages,
+  getAvailableVoices,
+  initializeGoogleVoices,
+  getVoicesForLanguage
+};
