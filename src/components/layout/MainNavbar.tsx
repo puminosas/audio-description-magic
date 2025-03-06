@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 const MainNavbar = () => {
   const { user, isAdmin } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Helper function to check if a path is active
@@ -57,11 +58,11 @@ const MainNavbar = () => {
           <div className="flex items-center">
             <div className="hidden md:block">
               {user ? (
-                <Button variant="outline" onClick={() => location.href = '/dashboard'}>
+                <Button variant="outline" onClick={() => navigate('/dashboard')}>
                   Dashboard
                 </Button>
               ) : (
-                <Button onClick={() => location.href = '/auth'}>
+                <Button onClick={() => navigate('/auth')}>
                   Sign In
                 </Button>
               )}
