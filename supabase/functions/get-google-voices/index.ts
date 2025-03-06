@@ -102,34 +102,57 @@ async function fetchGoogleVoices() {
     // Get credentials from environment variable
     const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
     if (!credentialsJson) {
-      throw new Error("Missing Google credentials");
+      console.error("Missing Google credentials");
+      return getFallbackVoices();
     }
     
     // Parse credentials
-    const credentials = JSON.parse(credentialsJson);
+    let credentials;
+    try {
+      credentials = JSON.parse(credentialsJson);
+    } catch (parseError) {
+      console.error("Failed to parse credentials JSON:", parseError);
+      return getFallbackVoices();
+    }
+    
     if (!credentials.client_email || !credentials.private_key) {
-      throw new Error("Invalid Google credentials format");
+      console.error("Invalid Google credentials format");
+      return getFallbackVoices();
     }
     
     console.log("Getting access token for Google API");
+    
     // Get access token
-    const accessToken = await getGoogleAccessToken(credentials);
+    let accessToken;
+    try {
+      accessToken = await getGoogleAccessToken(credentials);
+    } catch (tokenError) {
+      console.error("Failed to get access token:", tokenError);
+      return getFallbackVoices();
+    }
     
     console.log("Fetching voices from Google TTS API");
+    
     // Call Google TTS API to list voices
-    const response = await fetch(
-      "https://texttospeech.googleapis.com/v1beta1/voices",
-      {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-        },
-      }
-    );
+    let response;
+    try {
+      response = await fetch(
+        "https://texttospeech.googleapis.com/v1beta1/voices",
+        {
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+          },
+        }
+      );
+    } catch (fetchError) {
+      console.error("Failed to fetch from Google API:", fetchError);
+      return getFallbackVoices();
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Google API error:", errorText);
-      throw new Error(`Google API error: ${response.status} ${response.statusText}`);
+      return getFallbackVoices();
     }
 
     let data;
@@ -137,7 +160,7 @@ async function fetchGoogleVoices() {
       data = await response.json();
     } catch (parseError) {
       console.error("Error parsing response:", parseError);
-      throw new Error(`Failed to parse response: ${parseError.message}`);
+      return getFallbackVoices();
     }
     
     // Process voices to match the Python example format
@@ -195,7 +218,8 @@ function getLanguageDisplayName(code) {
     "nl-NL": "Dutch",
     "pl-PL": "Polish",
     "sv-SE": "Swedish",
-    "tr-TR": "Turkish"
+    "tr-TR": "Turkish",
+    "lt-LT": "Lithuanian"
   };
   
   return languageNames[code] || code;
@@ -270,6 +294,17 @@ function getFallbackVoices() {
         FEMALE: [
           { name: "ja-JP-Standard-A", ssml_gender: "FEMALE" },
           { name: "ja-JP-Wavenet-A", ssml_gender: "FEMALE" }
+        ]
+      }
+    },
+    "lt-LT": {
+      display_name: "Lithuanian",
+      voices: {
+        MALE: [
+          { name: "lt-LT-Standard-A", ssml_gender: "MALE" }
+        ],
+        FEMALE: [
+          { name: "lt-LT-Standard-B", ssml_gender: "FEMALE" }
         ]
       }
     }

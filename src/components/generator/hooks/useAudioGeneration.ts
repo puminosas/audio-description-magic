@@ -68,7 +68,7 @@ export const useAudioGeneration = () => {
           );
           
           // Call our Supabase Edge Function to generate a better description
-          const descPromise = supabase.functions.invoke('generate-description', {
+          const descResponse = await supabase.functions.invoke('generate-description', {
             body: {
               product_name: formData.text,
               language: formData.language.code,
@@ -76,17 +76,14 @@ export const useAudioGeneration = () => {
             }
           });
           
-          const descResponse = await Promise.race([
-            descPromise,
-            descTimeoutPromise
-          ]);
+          const descPromise = descResponse;
           
           // Check for error first
           if (descResponse.error) {
             console.error("Error generating description:", descResponse.error);
           } 
-          // Then check if we have data
-          else if (descResponse.data?.success && descResponse.data?.generated_text) {
+          // Then check if we have data and it contains success property
+          else if (descResponse.data && descResponse.data.success && descResponse.data.generated_text) {
             enhancedText = descResponse.data.generated_text;
             console.log("Generated enhanced description:", enhancedText.substring(0, 100) + "...");
           }
