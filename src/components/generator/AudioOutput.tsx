@@ -3,12 +3,15 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import AudioPlayer from '@/components/ui/AudioPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { History } from 'lucide-react';
 
 interface AudioOutputProps {
   audioUrl: string | null;
   generatedText: string | null;
   isGenerating: boolean;
   error: string | null;
+  isCached?: boolean;
 }
 
 const AudioOutput: React.FC<AudioOutputProps> = ({
@@ -16,6 +19,7 @@ const AudioOutput: React.FC<AudioOutputProps> = ({
   generatedText,
   isGenerating,
   error,
+  isCached
 }) => {
   if (!audioUrl && !isGenerating) return null;
 
@@ -32,6 +36,12 @@ const AudioOutput: React.FC<AudioOutputProps> = ({
             <>
               {audioUrl && (
                 <div className="pt-2">
+                  {isCached && (
+                    <Badge variant="secondary" className="mb-2 gap-1">
+                      <History size={12} />
+                      <span>Cached Result</span>
+                    </Badge>
+                  )}
                   <AudioPlayer
                     audioUrl={audioUrl}
                     fileName="audio-description.mp3"

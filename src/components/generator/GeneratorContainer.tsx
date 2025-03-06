@@ -14,7 +14,7 @@ const GeneratorContainer = () => {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState('generate');
   const { generationStats, fetchGenerationStats } = useGenerationStats();
-  const { loading, generatedAudio, error, handleGenerate, setError } = useGenerationLogic();
+  const { loading, generatedAudio, error, handleGenerate, setError, isCached } = useGenerationLogic();
 
   const handleGenerateAudio = async (formData: {
     text: string;
@@ -67,7 +67,7 @@ const GeneratorContainer = () => {
                 generatedText={generatedAudio?.text || null} 
                 isGenerating={loading}
                 error={error}
-                folderUrl={generatedAudio?.folderUrl || null}
+                isCached={isCached}
               />
             </div>
           )}

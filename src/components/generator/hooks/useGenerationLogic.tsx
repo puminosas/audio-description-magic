@@ -11,7 +11,8 @@ export const useGenerationLogic = () => {
     generatedAudio, 
     error, 
     handleGenerate, 
-    setError 
+    setError,
+    isCached
   } = useAudioGeneration();
 
   return {
@@ -19,6 +20,7 @@ export const useGenerationLogic = () => {
     generatedAudio,
     error,
     handleGenerate,
-    setError
+    setError,
+    isCached
   };
 };

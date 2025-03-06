@@ -10,6 +10,7 @@ import {
   VoiceOption,
   AudioGenerationResult,
   AudioSuccessResult,
+  AudioErrorResult,
 } from '@/utils/audio';
 import { useGenerationState, GeneratedAudio } from './useGenerationState';
 import { useGenerationErrors } from './useGenerationErrors';
@@ -18,7 +19,7 @@ import { useAudioValidator } from './useAudioValidator';
 export const useAudioGeneration = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { loading, setLoading, generatedAudio, setGeneratedAudio } = useGenerationState();
+  const { loading, setLoading, generatedAudio, setGeneratedAudio, findInCache, isCached } = useGenerationState();
   const { error, setError, handleError } = useGenerationErrors();
   const { validateAudioUrl } = useAudioValidator();
 
@@ -28,6 +29,7 @@ export const useAudioGeneration = () => {
     voice: VoiceOption;
   }, activeTab: string, onSuccess?: () => Promise<void>) => {
     try {
+      // Start with clean state
       setLoading(true);
       setError(null);
       setGeneratedAudio(null);
@@ -38,6 +40,21 @@ export const useAudioGeneration = () => {
         throw new Error('Please sign in to generate audio descriptions.');
       }
       
+      // Check cache first to avoid unnecessary API calls
+      const cachedAudio = findInCache(formData.text);
+      if (cachedAudio) {
+        console.log("Found in cache, using cached audio");
+        setGeneratedAudio(cachedAudio);
+        
+        toast({
+          title: 'Using Cached Audio',
+          description: 'Using a recently generated version of this audio for better performance.',
+        });
+        
+        setLoading(false);
+        return;
+      }
+      
       // Step 1: First, generate an enhanced product description if the text is short
       let enhancedText = formData.text;
       
@@ -45,14 +62,24 @@ export const useAudioGeneration = () => {
         console.log("Input is short, generating enhanced description...");
         
         try {
+          // Add a timeout for description generation
+          const descTimeoutPromise = new Promise<{success: false, error: string}>((_, reject) => 
+            setTimeout(() => reject(new Error('Description generation timed out')), 15000)
+          );
+          
           // Call our Supabase Edge Function to generate a better description
-          const { data: descData, error: descError } = await supabase.functions.invoke('generate-description', {
+          const descPromise = supabase.functions.invoke('generate-description', {
             body: {
               product_name: formData.text,
               language: formData.language.code,
               voice_name: formData.voice.name
             }
           });
+          
+          const { data: descData, error: descError } = await Promise.race([
+            descPromise,
+            descTimeoutPromise
+          ]);
           
           if (descError) {
             console.error("Error generating description:", descError);
@@ -70,8 +97,8 @@ export const useAudioGeneration = () => {
       console.log(`Generating audio with ${enhancedText !== formData.text ? 'enhanced' : 'original'} text...`);
       
       // Add a timeout to prevent long-running requests
-      const timeoutPromise = new Promise<AudioGenerationResult>((_, reject) => 
-        setTimeout(() => reject(new Error('The request took too long to complete. Try with a shorter text.')), 60000)
+      const timeoutPromise = new Promise<AudioErrorResult>((_, reject) => 
+        setTimeout(() => ({ error: 'The request took too long to complete. Try with a shorter text.' }), 60000)
       );
       
       // Race the generation with a timeout
@@ -123,21 +150,26 @@ export const useAudioGeneration = () => {
         return;
       }
       
-      // Set audio with a small delay to ensure DOM is ready
+      // Create the audio object
+      const audioData: GeneratedAudio = {
+        audioUrl: result.audioUrl,
+        text: result.text || enhancedText,
+        folderUrl: null, // Removing folderUrl since we only use Supabase Storage
+        id: result.id || crypto.randomUUID(),
+        timestamp: Date.now()
+      };
+      
+      // Set generated audio with a small delay to ensure DOM is ready
       setTimeout(() => {
-        setGeneratedAudio({
-          audioUrl: result.audioUrl,
-          text: result.text || enhancedText,
-          folderUrl: null // Removing folderUrl since we only use Supabase Storage
-        });
+        setGeneratedAudio(audioData);
       }, 100);
       
       if (user?.id) {
         try {
           await Promise.all([
             saveAudioToHistory(
-              result.audioUrl,
-              result.text || enhancedText,
+              audioData.audioUrl,
+              audioData.text,
               formData.language.name,
               formData.voice.name,
               user.id
@@ -174,6 +206,7 @@ export const useAudioGeneration = () => {
     generatedAudio,
     error,
     handleGenerate,
-    setError
+    setError,
+    isCached
   };
 };

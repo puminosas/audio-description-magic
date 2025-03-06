@@ -2,6 +2,24 @@
 import { supabase } from '@/integrations/supabase/client';
 import { AudioGenerationResult, AudioSuccessResult, AudioErrorResult, LanguageOption, VoiceOption } from './types';
 
+// Create a simple rate limiter for API calls
+const apiCallTimestamps: Record<string, number[]> = {};
+
+const checkRateLimiting = (apiName: string, maxCalls: number, timeWindowMs: number): boolean => {
+  const now = Date.now();
+  const timestamps = apiCallTimestamps[apiName] || [];
+  
+  // Filter out timestamps older than our time window
+  const recentCalls = timestamps.filter(time => (now - time) < timeWindowMs);
+  
+  // Add current timestamp
+  recentCalls.push(now);
+  apiCallTimestamps[apiName] = recentCalls;
+  
+  // Check if we've exceeded our rate limit
+  return recentCalls.length <= maxCalls;
+};
+
 /**
  * Generate an audio description using Google Text-to-Speech via our Supabase Edge Function
  */
@@ -18,10 +36,15 @@ export async function generateAudioDescription(
       return { error: 'Authentication required to generate audio descriptions' };
     }
 
+    // Apply rate limiting - 10 calls per minute
+    if (!checkRateLimiting('generateDescription', 10, 60000)) {
+      return { error: 'Rate limit exceeded. Please wait a moment before generating more audio.' };
+    }
+
     // First determine if we need to generate a description
     let finalText = text;
     
-    if (text.length < 20) {
+    if (text.length < 50) {
       try {
         console.log(`Generating description for: ${text} in language: ${language.code}`);
         // This is likely a product name, so generate a description
@@ -48,6 +71,11 @@ export async function generateAudioDescription(
 
     try {
       console.log(`Generating audio for ${finalText.substring(0, 30)}... with voice ${voice.id}`);
+      
+      // Apply rate limiting - 5 calls per minute for TTS
+      if (!checkRateLimiting('generateAudio', 5, 60000)) {
+        return { error: 'Rate limit exceeded for audio generation. Please wait a moment before generating more audio.' };
+      }
       
       // Generate the audio using Google TTS
       const { data, error } = await supabase.functions.invoke('generate-google-tts', {
@@ -82,7 +110,8 @@ export async function generateAudioDescription(
       const result: AudioSuccessResult = {
         audioUrl: data.audio_url,
         text: finalText,
-        folderUrl: null // No longer needed since we're using Supabase storage
+        folderUrl: null, // No longer needed since we're using Supabase storage
+        id: data.fileName || crypto.randomUUID() // Store the filename as ID for reference
       };
 
       return result;
@@ -109,6 +138,12 @@ export async function generateAudioDescription(
  */
 export async function fetchGoogleVoices() {
   try {
+    // Apply rate limiting - 1 call per minute for voice list
+    if (!checkRateLimiting('fetchVoices', 1, 60000)) {
+      console.warn('Rate limiting applied to voice fetching - using cached voices');
+      return getDefaultVoices();
+    }
+    
     console.log('Fetching Google TTS voices...');
     const { data, error } = await supabase.functions.invoke('get-google-voices');
     
@@ -121,16 +156,39 @@ export async function fetchGoogleVoices() {
     return data;
   } catch (error) {
     console.error('Error in fetchGoogleVoices:', error);
-    
-    // Return fallback voice data if API call fails
-    return {
-      "en-US": {
-        display_name: "English (US)",
-        voices: {
-          MALE: [{ name: "en-US-Wavenet-A", ssml_gender: "MALE" }],
-          FEMALE: [{ name: "en-US-Wavenet-C", ssml_gender: "FEMALE" }]
-        }
-      }
-    };
+    return getDefaultVoices();
   }
+}
+
+// Helper function to provide default voices when API call fails
+function getDefaultVoices() {
+  return {
+    "en-US": {
+      display_name: "English (US)",
+      voices: {
+        MALE: [
+          { name: "en-US-Wavenet-A", ssml_gender: "MALE" },
+          { name: "en-US-Wavenet-B", ssml_gender: "MALE" }
+        ],
+        FEMALE: [
+          { name: "en-US-Wavenet-C", ssml_gender: "FEMALE" },
+          { name: "en-US-Wavenet-E", ssml_gender: "FEMALE" }
+        ]
+      }
+    },
+    "es-ES": {
+      display_name: "Spanish (Spain)",
+      voices: {
+        MALE: [{ name: "es-ES-Standard-B", ssml_gender: "MALE" }],
+        FEMALE: [{ name: "es-ES-Standard-A", ssml_gender: "FEMALE" }]
+      }
+    },
+    "fr-FR": {
+      display_name: "French (France)",
+      voices: {
+        MALE: [{ name: "fr-FR-Wavenet-B", ssml_gender: "MALE" }],
+        FEMALE: [{ name: "fr-FR-Wavenet-A", ssml_gender: "FEMALE" }]
+      }
+    }
+  };
 }
