@@ -1,9 +1,9 @@
 
 import { useAudioGeneration } from './useAudioGeneration';
-import { GeneratedAudio } from './useGenerationState';
 import { LanguageOption, VoiceOption } from '@/utils/audio';
 
-export { GeneratedAudio } from './useGenerationState';
+// Use 'export type' when re-exporting a type with isolatedModules enabled
+export type { GeneratedAudio } from './useGenerationState';
 
 export const useGenerationLogic = () => {
   const { 

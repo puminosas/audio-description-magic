@@ -8,6 +8,8 @@ import {
   updateGenerationCount, 
   LanguageOption,
   VoiceOption,
+  AudioGenerationResult,
+  AudioSuccessResult,
 } from '@/utils/audio';
 import { useGenerationState, GeneratedAudio } from './useGenerationState';
 import { useGenerationErrors } from './useGenerationErrors';
@@ -68,7 +70,7 @@ export const useAudioGeneration = () => {
       console.log(`Generating audio with ${enhancedText !== formData.text ? 'enhanced' : 'original'} text...`);
       
       // Add a timeout to prevent long-running requests
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<AudioGenerationResult>((_, reject) => 
         setTimeout(() => reject(new Error('The request took too long to complete. Try with a shorter text.')), 60000)
       );
       
@@ -80,7 +82,7 @@ export const useAudioGeneration = () => {
           formData.voice
         ),
         timeoutPromise
-      ]);
+      ]) as AudioGenerationResult;
       
       if ('error' in result) {
         const errorMessage = result.error;
