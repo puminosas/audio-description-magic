@@ -45,7 +45,7 @@ const GeneratorContainer = () => {
   };
 
   return (
-    <div className="container max-w-6xl mx-auto px-4 py-8 md:py-12">
+    <div className="container max-w-6xl mx-auto px-4 py-8">
       <GeneratorHeader />
       <ErrorAlert error={error} />
 

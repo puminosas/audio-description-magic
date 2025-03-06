@@ -2,20 +2,13 @@
 #root {
   max-width: 100%;
   margin: 0 auto;
-  padding: 0.5rem;
+  padding: 0;
   text-align: center;
 }
 
 @media (min-width: 768px) {
   #root {
     max-width: 1280px;
-    padding: 1rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  #root {
-    padding: 2rem;
   }
 }
 
@@ -90,15 +83,22 @@
 
 /* Fix for mobile padding */
 main {
-  padding-top: 60px;
   width: 100%;
   overflow-x: hidden;
 }
 
-@media (min-width: 768px) {
-  main {
-    padding-top: 80px;
-  }
+/* Navbar height and main content padding */
+.sound-wave {
+  display: flex;
+  align-items: flex-end;
+  height: 24px;
+  gap: 3px;
+}
+
+.sound-wave .bar {
+  width: 3px;
+  background-color: hsl(var(--primary));
+  border-radius: 999px;
 }
 
 /* Glassmorphism utility class */
