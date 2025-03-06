@@ -71,14 +71,14 @@ export const useAudioGenerationProcess = () => {
     ]) as AudioGenerationResult;
     
     if ('error' in result) {
-      return result;
+      return result as AudioErrorResult;
     }
     
-    // Create the audio object
+    // Create the audio object with the required folderUrl property
     const audioData: GeneratedAudio = {
-      audioUrl: result.audioUrl,
+      audioUrl: result.audioUrl || '',
       text: result.text || enhancedText,
-      folderUrl: null, // Removing folderUrl since we only use Supabase Storage
+      folderUrl: null, // Adding null as required by GeneratedAudio type
       id: result.id || crypto.randomUUID(),
       timestamp: Date.now()
     };
