@@ -13,13 +13,14 @@ export const saveAudioToHistory = async (
 ): Promise<boolean> => {
   try {
     const { data, error } = await supabase
-      .from('audio_history')
+      .from('audio_files')
       .insert({
         user_id: userId,
-        text_content: text,
+        title: text.substring(0, 100), // Use first 100 chars as title
+        description: text,
         audio_url: audioUrl,
         language,
-        voice,
+        voice_name: voice,
         created_at: new Date().toISOString()
       });
       
@@ -71,13 +72,13 @@ export const getAudioHistory = async () => {
 export const updateGenerationCount = async (userId: string): Promise<boolean> => {
   try {
     const { data, error } = await supabase
-      .from('user_stats')
+      .from('generation_counts')
       .upsert({
         user_id: userId,
-        total_generations: 1, // This will be incremented by RLS trigger
-        last_generation: new Date().toISOString()
+        count: 1, // This will be incremented by database trigger if one exists
+        date: new Date().toISOString().split('T')[0] // Get date part only
       }, {
-        onConflict: 'user_id'
+        onConflict: 'user_id,date'
       });
       
     if (error) {
@@ -89,5 +90,51 @@ export const updateGenerationCount = async (userId: string): Promise<boolean> =>
   } catch (error) {
     console.error('Error in updateGenerationCount:', error);
     return false;
+  }
+};
+
+/**
+ * Delete an audio file from history
+ */
+export const deleteAudioFile = async (fileId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('audio_files')
+      .delete()
+      .eq('id', fileId);
+      
+    if (error) {
+      console.error('Error deleting audio file:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in deleteAudioFile:', error);
+    return false;
+  }
+};
+
+/**
+ * Fetch limited audio files for a user
+ */
+export const fetchUserAudios = async (userId: string, limit = 5) => {
+  try {
+    const { data, error } = await supabase
+      .from('audio_files')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+      
+    if (error) {
+      console.error('Error fetching user audios:', error);
+      return { data: [] };
+    }
+    
+    return { data: data || [] };
+  } catch (error) {
+    console.error('Error in fetchUserAudios:', error);
+    return { data: [] };
   }
 };

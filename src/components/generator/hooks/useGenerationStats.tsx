@@ -23,8 +23,8 @@ export const useGenerationStats = () => {
     try {
       const stats = await getUserGenerationStats(user.id);
       setGenerationStats({
-        total: stats.total || 0,
-        today: stats.today || 0,
+        total: stats.totalGenerations || 0,
+        today: stats.recentGenerations?.length || 0,
         remaining: profile?.remaining_generations || 10
       });
     } catch (error) {

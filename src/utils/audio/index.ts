@@ -31,20 +31,44 @@ export const initializeGoogleVoices = async () => {
 // Added for compatibility with existing code
 export const getUserGenerationStats = async (userId: string) => {
   try {
-    return { totalGenerations: 0, recentGenerations: [] };
+    // Query generation counts
+    const { data: counts } = await supabase
+      .from('generation_counts')
+      .select('count')
+      .eq('user_id', userId);
+      
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get today's generations
+    const { data: todayData } = await supabase
+      .from('generation_counts')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .single();
+    
+    // Calculate total generations
+    const totalGenerations = counts?.reduce((sum, item) => sum + (item.count || 0), 0) || 0;
+    
+    // Get recent audio files
+    const { data: recentGenerations } = await supabase
+      .from('audio_files')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+      
+    return { 
+      totalGenerations, 
+      recentGenerations: recentGenerations || [],
+      todayCount: todayData?.count || 0
+    };
   } catch (error) {
     console.error('Error fetching user stats:', error);
-    return { totalGenerations: 0, recentGenerations: [] };
+    return { totalGenerations: 0, recentGenerations: [], todayCount: 0 };
   }
 };
 
-// Added for compatibility with existing code
-export const fetchUserAudios = async (userId: string) => {
-  try {
-    const { getAudioHistory } = await import('./historyService');
-    return await getAudioHistory();
-  } catch (error) {
-    console.error('Error fetching user audios:', error);
-    return [];
-  }
-};
+// Add supabase import for the functions above
+import { supabase } from '@/integrations/supabase/client';
