@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { useAudioGeneration } from './useAudioGeneration';
+import { useAudioGeneration } from './audio-generation';
 import { LanguageOption, VoiceOption } from '@/utils/audio/types';
 import { initializeGoogleVoices } from '@/utils/audio';
 
