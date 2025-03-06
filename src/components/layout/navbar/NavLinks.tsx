@@ -1,56 +1,72 @@
+
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { useAdminCheck } from '@/hooks/useAdminCheck';
-import { useMobile } from '@/hooks/useMobile';
 
-const NavLinks = () => {
+export interface NavLink {
+  title: string;
+  href: string;
+  isExternal?: boolean;
+  requiresAuth?: boolean;
+  adminOnly?: boolean;
+}
+
+interface NavLinksProps {
+  links?: NavLink[];
+  variant?: 'default' | 'mobile';
+  onLinkClick?: () => void;
+}
+
+const defaultLinks: NavLink[] = [
+  { title: 'Generator', href: '/' },
+  { title: 'Pricing', href: '/pricing' },
+  { title: 'Integration Docs', href: '/integration-docs' },
+];
+
+const NavLinks = ({ links = defaultLinks, variant = 'default', onLinkClick }: NavLinksProps) => {
   const { user } = useAuth();
-  const isAdmin = useAdminCheck();
-  const location = useLocation();
-  const isMobile = useMobile();
-  
-  const linkContainerClasses = `
-    flex 
-    ${isMobile ? 'flex-col items-center w-full' : 'items-center gap-6'}
-  `;
+  const isAdmin = false; // Simplified until you restore admin check
 
-  const navLinkClasses = ({ isActive }: { isActive: boolean }) => {
-    return `
-      text-sm 
-      font-medium 
-      ${isMobile ? 'w-full text-center py-3' : ''}
-      hover:text-primary 
-      transition-colors 
-      duration-200
-      ${isActive ? 'text-primary' : 'text-secondary-foreground'}
-    `;
-  };
-  
-  const NavItem = ({ to, children, isActive }: { to: string, children: React.ReactNode, isActive: boolean }) => (
-    <NavLink to={to} className={navLinkClasses} >
-      {children}
-    </NavLink>
-  );
-  
   return (
-    <div className={linkContainerClasses}>
-      <NavItem to="/" isActive={location.pathname === "/"}>Home</NavItem>
-      
-      {/* Add link to embed audio documentation */}
-      <NavItem to="/embed-audio-docs" isActive={location.pathname === "/embed-audio-docs"}>
-        Integration Docs
-      </NavItem>
-      
-      <NavItem to="/generator" isActive={location.pathname === "/generator"}>Generator</NavItem>
-      
-      {user && isAdmin && (
-        <NavItem to="/admin" isActive={location.pathname === "/admin"}>Admin</NavItem>
-      )}
-      
-      {user ? (
-        <NavItem to="/history" isActive={location.pathname === "/history"}>History</NavItem>
-      ) : null}
+    <div className={cn(
+      variant === 'default' ? 'flex items-center space-x-1 md:space-x-2' : 'flex flex-col space-y-3'
+    )}>
+      {links.map((link) => {
+        // Skip admin-only links for non-admin users
+        if (link.adminOnly && !isAdmin) return null;
+        
+        // Skip auth-required links for non-authenticated users
+        if (link.requiresAuth && !user) return null;
+
+        return link.isExternal ? (
+          <a
+            key={link.href}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "text-sm font-medium transition-colors hover:text-primary",
+              variant === 'default' ? 'px-3 py-2' : 'px-2 py-1'
+            )}
+            onClick={onLinkClick}
+          >
+            {link.title}
+          </a>
+        ) : (
+          <Link
+            key={link.href}
+            to={link.href}
+            className={cn(
+              "text-sm font-medium transition-colors hover:text-primary",
+              variant === 'default' ? 'px-3 py-2' : 'px-2 py-1'
+            )}
+            onClick={onLinkClick}
+          >
+            {link.title}
+          </Link>
+        );
+      })}
     </div>
   );
 };
