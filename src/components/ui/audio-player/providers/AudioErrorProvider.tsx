@@ -30,43 +30,6 @@ export const AudioErrorProvider = ({
       return;
     }
     
-    // Enhanced validation for data URLs
-    if (audioUrl.startsWith('data:audio/')) {
-      const parts = audioUrl.split('base64,');
-      
-      // Check for basic format validity
-      if (parts.length !== 2) {
-        setError("Invalid audio data format");
-        setIsLoading(false);
-        return;
-      }
-      
-      const base64Data = parts[1];
-      
-      // Check for minimum data length (more permissive now)
-      if (base64Data.length < 5000) {
-        setError("Audio data is too small to be valid");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Check for truncation (invalid base64 padding)
-      if (base64Data.length % 4 !== 0) {
-        setError("Audio data appears to be truncated. Try generating with shorter text.");
-        setIsLoading(false);
-        return;
-      }
-    }
-    
-    // Check for Google Storage URLs with expected issues
-    if (audioUrl.includes('storage.googleapis.com') || audioUrl.includes('storage.cloud.google.com')) {
-      if (audioUrl.includes('403') || audioUrl.includes('Access Denied')) {
-        setError("Access denied to audio file. Please contact the administrator to check Google Cloud Storage permissions.");
-        setIsLoading(false);
-        return;
-      }
-    }
-    
     setIsLoading(true);
     
     // Create a new Audio element to precheck if the URL is valid
@@ -83,23 +46,29 @@ export const AudioErrorProvider = ({
             errorMessage = "Audio loading was aborted.";
             break;
           case MediaError.MEDIA_ERR_NETWORK:
-            errorMessage = "Network error occurred while loading audio.";
+            errorMessage = "Network error occurred while loading audio. Check if the URL is accessible.";
             break;
           case MediaError.MEDIA_ERR_DECODE:
             errorMessage = "Audio decoding failed. Try another browser or download the file directly.";
             break;
           case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            errorMessage = "Audio format is not supported by your browser. Try MP3 format.";
+            errorMessage = "Audio format is not supported by your browser. Try downloading the MP3 file directly.";
             break;
         }
       }
       
-      // For external URLs, provide more specific Google Storage error messages
-      if (audioUrl.includes('storage.googleapis.com') || audioUrl.includes('storage.cloud.google.com')) {
+      // For external URLs, provide more specific error messages
+      if (audioUrl.includes('storage.googleapis.com') || 
+          audioUrl.includes('storage.cloud.google.com') ||
+          audioUrl.includes('supabase.co/storage')) {
+        
+        // Check for common cloud storage issues
         if (audioUrl.includes('Access Denied') || audioUrl.includes('permission') || audioUrl.includes('403')) {
-          errorMessage = "Access denied to audio file. Please contact the administrator to check Google Cloud Storage permissions.";
+          errorMessage = "Access denied to audio file. The file may have expired or requires authorization.";
+        } else if (audioUrl.includes('404') || audioUrl.includes('Not Found')) {
+          errorMessage = "Audio file not found. It may have been removed or relocated.";
         } else {
-          errorMessage = "Failed to load audio from Google Storage. The file may have been removed or is not accessible.";
+          errorMessage = "Failed to load audio from cloud storage. Try downloading the file instead.";
         }
       }
       
@@ -127,10 +96,8 @@ export const AudioErrorProvider = ({
           } else {
             setError("Audio loading timed out. Try a different browser or download the file.");
           }
-        } else if (audioUrl.includes('storage.googleapis.com') || audioUrl.includes('storage.cloud.google.com')) {
-          setError("Audio loading timed out. There might be a permission issue with Google Cloud Storage.");
         } else {
-          setError("Audio loading timed out. Check your network connection or try again later.");
+          setError("Audio loading timed out. The file may have expired or be unavailable. Try generating a new audio file.");
         }
         setIsLoading(false);
       }

@@ -1,3 +1,4 @@
+
 // Validate request data and environment variables
 export function validateTTSRequest(data: any) {
   const { text, language, voice, user_id } = data;
@@ -16,6 +17,11 @@ export function validateTTSRequest(data: any) {
   
   if (!user_id || typeof user_id !== 'string') {
     throw new Error('User ID is required and must be a string');
+  }
+  
+  // Validate text length to prevent extremely large TTS requests
+  if (text.length > 5000) {
+    throw new Error('Text exceeds maximum length of 5000 characters');
   }
   
   return { text, language, voice, user_id };
@@ -45,8 +51,27 @@ export function validateEnvironment() {
   // Parse the credentials JSON
   try {
     const credentials = JSON.parse(GOOGLE_APPLICATION_CREDENTIALS);
+    
+    // Validate essential credential fields
+    if (!credentials.project_id || !credentials.private_key || !credentials.client_email) {
+      throw new Error('Google credentials JSON missing required fields');
+    }
+    
     return { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_STORAGE_BUCKET, credentials };
   } catch (e) {
-    throw new Error('Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format');
+    throw new Error('Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format: ' + e.message);
   }
+}
+
+// Validate and sanitize file paths to prevent security issues
+export function validateAndSanitizeFilePath(path: string): string {
+  // Remove any potentially harmful characters
+  const sanitized = path.replace(/[^a-zA-Z0-9_\-./]/g, '_');
+  
+  // Prevent path traversal attacks
+  if (sanitized.includes('..')) {
+    throw new Error('Invalid file path: path traversal not allowed');
+  }
+  
+  return sanitized;
 }
