@@ -142,7 +142,7 @@ export async function fetchGoogleVoices() {
     // Apply rate limiting - 1 call per minute for voice list
     if (!checkRateLimiting('fetchVoices', 1, 60000)) {
       console.warn('Rate limiting applied to voice fetching - using cached voices');
-      return getDefaultVoices();
+      throw new Error('Rate limit reached for voice fetching. Try again later.');
     }
     
     console.log('Fetching Google TTS voices...');
@@ -153,43 +153,14 @@ export async function fetchGoogleVoices() {
       throw new Error(error.message);
     }
     
+    if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+      throw new Error('No voices available. Google TTS API may be unreachable.');
+    }
+    
     console.log('Successfully fetched Google TTS voices');
     return data;
   } catch (error) {
     console.error('Error in fetchGoogleVoices:', error);
-    return getDefaultVoices();
+    throw error;
   }
-}
-
-// Helper function to provide default voices when API call fails
-function getDefaultVoices() {
-  return {
-    "en-US": {
-      display_name: "English (US)",
-      voices: {
-        MALE: [
-          { name: "en-US-Wavenet-A", ssml_gender: "MALE" },
-          { name: "en-US-Wavenet-B", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "en-US-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "en-US-Wavenet-E", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "es-ES": {
-      display_name: "Spanish (Spain)",
-      voices: {
-        MALE: [{ name: "es-ES-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "es-ES-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "fr-FR": {
-      display_name: "French (France)",
-      voices: {
-        MALE: [{ name: "fr-FR-Wavenet-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "fr-FR-Wavenet-A", ssml_gender: "FEMALE" }]
-      }
-    }
-  };
 }

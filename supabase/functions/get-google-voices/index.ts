@@ -28,7 +28,12 @@ serve(async (req) => {
     const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
     if (!credentialsJson) {
       console.error("Google credentials not found in environment variables");
-      return getDefaultVoicesResponse();
+      return new Response(JSON.stringify({
+        error: "Google TTS API credentials not configured"
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
     // Parse the credentials
@@ -37,13 +42,23 @@ serve(async (req) => {
       credentials = JSON.parse(credentialsJson);
     } catch (parseError) {
       console.error("Failed to parse Google credentials:", parseError);
-      return getDefaultVoicesResponse();
+      return new Response(JSON.stringify({
+        error: "Invalid Google TTS API credentials format"
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
     // Validate that we have the necessary credentials
     if (!credentials.private_key || !credentials.client_email) {
       console.error("Invalid Google credentials format");
-      return getDefaultVoicesResponse();
+      return new Response(JSON.stringify({
+        error: "Incomplete Google TTS API credentials"
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
     // Get access token for Google API
@@ -54,7 +69,12 @@ serve(async (req) => {
       console.log("Successfully obtained access token");
     } catch (tokenError) {
       console.error("Failed to get access token:", tokenError);
-      return getDefaultVoicesResponse();
+      return new Response(JSON.stringify({
+        error: "Failed to authenticate with Google TTS API: " + tokenError.message
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
     // Call the Google Cloud Text-to-Speech API to get voices
@@ -72,14 +92,24 @@ serve(async (req) => {
       
       if (!voicesResponse.ok) {
         console.error(`API error: ${voicesResponse.status} - ${voicesResponse.statusText}`);
-        return getDefaultVoicesResponse();
+        return new Response(JSON.stringify({
+          error: `Google TTS API responded with error: ${voicesResponse.status} ${voicesResponse.statusText}`
+        }), {
+          status: voicesResponse.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
       
       const voicesData = await voicesResponse.json();
       
       if (!voicesData.voices || !Array.isArray(voicesData.voices)) {
         console.error("Invalid response format from Google TTS API");
-        return getDefaultVoicesResponse();
+        return new Response(JSON.stringify({
+          error: "Invalid response format from Google TTS API"
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
       
       // Process the voices into our desired format
@@ -97,12 +127,22 @@ serve(async (req) => {
       
     } catch (apiError) {
       console.error("Error fetching voices from API:", apiError);
-      return getDefaultVoicesResponse();
+      return new Response(JSON.stringify({
+        error: `Failed to fetch voices from Google TTS API: ${apiError.message}`
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
   } catch (error) {
     console.error("Unhandled error:", error);
-    return getDefaultVoicesResponse();
+    return new Response(JSON.stringify({
+      error: `Unhandled error in get-google-voices: ${error.message}`
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });
 
@@ -255,51 +295,4 @@ function getLanguageDisplayName(code: string): string {
   };
   
   return languageNames[code] || code;
-}
-
-// Return default voices when we can't fetch from the API
-function getDefaultVoicesResponse() {
-  console.log("Returning default voices data");
-  
-  const defaultVoices = {
-    "en-US": {
-      display_name: "English (US)",
-      voices: {
-        MALE: [
-          { name: "en-US-Wavenet-A", ssml_gender: "MALE" },
-          { name: "en-US-Wavenet-B", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "en-US-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "en-US-Wavenet-E", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "es-ES": {
-      display_name: "Spanish (Spain)",
-      voices: {
-        MALE: [{ name: "es-ES-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "es-ES-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "fr-FR": {
-      display_name: "French (France)",
-      voices: {
-        MALE: [{ name: "fr-FR-Wavenet-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "fr-FR-Wavenet-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "lt-LT": {
-      display_name: "Lithuanian (Lithuania)",
-      voices: {
-        MALE: [{ name: "lt-LT-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "lt-LT-Standard-B", ssml_gender: "FEMALE" }]
-      }
-    }
-  };
-  
-  return new Response(
-    JSON.stringify(defaultVoices),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
 }

@@ -1,189 +1,93 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { v4 as uuidv4 } from 'uuid';
 
-// Function to save an audio file to history
+/**
+ * Save generated audio to the user's history
+ */
 export const saveAudioToHistory = async (
   audioUrl: string,
-  textContent: string,
+  text: string,
   language: string,
   voice: string,
   userId: string
-) => {
+): Promise<boolean> => {
   try {
-    const timestamp = new Date().toISOString();
-    const fileName = `audio_${timestamp}.mp3`;
-    
-    // Insert file metadata into database
     const { data, error } = await supabase
-      .from('audio_files')
+      .from('audio_history')
       .insert({
-        audio_url: audioUrl,
-        title: fileName,
-        language: language,
-        voice_name: voice,
         user_id: userId,
-        description: textContent.substring(0, 1000), // Store first 1000 chars
-        created_at: timestamp
+        text_content: text,
+        audio_url: audioUrl,
+        language,
+        voice,
+        created_at: new Date().toISOString()
       });
-    
+      
     if (error) {
       console.error('Error saving to history:', error);
-      throw error;
+      return false;
     }
     
-    return data;
+    return true;
   } catch (error) {
-    console.error('Failed to save audio to history:', error);
-    throw error;
+    console.error('Error in saveAudioToHistory:', error);
+    return false;
   }
 };
 
-// Function to get audio file history for a user
+/**
+ * Get user's audio generation history
+ */
 export const getAudioHistory = async () => {
   try {
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: session } = await supabase.auth.getSession();
     
-    if (!user) {
-      // Return empty array if no user logged in
+    if (!session.session?.user) {
+      console.warn('No authenticated user for audio history');
       return [];
     }
     
-    // Check for audio files in the session if user is not authenticated
-    if (!user.id) {
-      return [];
-    }
-    
-    // Get the user's audio files
     const { data, error } = await supabase
       .from('audio_files')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', session.session.user.id)
       .order('created_at', { ascending: false });
-    
+      
     if (error) {
       console.error('Error fetching audio history:', error);
-      throw error;
+      return [];
     }
     
-    // Map the database data to the expected format
-    return data.map((file: any) => ({
-      id: file.id,
-      fileName: file.title,
-      filePath: file.audio_url,
-      audioUrl: file.audio_url,
-      fileType: 'audio/mpeg',
-      language: file.language,
-      voice: file.voice_name,
-      textContent: file.description,
-      createdAt: new Date(file.created_at)
-    }));
+    return data || [];
   } catch (error) {
-    console.error('Failed to get audio history:', error);
-    throw error;
+    console.error('Error in getAudioHistory:', error);
+    return [];
   }
 };
 
-// Function to delete an audio file
-export const deleteAudioFile = async (fileId: string) => {
+/**
+ * Update the user's generation count
+ */
+export const updateGenerationCount = async (userId: string): Promise<boolean> => {
   try {
-    // Get the file info first
-    const { data: file, error: fetchError } = await supabase
-      .from('audio_files')
-      .select('*')
-      .eq('id', fileId)
-      .single();
-    
-    if (fetchError) {
-      console.error('Error fetching file data:', fetchError);
-      throw fetchError;
-    }
-    
-    // Delete the database record
-    const { error: deleteError } = await supabase
-      .from('audio_files')
-      .delete()
-      .eq('id', fileId);
-    
-    if (deleteError) {
-      console.error('Error deleting file record:', deleteError);
-      throw deleteError;
+    const { data, error } = await supabase
+      .from('user_stats')
+      .upsert({
+        user_id: userId,
+        total_generations: 1, // This will be incremented by RLS trigger
+        last_generation: new Date().toISOString()
+      }, {
+        onConflict: 'user_id'
+      });
+      
+    if (error) {
+      console.error('Error updating generation count:', error);
+      return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Failed to delete audio file:', error);
-    throw error;
-  }
-};
-
-// Function to update the generation count for a user
-export const updateGenerationCount = async (userId: string) => {
-  try {
-    // Get current user stats
-    // First, check if we have a generation_counts table
-    const { error: checkError } = await supabase
-      .from('generation_counts')
-      .select('count')
-      .eq('user_id', userId)
-      .single();
-    
-    // If the table exists, update the count
-    if (!checkError || checkError.code !== 'PGRST116') { // Not a "table doesn't exist" error
-      try {
-        const { data: existingRecord, error: fetchError } = await supabase
-          .from('generation_counts')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-        
-        if (fetchError && fetchError.code !== 'PGRST116') { // "No rows returned" is okay
-          console.error('Error fetching generation count:', fetchError);
-          return false;
-        }
-        
-        if (existingRecord) {
-          // Update existing record
-          const { error: updateError } = await supabase
-            .from('generation_counts')
-            .update({
-              count: existingRecord.count + 1,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', userId);
-          
-          if (updateError) {
-            console.error('Error updating generation count:', updateError);
-            return false;
-          }
-        } else {
-          // Create new record
-          const { error: insertError } = await supabase
-            .from('generation_counts')
-            .insert({
-              user_id: userId,
-              count: 1,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-          
-          if (insertError) {
-            console.error('Error creating generation count:', insertError);
-            return false;
-          }
-        }
-        
-        return true;
-      } catch (error) {
-        console.error('Error handling generation count:', error);
-        return false;
-      }
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Failed to update generation count:', error);
+    console.error('Error in updateGenerationCount:', error);
     return false;
   }
 };
