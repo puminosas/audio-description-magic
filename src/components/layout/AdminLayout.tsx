@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -22,10 +23,15 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { handleError } = useErrorHandler('Error signing out');
   
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      handleError(error);
+    }
   };
   
   return (

@@ -9,6 +9,7 @@ import AdminUserActivity from '@/pages/Admin/AdminUserActivity';
 import AdminFeedback from '@/pages/Admin/AdminFeedback';
 import AdminSettings from '@/pages/Admin/AdminSettings';
 import AdminAiChatPage from '@/pages/Admin/AdminAiChat';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface AdminTabsProps {
   setMobileMenuOpen: (open: boolean) => void;
@@ -17,6 +18,7 @@ interface AdminTabsProps {
 const AdminTabs: React.FC<AdminTabsProps> = ({ setMobileMenuOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { handleError } = useErrorHandler('Navigation error');
   
   // Get current tab from path
   const getCurrentTab = () => {
@@ -34,21 +36,39 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ setMobileMenuOpen }) => {
   };
 
   const handleTabClick = (tab: string) => {
-    setMobileMenuOpen(false);
-    
-    switch (tab) {
-      case 'audio-files': navigate('/admin/audio-files'); break;
-      case 'users': navigate('/admin/users'); break;
-      case 'user-update': navigate('/admin/user-update'); break;
-      case 'user-activity': navigate('/admin/user-activity'); break;
-      case 'feedback': navigate('/admin/feedback'); break;
-      case 'ai-chat': navigate('/admin/ai-chat'); break;
-      case 'settings': navigate('/admin/settings'); break;
-      default: navigate('/admin'); break;
+    try {
+      setMobileMenuOpen(false);
+      
+      switch (tab) {
+        case 'audio-files': navigate('/admin/audio-files'); break;
+        case 'users': navigate('/admin/users'); break;
+        case 'user-update': navigate('/admin/user-update'); break;
+        case 'user-activity': navigate('/admin/user-activity'); break;
+        case 'feedback': navigate('/admin/feedback'); break;
+        case 'ai-chat': navigate('/admin/ai-chat'); break;
+        case 'settings': navigate('/admin/settings'); break;
+        default: navigate('/admin'); break;
+      }
+    } catch (error) {
+      handleError(error);
     }
   };
   
   const currentTab = getCurrentTab();
+  
+  // Active tab component renderer
+  const renderActiveTabContent = () => {
+    switch (currentTab) {
+      case 'analytics': return <AdminAnalytics />;
+      case 'audio-files': return <AdminAudioFiles />;
+      case 'users': return <AdminUserManagement />;
+      case 'user-activity': return <AdminUserActivity />;
+      case 'feedback': return <AdminFeedback />;
+      case 'ai-chat': return <AdminAiChatPage />;
+      case 'settings': return <AdminSettings />;
+      default: return <AdminAnalytics />;
+    }
+  };
   
   return (
     <Tabs value={currentTab} className="space-y-6">
@@ -106,26 +126,8 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ setMobileMenuOpen }) => {
         </TabsList>
       </div>
       
-      <TabsContent value="analytics">
-        <AdminAnalytics />
-      </TabsContent>
-      <TabsContent value="audio-files">
-        <AdminAudioFiles />
-      </TabsContent>
-      <TabsContent value="users">
-        <AdminUserManagement />
-      </TabsContent>
-      <TabsContent value="user-activity">
-        <AdminUserActivity />
-      </TabsContent>
-      <TabsContent value="feedback">
-        <AdminFeedback />
-      </TabsContent>
-      <TabsContent value="ai-chat">
-        <AdminAiChatPage />
-      </TabsContent>
-      <TabsContent value="settings">
-        <AdminSettings />
+      <TabsContent value={currentTab}>
+        {renderActiveTabContent()}
       </TabsContent>
     </Tabs>
   );

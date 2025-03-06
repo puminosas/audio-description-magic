@@ -15,6 +15,7 @@ import Dashboard from './pages/Dashboard';
 import MainNavbar from './components/layout/MainNavbar';
 import ErrorBoundary from './components/error/ErrorBoundary';
 import ErrorPage from './components/error/ErrorPage';
+import { Toaster } from "@/components/ui/toaster";
 
 // Layout component with navbar
 const RootLayout = () => {
@@ -24,8 +25,19 @@ const RootLayout = () => {
       <main className="pt-16">
         <Outlet />
       </main>
+      <Toaster />
     </>
   );
+};
+
+// Error handler function for analytics/logging
+const handleAppError = (error: Error, errorInfo: React.ErrorInfo) => {
+  console.error('Global error caught:', error);
+  
+  // In production, you might want to log to a service
+  if (process.env.NODE_ENV === 'production') {
+    // Example: Sentry.captureException(error);
+  }
 };
 
 const router = createBrowserRouter([
@@ -65,7 +77,7 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary onError={handleAppError}>
       <AuthProvider>
         <RouterProvider router={router} />
       </AuthProvider>

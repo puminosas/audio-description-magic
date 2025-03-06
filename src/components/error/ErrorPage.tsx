@@ -3,13 +3,14 @@ import React from 'react';
 import { useNavigate, useRouteError, isRouteErrorResponse } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface ErrorPageProps {
   error?: Error | null;
+  resetErrorBoundary?: () => void;
 }
 
-const ErrorPage: React.FC<ErrorPageProps> = ({ error }) => {
+const ErrorPage: React.FC<ErrorPageProps> = ({ error, resetErrorBoundary }) => {
   const navigate = useNavigate();
   const routeError = useRouteError();
   
@@ -39,6 +40,14 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ error }) => {
     navigate('/');
   };
 
+  const handleRefresh = () => {
+    if (resetErrorBoundary) {
+      resetErrorBoundary();
+    } else {
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-background">
       <Card className="max-w-md w-full shadow-lg">
@@ -58,8 +67,15 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ error }) => {
             We apologize for the inconvenience. Our team has been notified and is working to fix this issue.
           </p>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <Button onClick={handleReturnHome}>Return to Home</Button>
+        <CardFooter className="flex justify-center gap-2">
+          <Button onClick={handleReturnHome} variant="outline">
+            <Home className="mr-2 h-4 w-4" />
+            Return Home
+          </Button>
+          <Button onClick={handleRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Try Again
+          </Button>
         </CardFooter>
       </Card>
     </div>

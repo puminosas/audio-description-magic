@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,6 +5,7 @@ import PricingCard from '@/components/ui/PricingCard';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 declare global {
   interface Window {
@@ -17,28 +17,37 @@ const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { handleError } = useErrorHandler('Payment system error');
   
   useEffect(() => {
     // Initialize Paddle
     const loadPaddleJs = () => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.paddle.com/paddle/paddle.js';
-      script.async = true;
-      script.onload = initializePaddle;
-      document.body.appendChild(script);
+      try {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.paddle.com/paddle/paddle.js';
+        script.async = true;
+        script.onload = initializePaddle;
+        document.body.appendChild(script);
+      } catch (err) {
+        handleError(err);
+      }
     };
 
     const initializePaddle = () => {
-      if (window.Paddle) {
-        window.Paddle.Setup({ 
-          vendor: 123456, // Replace with your Paddle vendor ID
-          debug: true // Set to false in production
-        });
+      try {
+        if (window.Paddle) {
+          window.Paddle.Setup({ 
+            vendor: 123456, // Replace with your Paddle vendor ID
+            debug: true // Set to false in production
+          });
+        }
+      } catch (err) {
+        handleError(err);
       }
     };
 
     loadPaddleJs();
-  }, []);
+  }, [handleError]);
 
   const handleCheckout = (planId: string) => {
     // Don't proceed if user is not logged in
@@ -51,32 +60,33 @@ const Pricing = () => {
       return;
     }
 
-    if (window.Paddle) {
-      window.Paddle.Checkout.open({
-        product: planId,
-        email: user.email,
-        successCallback: (data: any) => {
-          console.log('Checkout success:', data);
-          // You would typically call your API endpoint to update the user's plan
-          // after successful payment verification on the server side
-          toast({
-            title: "Subscription Successful",
-            description: "Your subscription has been activated. Refreshing your account...",
-          });
-          
-          // In a real implementation, you would update the user's profile with the new plan
-          // For now we'll just show a toast
-          setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 2000);
-        }
-      });
-    } else {
-      toast({
-        title: "Payment System Unavailable",
-        description: "Our payment system is currently unavailable. Please try again later.",
-        variant: "destructive"
-      });
+    try {
+      if (window.Paddle) {
+        window.Paddle.Checkout.open({
+          product: planId,
+          email: user.email,
+          successCallback: (data: any) => {
+            console.log('Checkout success:', data);
+            toast({
+              title: "Subscription Successful",
+              description: "Your subscription has been activated. Refreshing your account...",
+            });
+            
+            // In a real implementation, you would update the user's profile with the new plan
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 2000);
+          }
+        });
+      } else {
+        toast({
+          title: "Payment System Unavailable",
+          description: "Our payment system is currently unavailable. Please try again later.",
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      handleError(err);
     }
   };
 
@@ -155,7 +165,6 @@ const Pricing = () => {
     }
   };
 
-  // Fixed rendering issue with Tabs component
   const renderPricingCards = () => (
     <div className="grid md:grid-cols-3 gap-8 w-full">
       <PricingCard
@@ -207,9 +216,9 @@ const Pricing = () => {
             defaultValue="monthly"
             value={billingCycle}
             onValueChange={(value) => setBillingCycle(value as 'monthly' | 'annual')}
-            className="w-fit"
+            className="w-full"
           >
-            <TabsList className="grid w-[400px] grid-cols-2">
+            <TabsList className="grid w-[400px] grid-cols-2 mx-auto">
               <TabsTrigger value="monthly">Monthly Billing</TabsTrigger>
               <TabsTrigger value="annual">
                 Annual Billing
@@ -219,11 +228,11 @@ const Pricing = () => {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="monthly" className="mt-0 w-full">
+            <TabsContent value="monthly" className="mt-8">
               {renderPricingCards()}
             </TabsContent>
             
-            <TabsContent value="annual" className="mt-0 w-full">
+            <TabsContent value="annual" className="mt-8">
               {renderPricingCards()}
             </TabsContent>
           </Tabs>
