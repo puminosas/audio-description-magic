@@ -1,111 +1,129 @@
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { FileInfo } from '../../types';
-import type { FileOperationsReturn } from './types';
 
 export const useFileOperations = (
-  setFiles: (files: FileInfo[]) => void,
-  setSelectedFile: (file: FileInfo | null) => void,
-  setIsLoadingFiles: (isLoading: boolean) => void,
-  setIsLoadingFile: (isLoading: boolean) => void,
-  setFileError: (error: string | null) => void
-): FileOperationsReturn => {
+  setFiles: React.Dispatch<React.SetStateAction<FileInfo[]>>,
+  setSelectedFile: React.Dispatch<React.SetStateAction<FileInfo | null>>,
+  setIsLoadingFiles: React.Dispatch<React.SetStateAction<boolean>>,
+  setIsLoadingFile: React.Dispatch<React.SetStateAction<boolean>>,
+  setError: React.Dispatch<React.SetStateAction<string | null>>
+) => {
+  // Get all project files
   const getFiles = useCallback(async () => {
     setIsLoadingFiles(true);
-    setFileError(null);
+    setError(null);
+    
     try {
-      // Example of fetching files from a supabase bucket
-      const { data, error } = await supabase.storage
-        .from('admin-chat-files')
-        .list('', { // Fetch files from the root directory
-          limit: 100,
-          offset: 0,
-          sortBy: { column: 'created_at', order: 'desc' },
-        });
-
-      if (error) {
-        throw new Error(`Error fetching files: ${error.message}`);
-      }
-
-      // Map the data to the FileInfo type
-      const filesInfo: FileInfo[] = data.map(file => ({
-        path: file.name, // Use name as path for simplicity
-        type: file.metadata?.mimetype?.includes('text') ? 'document' : 
-              file.metadata?.mimetype?.includes('javascript') || 
-              file.metadata?.mimetype?.includes('typescript') ? 'script' : 'unknown',
-        size: file.metadata?.size || 0,
-        createdAt: file.created_at,
-        updatedAt: file.updated_at,
-        content: null, // Initially no content
+      const { data, error } = await supabase.functions.invoke('project-files', {
+        body: {}
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      const fileInfos: FileInfo[] = (data?.files || []).map((file: any) => ({
+        path: file.path,
+        content: '',
+        type: detectFileType(file.path)
       }));
-
-      setFiles(filesInfo);
+      
+      setFiles(fileInfos);
     } catch (err) {
-      setFileError(`Failed to retrieve files: ${(err as Error).message}`);
+      setError(err instanceof Error ? err.message : 'Failed to fetch files.');
     } finally {
       setIsLoadingFiles(false);
     }
-  }, [setFiles, setIsLoadingFiles, setFileError]);
+  }, [setFiles, setIsLoadingFiles, setError]);
 
+  // Get content of a specific file
   const getFileContent = useCallback(async (filePath: string) => {
     setIsLoadingFile(true);
-    setFileError(null);
+    setError(null);
+    
     try {
-      const { data, error } = await supabase.storage
-        .from('admin-chat-files')
-        .download(filePath);
-
-      if (error) {
-        throw new Error(`Error downloading file: ${error.message}`);
-      }
-
-      if (data) {
-        const fileContent = await data.text();
-
-        // Update the selected file with content
-        setSelectedFile((prevFile) => {
-          if (prevFile && prevFile.path === filePath) {
-            return { ...prevFile, content: fileContent };
-          }
-          return prevFile;
-        });
-      }
+      const { data, error } = await supabase.functions.invoke('get-file-content', {
+        body: { filePath }
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      const content = data?.content || '';
+      
+      // Update files array with content
+      setFiles(prevFiles => 
+        prevFiles.map(file => 
+          file.path === filePath ? { ...file, content } : file
+        )
+      );
+      
+      // Update selected file if it matches
+      setSelectedFile(prevFile => 
+        prevFile && prevFile.path === filePath 
+          ? { ...prevFile, content } 
+          : prevFile
+      );
+      
+      return content;
     } catch (err) {
-      setFileError(`Failed to retrieve file content: ${(err as Error).message}`);
+      setError(err instanceof Error ? err.message : 'Failed to fetch file content.');
+      throw err;
     } finally {
       setIsLoadingFile(false);
     }
-  }, [setSelectedFile, setIsLoadingFile, setFileError]);
+  }, [setFiles, setSelectedFile, setIsLoadingFile, setError]);
 
+  // Save changes to a file
   const saveFileContent = useCallback(async (filePath: string, content: string): Promise<boolean> => {
     setIsLoadingFile(true);
-    setFileError(null);
+    setError(null);
+    
     try {
-      // Convert the string content to a Blob
-      const blob = new Blob([content], { type: 'text/plain' });
-
-      const { error } = await supabase.storage
-        .from('admin-chat-files')
-        .upload(filePath, blob, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: 'text/plain', // Specify content type
-        });
-
-      if (error) {
-        throw new Error(`Error uploading file: ${error.message}`);
-      }
-
-      // Update was successful
+      const { data, error } = await supabase.functions.invoke('edit-file', {
+        body: { filePath, content }
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      // Update files array with new content
+      setFiles(prevFiles => 
+        prevFiles.map(file => 
+          file.path === filePath ? { ...file, content } : file
+        )
+      );
+      
+      // Update selected file if it matches
+      setSelectedFile(prevFile => 
+        prevFile && prevFile.path === filePath 
+          ? { ...prevFile, content } 
+          : prevFile
+      );
+      
       return true;
     } catch (err) {
-      setFileError(`Failed to save file content: ${(err as Error).message}`);
+      setError(err instanceof Error ? err.message : 'Failed to save file content.');
       return false;
     } finally {
       setIsLoadingFile(false);
     }
-  }, [setIsLoadingFile, setFileError]);
+  }, [setFiles, setSelectedFile, setIsLoadingFile, setError]);
+
+  // Detect file type based on extension
+  const detectFileType = (filePath: string): 'script' | 'document' | 'style' | 'config' | 'unknown' => {
+    const extension = filePath.split('.').pop()?.toLowerCase() || '';
+    
+    if (['js', 'jsx', 'ts', 'tsx', 'py', 'rb', 'php', 'sh'].includes(extension)) {
+      return 'script';
+    } else if (['html', 'md', 'txt', 'rtf', 'pdf', 'doc', 'docx'].includes(extension)) {
+      return 'document';
+    } else if (['css', 'scss', 'sass', 'less'].includes(extension)) {
+      return 'style';
+    } else if (['json', 'yaml', 'yml', 'toml', 'ini', 'env'].includes(extension)) {
+      return 'config';
+    } else {
+      return 'unknown';
+    }
+  };
 
   return {
     getFiles,
@@ -113,3 +131,5 @@ export const useFileOperations = (
     saveFileContent
   };
 };
+
+export default useFileOperations;
