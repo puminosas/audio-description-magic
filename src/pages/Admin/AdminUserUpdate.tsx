@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +8,9 @@ import { assignAdminRole, updateUserPlan, updateUserRemainingGenerations } from 
 import { Loader2, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Define the auth user type to address TypeScript errors
 interface AuthUser {
   id: string;
   email?: string;
-  // Add other properties as needed
 }
 
 const AdminUserUpdate = () => {
@@ -22,12 +19,15 @@ const AdminUserUpdate = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   
+  useEffect(() => {
+    setEmail('a.mackeliunas@gmail.com');
+  }, []);
+  
   const handleAssignPermissions = async () => {
     try {
       setLoading(true);
       setSuccess(false);
       
-      // Get the user from Supabase using direct query
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -38,74 +38,45 @@ const AdminUserUpdate = () => {
         throw new Error(`Error fetching user: ${profileError.message}`);
       }
       
+      let userId;
+      
       if (!profileData) {
-        // If not found in profiles, try to find the user in auth.users
-        // Note: This might not work as expected in production without admin access
         try {
-          const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
-            perPage: 1000
-          });
+          const { data: authUserData, error: authError } = await supabase.auth.admin.getUserByEmail(email);
           
-          if (authError) {
-            throw new Error(`Error fetching users: ${authError.message}`);
+          if (authError || !authUserData?.user) {
+            throw new Error(`User with email ${email} not found or could not be retrieved`);
           }
           
-          // Find the user with the given email
-          const user = authData?.users?.find(
-            (u: AuthUser) => u.email === email
-          ) as AuthUser | undefined;
-          
-          if (!user) {
-            throw new Error(`User with email ${email} not found`);
-          }
-          
-          console.log('Found user:', user);
-          
-          // 1. Assign admin role
-          const adminRoleAssigned = await assignAdminRole(user.id);
-          if (!adminRoleAssigned) {
-            throw new Error('Failed to assign admin role');
-          }
-          
-          // 2. Update plan to premium unlimited
-          const planUpdated = await updateUserPlan(user.id, 'premium');
-          if (!planUpdated) {
-            throw new Error('Failed to update user plan');
-          }
-          
-          // 3. Set unlimited remaining generations
-          const generationsUpdated = await updateUserRemainingGenerations(user.id, 9999);
-          if (!generationsUpdated) {
-            throw new Error('Failed to update remaining generations');
-          }
-        } catch (error) {
-          console.error('Error processing user:', error);
+          userId = authUserData.user.id;
+          console.log('Found user by email:', userId);
+        } catch (err) {
+          console.error('Error finding user by email:', err);
           throw new Error(`User with email ${email} not found or could not be processed`);
         }
       } else {
-        // User found in profiles, use the id
-        const userId = profileData.id;
-        
-        // 1. Assign admin role
-        const adminRoleAssigned = await assignAdminRole(userId);
-        if (!adminRoleAssigned) {
-          throw new Error('Failed to assign admin role');
-        }
-        
-        // 2. Update plan to premium unlimited
-        const planUpdated = await updateUserPlan(userId, 'premium');
-        if (!planUpdated) {
-          throw new Error('Failed to update user plan');
-        }
-        
-        // 3. Set unlimited remaining generations
-        const generationsUpdated = await updateUserRemainingGenerations(userId, 9999);
-        if (!generationsUpdated) {
-          throw new Error('Failed to update remaining generations');
-        }
+        userId = profileData.id;
       }
       
-      // Success
+      if (!userId) {
+        throw new Error(`Could not determine user ID for ${email}`);
+      }
+      
+      const adminRoleAssigned = await assignAdminRole(userId);
+      if (!adminRoleAssigned) {
+        throw new Error('Failed to assign admin role');
+      }
+      
+      const planUpdated = await updateUserPlan(userId, 'premium');
+      if (!planUpdated) {
+        throw new Error('Failed to update user plan');
+      }
+      
+      const generationsUpdated = await updateUserRemainingGenerations(userId, 9999);
+      if (!generationsUpdated) {
+        throw new Error('Failed to update remaining generations');
+      }
+      
       setSuccess(true);
       toast({
         title: 'Success',

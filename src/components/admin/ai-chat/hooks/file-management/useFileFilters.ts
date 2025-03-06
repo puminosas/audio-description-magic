@@ -1,61 +1,74 @@
 
-import { useState } from 'react';
-import { FileInfo } from '../../types';
-import { FileFilters, FileFiltersReturn } from './types';
+import { useMemo, useState } from 'react';
+import { FileInfo, FileFilters } from '../../types';
+import { FileFiltersReturn } from './types';
 
-const initialFilters: FileFilters = {
-  types: [],
-  searchQuery: ''
-};
+export function useFileFilters(files: FileInfo[]): FileFiltersReturn {
+  const [filters, setFilters] = useState<FileFilters>({
+    searchQuery: '',
+    types: {
+      script: true,
+      document: true,
+      style: true,
+      config: true,
+      unknown: true
+    }
+  });
 
-export const useFileFilters = (files: FileInfo[] = []): FileFiltersReturn => {
-  const [activeFilters, setActiveFilters] = useState<FileFilters>(initialFilters);
-
+  // Set search query filter
   const setSearchQuery = (query: string) => {
-    setActiveFilters(prev => ({
+    setFilters(prev => ({
       ...prev,
       searchQuery: query
     }));
   };
 
-  const toggleFileTypeFilter = (type: string) => {
-    setActiveFilters(prev => {
-      const types = prev.types.includes(type)
-        ? prev.types.filter(t => t !== type)
-        : [...prev.types, type];
-      
-      return {
-        ...prev,
-        types
-      };
+  // Toggle file type filter
+  const toggleTypeFilter = (type: string) => {
+    setFilters(prev => ({
+      ...prev,
+      types: {
+        ...prev.types,
+        [type]: !prev.types[type as keyof typeof prev.types]
+      }
+    }));
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setFilters({
+      searchQuery: '',
+      types: {
+        script: true,
+        document: true,
+        style: true,
+        config: true,
+        unknown: true
+      }
     });
   };
 
-  const clearFilters = () => {
-    setActiveFilters(initialFilters);
-  };
+  // Apply filters to the file list
+  const filteredFiles = useMemo(() => {
+    return files.filter(file => {
+      // Apply search query filter
+      const matchesSearch = filters.searchQuery === '' || 
+        file.path.toLowerCase().includes(filters.searchQuery.toLowerCase());
 
-  const applyFilters = (filesToFilter: FileInfo[]): FileInfo[] => {
-    return filesToFilter.filter(file => {
-      // Apply search filter
-      const matchesSearch = activeFilters.searchQuery
-        ? file.path.toLowerCase().includes(activeFilters.searchQuery.toLowerCase())
-        : true;
-
-      // Apply type filter
-      const matchesType = activeFilters.types.length > 0
-        ? activeFilters.types.includes(file.type || 'unknown')
-        : true;
+      // Apply file type filter - if none are selected, show all
+      const allTypesOff = Object.values(filters.types).every(value => !value);
+      const fileType = file.type || 'unknown';
+      const matchesType = allTypesOff || filters.types[fileType as keyof typeof filters.types];
 
       return matchesSearch && matchesType;
     });
-  };
+  }, [files, filters.searchQuery, filters.types]);
 
   return {
-    activeFilters,
+    filters,
+    filteredFiles,
     setSearchQuery,
-    toggleFileTypeFilter,
-    clearFilters,
-    applyFilters
+    toggleTypeFilter,
+    resetFilters
   };
-};
+}

@@ -35,22 +35,47 @@ export async function generateAudioDescription(
 
         if (descriptionError) {
           console.error('Error generating description:', descriptionError);
-          // Continue with original text if description generation fails
         } else if (descriptionData && descriptionData.success && descriptionData.generated_text) {
           finalText = descriptionData.generated_text;
           console.log('Successfully generated description:', finalText.substring(0, 50) + '...');
         } else {
-          // Fallback if we got a response but no success flag or text
           console.warn('Description generation returned unexpected format:', descriptionData);
         }
       } catch (descError) {
         console.error('Failed to connect to description service:', descError);
-        // Continue with original text if connection fails
       }
     }
 
     try {
       console.log(`Generating audio for ${finalText.substring(0, 30)}... with voice ${voice.id}`);
+      
+      // For short descriptions, try using OpenAI first (as a fallback)
+      if (finalText.length < 500) {
+        try {
+          console.log("Attempting to generate with OpenAI TTS (faster response)...");
+          const { data: openaiData, error: openaiError } = await supabase.functions.invoke('generate-audio', {
+            body: {
+              text: finalText,
+              language: language.code,
+              voice: voice.name.toLowerCase()
+            }
+          });
+          
+          if (!openaiError && openaiData && openaiData.success && openaiData.audioUrl) {
+            console.log("Successfully generated audio with OpenAI TTS");
+            return {
+              audioUrl: openaiData.audioUrl,
+              text: finalText,
+              folderUrl: null
+            };
+          } else {
+            console.log("OpenAI TTS failed, falling back to Google TTS");
+          }
+        } catch (openaiErr) {
+          console.log("OpenAI TTS error, falling back to Google TTS:", openaiErr);
+        }
+      }
+      
       // Now generate the audio using Google TTS
       const { data, error } = await supabase.functions.invoke('generate-google-tts', {
         body: {
@@ -82,7 +107,6 @@ export async function generateAudioDescription(
     } catch (audioError) {
       console.error('Connection error with audio generation service:', audioError);
       
-      // If we're getting connection errors, provide a more helpful message
       const errorMessage = audioError instanceof Error ? audioError.message : String(audioError);
       const isFetchError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Failed to send');
       

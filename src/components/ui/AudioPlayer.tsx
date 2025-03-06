@@ -34,7 +34,7 @@ const AudioPlayer = ({
         audioUrl.startsWith('https://') || 
         audioUrl.startsWith('http://');
       
-      // If it's not a data URL, assume it's a valid external URL
+      // If it's not a data URL, just validate that it's a valid URL
       if (!audioUrl.startsWith('data:audio/')) {
         return {
           hasValidUrl: isValidDataUrl,
@@ -51,44 +51,28 @@ const AudioPlayer = ({
       
       // Enhanced validation for data URLs
       let hasValidDataFormat = true;
-      let hasValidHeader = true;
       
-      // Check if base64 data is substantial enough - increased minimum size
-      const isValidLength = base64Data.length >= 10000; // Reduced minimum required size
+      // Check if base64 data is substantial enough
+      const isValidLength = base64Data.length >= 10000;
       
       // Check if base64 has valid padding
       const hasValidPadding = base64Data.length % 4 === 0;
       
-      // Try to check MP3 header (basic validation)
-      try {
-        if (base64Data.length > 8) {
-          const headerBytes = atob(base64Data.substring(0, 8));
-          hasValidHeader = headerBytes.indexOf('ID3') === 0 || headerBytes.charCodeAt(0) === 0xFF;
-        } else {
-          hasValidHeader = false;
-        }
-      } catch (err) {
-        console.error("Error checking MP3 header:", err);
-        hasValidHeader = false;
-      }
-      
-      hasValidDataFormat = isValidLength && hasValidPadding && hasValidHeader;
+      hasValidDataFormat = isValidLength && hasValidPadding;
       
       const validationDetails = {
         isValidDataUrl,
         hasValidDataFormat,
-        hasValidHeader,
         urlLength: audioUrl.length,
         base64Length: base64Data.length,
         sizeKB: Math.round(base64Data.length / 1024),
         hasValidPadding: base64Data.length % 4 === 0,
         startsWithDataAudio: audioUrl.startsWith('data:audio/'),
         includesBase64: audioUrl.includes('base64,'),
-        minimumRequired: 10000 // Updated minimum required size
+        minimumRequired: 10000
       };
       
       return { 
-        // For URLs to pass validation, they need to be valid format AND have valid data (for data URLs)
         hasValidUrl: isValidDataUrl && (audioUrl.startsWith('http') || hasValidDataFormat),
         isValidUrl: isValidDataUrl,
         validationDetails

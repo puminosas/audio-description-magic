@@ -43,8 +43,8 @@ export const AudioErrorProvider = ({
       
       const base64Data = parts[1];
       
-      // Check for minimum data length
-      if (base64Data.length < 10000) {
+      // Check for minimum data length (more permissive now)
+      if (base64Data.length < 5000) {
         setError("Audio data is too small to be valid");
         setIsLoading(false);
         return;
@@ -55,24 +55,6 @@ export const AudioErrorProvider = ({
         setError("Audio data appears to be truncated. Try generating with shorter text.");
         setIsLoading(false);
         return;
-      }
-      
-      // Check file size - warning for very large files
-      if (base64Data.length > 1500000) {
-        console.warn("Very large audio file detected:", Math.round(base64Data.length/1024), "KB");
-      }
-      
-      // Try to validate MP3 header (basic check)
-      try {
-        const headerBytes = atob(base64Data.substring(0, 8));
-        const validMP3Header = headerBytes.indexOf('ID3') === 0 || headerBytes.charCodeAt(0) === 0xFF;
-        if (!validMP3Header) {
-          setError("Audio data does not appear to be a valid MP3 file");
-          setIsLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.error("Error checking MP3 header:", err);
       }
     }
     
@@ -103,35 +85,9 @@ export const AudioErrorProvider = ({
         }
       }
       
-      // For data URLs, provide more specific error messages
-      if (audioUrl.startsWith('data:audio/')) {
-        const base64Part = audioUrl.split('base64,')[1] || '';
-        const fileSizeKB = Math.round(base64Part.length/1024);
-        
-        // Log detailed information for debugging
-        console.log("Audio data diagnostics:", {
-          totalLength: audioUrl.length,
-          base64Length: base64Part.length,
-          sizeKB: fileSizeKB,
-          hasPadding: base64Part.endsWith('==') || base64Part.endsWith('='),
-          validPadding: base64Part.length % 4 === 0
-        });
-        
-        // If decoding failed and it's a data URL, suggest browser compatibility issues
-        if (audio.error?.code === MediaError.MEDIA_ERR_DECODE || 
-            audio.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-          
-          if (fileSizeKB > 1000) {
-            errorMessage = `Audio file (${fileSizeKB}KB) may be too large for browser playback. Try downloading the file instead.`;
-          } else {
-            errorMessage = "Your browser couldn't decode the audio. Try using a different browser or generating a shorter description.";
-          }
-        }
-        
-        // If data is potentially truncated
-        if (base64Part.length % 4 !== 0) {
-          errorMessage = "The audio data appears to be truncated. Try generating a shorter description.";
-        }
+      // For external URLs, provide more specific Google Storage error messages
+      if (audioUrl.includes('storage.googleapis.com') || audioUrl.includes('storage.cloud.google.com')) {
+        errorMessage = "Failed to load audio from Google Storage. This could be due to permission issues or the file may have been removed.";
       }
       
       setError(errorMessage);
@@ -167,14 +123,6 @@ export const AudioErrorProvider = ({
     
     // Handle errors that might occur when setting the src
     try {
-      // Test the audio data before setting it as a source
-      if (audioUrl.startsWith('data:audio/')) {
-        const base64Part = audioUrl.split('base64,')[1];
-        if (!base64Part || base64Part.length < 5000) {
-          throw new Error("Invalid base64 audio data");
-        }
-      }
-      
       // Set the audio source
       audio.src = audioUrl;
       

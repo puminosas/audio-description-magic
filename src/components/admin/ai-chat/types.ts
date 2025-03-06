@@ -32,3 +32,24 @@ export interface FileInfo {
   content: string;
   type?: 'script' | 'document' | 'style' | 'config' | 'unknown';
 }
+
+// File filters type
+export interface FileFilters {
+  searchQuery: string;
+  types: {
+    script: boolean;
+    document: boolean;
+    style: boolean;
+    config: boolean;
+    unknown: boolean;
+  };
+}
+
+// File management state interface
+export interface FileManagementState {
+  files: FileInfo[];
+  selectedFile: FileInfo | null;
+  isLoadingFiles: boolean;
+  isLoadingFile: boolean;
+  fileError: string | null;
+}

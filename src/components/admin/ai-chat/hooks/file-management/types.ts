@@ -1,64 +1,39 @@
 
-import { FileInfo } from '../../types';
+import { FileInfo, FileFilters, FileManagementState } from '../../types';
 
-export interface FileState {
-  files: FileInfo[];
-  selectedFile: string | null;
-  fileContent: string;
-  isLoading: boolean;
-  fileError: string | null;
-  isEditing: boolean;
-}
-
-export interface FileManagementState {
-  files: FileInfo[];
-  filteredFiles: FileInfo[];
-  isLoadingFiles: boolean;
-  selectedFile: string | null;
-  fileContent: string;
-  isEditing: boolean;
-  isLoadingContent: boolean;
-  error: string | null;
-  fileError: string | null;
-  activeFilters: FileFilters;
-}
-
+// Return type for useFileState hook
 export interface FileStateReturn {
-  state: FileManagementState;
-  updateState: (updates: Partial<FileManagementState>) => void;
-  setSelectedFile: (filePath: string | null) => void;
-  setFileContent: (content: string) => void;
-  setIsEditing: (isEditing: boolean) => void;
-  setError: (error: string | null) => void;
-  setFileError: (fileError: string | null) => void;
+  files: FileInfo[];
+  selectedFile: FileInfo | null;
+  isLoadingFiles: boolean;
+  isLoadingFile: boolean;
+  fileError: string | null;
+  setFiles: (files: FileInfo[]) => void;
+  setSelectedFile: (file: FileInfo | null) => void;
+  setIsLoadingFiles: (isLoading: boolean) => void;
+  setIsLoadingFile: (isLoading: boolean) => void;
+  setFileError: (error: string | null) => void;
 }
 
-export interface FileFilters {
-  types: string[];
-  searchQuery: string;
-}
-
+// Return type for useFileFilters hook
 export interface FileFiltersReturn {
-  activeFilters: FileFilters;
+  filters: FileFilters;
+  filteredFiles: FileInfo[];
   setSearchQuery: (query: string) => void;
-  toggleFileTypeFilter: (type: string) => void;
-  clearFilters: () => void;
-  applyFilters: (files: FileInfo[]) => FileInfo[];
+  toggleTypeFilter: (type: string) => void;
+  resetFilters: () => void;
 }
 
-export interface FileOperations {
-  fetchFiles: () => Promise<void>;
-  handleFileSelect: (filePath: string) => Promise<void>;
-  setFileContent: (content: string) => void;
-  setIsEditing: (isEditing: boolean) => void;
-  handleSaveFile: () => Promise<void>;
-  handleAnalyzeWithAI: () => Promise<void>;
-}
-
+// Return type for useFileOperations hook
 export interface FileOperationsReturn {
-  fetchFiles: () => Promise<FileInfo[]>;
-  fetchFileContent: (filePath: string) => Promise<string>;
+  getFiles: () => Promise<void>;
+  getFileContent: (filePath: string) => Promise<void>;
   saveFileContent: (filePath: string, content: string) => Promise<boolean>;
-  analyzeFileWithAI: (filePath: string, content: string) => Promise<string>;
-  refreshFiles: () => Promise<void>;
+}
+
+// File operations interface
+export interface FileOperations {
+  getFiles: () => Promise<void>;
+  getFileContent: (filePath: string) => Promise<void>;
+  saveFileContent: (filePath: string, content: string) => Promise<boolean>;
 }
