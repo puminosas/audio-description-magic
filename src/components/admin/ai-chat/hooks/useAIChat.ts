@@ -62,3 +62,5 @@ export const useAIChat = () => {
     error
   };
 };
+
+export default useAIChat;

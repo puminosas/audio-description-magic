@@ -46,7 +46,7 @@ export const useFileOperations = (
     } finally {
       setIsLoadingFiles(false);
     }
-  }, [supabase, setFiles, setIsLoadingFiles, setFileError]);
+  }, [setFiles, setIsLoadingFiles, setFileError]);
 
   const getFileContent = useCallback(async (filePath: string) => {
     setIsLoadingFile(true);
@@ -76,7 +76,7 @@ export const useFileOperations = (
     } finally {
       setIsLoadingFile(false);
     }
-  }, [supabase, setSelectedFile, setIsLoadingFile, setFileError]);
+  }, [setSelectedFile, setIsLoadingFile, setFileError]);
 
   const saveFileContent = useCallback(async (filePath: string, content: string): Promise<boolean> => {
     setIsLoadingFile(true);
@@ -105,7 +105,7 @@ export const useFileOperations = (
     } finally {
       setIsLoadingFile(false);
     }
-  }, [supabase, setIsLoadingFile, setFileError]);
+  }, [setIsLoadingFile, setFileError]);
 
   return {
     getFiles,

@@ -1,17 +1,28 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useFileState } from './file-management/useFileState';
 import { useFileFilters } from './file-management/useFileFilters';
 import { useFileOperations } from './file-management/useFileOperations';
-import { useChatState } from './useChatState';
-import { useAIChat } from './useAIChat';
+import useChatState, { ChatMessage } from './useChatState';
+import useAIChat from './useAIChat';
 import type { FileInfo } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const useCombinedChatLogic = () => {
   // File Management Logic
-  const fileState = useFileState();
-  const { files, setFiles, selectedFile, setSelectedFile, isLoadingFiles, setIsLoadingFiles, isLoadingFile, setIsLoadingFile, fileError, setFileError } = fileState;
+  const {
+    files,
+    selectedFile,
+    isLoadingFiles,
+    isLoadingFile,
+    fileError,
+    setFiles,
+    setSelectedFile,
+    setIsLoadingFiles,
+    setIsLoadingFile,
+    setFileError
+  } = useFileState();
+  
   const fileOperations = useFileOperations(
     setFiles,
     setSelectedFile,
@@ -31,17 +42,17 @@ const useCombinedChatLogic = () => {
   const { sendMessage, sendFileAnalysisRequest } = aiChat;
 
   // Combined Logic
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = useCallback(async (message: string) => {
     if (!message.trim()) return;
     
     setIsLoading(true);
     setError(null);
     
     // Create a new message object for the user's message
-    const userMessage = {
+    const userMessage: ChatMessage = {
       id: uuidv4(),
       text: message,
-      isUser: true,
+      isUserMessage: true,
       timestamp: new Date().toISOString()
     };
     
@@ -53,10 +64,10 @@ const useCombinedChatLogic = () => {
       const response = await sendMessage(message, selectedFile?.path);
       
       // Create AI response message object
-      const aiMessage = {
+      const aiMessage: ChatMessage = {
         id: uuidv4(),
         text: response,
-        isUser: false,
+        isUserMessage: false,
         timestamp: new Date().toISOString()
       };
       
@@ -70,9 +81,9 @@ const useCombinedChatLogic = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sendMessage, selectedFile, setIsLoading, setError, setMessages, setInput]);
 
-  const handleFileSelect = async (file: FileInfo) => {
+  const handleFileSelect = useCallback(async (file: FileInfo) => {
     setSelectedFile(file);
     setIsLoadingFile(true);
     setFileError(null);
@@ -86,9 +97,9 @@ const useCombinedChatLogic = () => {
     } finally {
       setIsLoadingFile(false);
     }
-  };
+  }, [fileOperations, setSelectedFile, setIsLoadingFile, setFileError]);
 
-  const handleAnalyzeFile = async (file: FileInfo) => {
+  const handleAnalyzeFile = useCallback(async (file: FileInfo) => {
     if (!file || !file.content) {
       setError('No file content available for analysis');
       return;
@@ -102,10 +113,10 @@ const useCombinedChatLogic = () => {
       const analysisResult = await sendFileAnalysisRequest(file.path, file.content);
       
       // Create AI analysis message
-      const aiMessage = {
+      const aiMessage: ChatMessage = {
         id: uuidv4(),
         text: analysisResult,
-        isUser: false,
+        isUserMessage: false,
         timestamp: new Date().toISOString()
       };
       
@@ -116,9 +127,9 @@ const useCombinedChatLogic = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sendFileAnalysisRequest, setIsLoading, setError, setMessages]);
 
-  const handleSaveFile = async (file: FileInfo, content: string) => {
+  const handleSaveFile = useCallback(async (file: FileInfo, content: string): Promise<boolean> => {
     setIsLoadingFile(true);
     setFileError(null);
     try {
@@ -127,11 +138,11 @@ const useCombinedChatLogic = () => {
       
       if (success) {
         // Update files list with new content
-        const updatedFiles = files.map(f => 
-          f.path === file.path ? { ...f, content } : f
+        setFiles(prevFiles => 
+          prevFiles.map(f => 
+            f.path === file.path ? { ...f, content } : f
+          )
         );
-        
-        setFiles(updatedFiles);
         
         // Update selected file
         if (selectedFile && selectedFile.path === file.path) {
@@ -149,12 +160,12 @@ const useCombinedChatLogic = () => {
     } finally {
       setIsLoadingFile(false);
     }
-  };
+  }, [fileOperations, selectedFile, setFiles, setSelectedFile, setIsLoadingFile, setFileError]);
 
-  // Initialize files when hook is first used
-  useCallback(() => {
+  // Initialize files when component mounts
+  useEffect(() => {
     fileOperations.getFiles();
-  }, []);
+  }, [fileOperations]);
 
   return {
     // File Management
