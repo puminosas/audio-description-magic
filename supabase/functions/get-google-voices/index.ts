@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -23,57 +24,79 @@ serve(async (req) => {
       });
     }
     
-    // Fetch the Google OAuth token
-    const credentials = {
-      type: Deno.env.get("GOOGLE_CREDENTIALS_TYPE") || "service_account",
-      project_id: Deno.env.get("GOOGLE_CREDENTIALS_PROJECT_ID"),
-      private_key_id: Deno.env.get("GOOGLE_CREDENTIALS_PRIVATE_KEY_ID"),
-      private_key: Deno.env.get("GOOGLE_CREDENTIALS_PRIVATE_KEY")?.replace(/\\n/g, "\n"),
-      client_email: Deno.env.get("GOOGLE_CREDENTIALS_CLIENT_EMAIL"),
-      client_id: Deno.env.get("GOOGLE_CREDENTIALS_CLIENT_ID"),
-      auth_uri: Deno.env.get("GOOGLE_CREDENTIALS_AUTH_URI") || "https://accounts.google.com/o/oauth2/auth",
-      token_uri: Deno.env.get("GOOGLE_CREDENTIALS_TOKEN_URI") || "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: Deno.env.get("GOOGLE_CREDENTIALS_AUTH_PROVIDER_CERT_URL") || "https://www.googleapis.com/oauth2/v1/certs",
-      client_x509_cert_url: Deno.env.get("GOOGLE_CREDENTIALS_CLIENT_CERT_URL"),
-    };
-    
-    // Validate that we have the necessary credentials
-    if (!credentials.private_key || !credentials.client_email) {
-      console.error("Missing Google credentials");
+    // Get Google credentials from environment variables
+    const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+    if (!credentialsJson) {
+      console.error("Google credentials not found in environment variables");
       return getDefaultVoicesResponse();
     }
     
-    // Use a simpler approach to avoid JWT errors in Deno environment
+    // Parse the credentials
+    let credentials;
     try {
-      // Call the Google Cloud Text-to-Speech API directly with a simpler auth method
-      // First, get the access token
-      const tokenResponse = await fetch(
-        "https://oauth2.googleapis.com/token",
+      credentials = JSON.parse(credentialsJson);
+    } catch (parseError) {
+      console.error("Failed to parse Google credentials:", parseError);
+      return getDefaultVoicesResponse();
+    }
+    
+    // Validate that we have the necessary credentials
+    if (!credentials.private_key || !credentials.client_email) {
+      console.error("Invalid Google credentials format");
+      return getDefaultVoicesResponse();
+    }
+    
+    // Get access token for Google API
+    console.log("Getting access token for Google TTS API");
+    let accessToken;
+    try {
+      accessToken = await getGoogleAccessToken(credentials);
+      console.log("Successfully obtained access token");
+    } catch (tokenError) {
+      console.error("Failed to get access token:", tokenError);
+      return getDefaultVoicesResponse();
+    }
+    
+    // Call the Google Cloud Text-to-Speech API to get voices
+    console.log("Fetching voices from Google TTS API");
+    try {
+      const voicesResponse = await fetch(
+        "https://texttospeech.googleapis.com/v1/voices",
         {
-          method: "POST",
           headers: {
+            "Authorization": `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            client_email: credentials.client_email,
-            private_key: credentials.private_key,
-            token_uri: credentials.token_uri,
-            grant_type: "client_credentials",
-            scope: "https://www.googleapis.com/auth/cloud-platform"
-          }),
         }
       );
       
-      if (!tokenResponse.ok) {
-        console.error("Failed to get token:", await tokenResponse.text());
+      if (!voicesResponse.ok) {
+        console.error(`API error: ${voicesResponse.status} - ${voicesResponse.statusText}`);
         return getDefaultVoicesResponse();
       }
       
-      // Since we're having JWT issues, let's fall back to default voices for now
-      return getDefaultVoicesResponse();
+      const voicesData = await voicesResponse.json();
       
-    } catch (error) {
-      console.error("Error obtaining access token:", error);
+      if (!voicesData.voices || !Array.isArray(voicesData.voices)) {
+        console.error("Invalid response format from Google TTS API");
+        return getDefaultVoicesResponse();
+      }
+      
+      // Process the voices into our desired format
+      const formattedVoices = processVoices(voicesData.voices);
+      
+      // Update cache
+      cachedVoices = formattedVoices;
+      cacheTimestamp = now;
+      
+      console.log(`Successfully fetched ${voicesData.voices.length} voices from Google TTS API`);
+      
+      return new Response(JSON.stringify(formattedVoices), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      
+    } catch (apiError) {
+      console.error("Error fetching voices from API:", apiError);
       return getDefaultVoicesResponse();
     }
     
@@ -83,31 +106,115 @@ serve(async (req) => {
   }
 });
 
+// Get Google OAuth access token
+async function getGoogleAccessToken(credentials: any): Promise<string> {
+  try {
+    // Create JWT claims for authentication
+    const now = Math.floor(Date.now() / 1000);
+    const expTime = now + 3600; // 1 hour
+    
+    const claims = {
+      iss: credentials.client_email,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: expTime,
+      iat: now
+    };
+    
+    // Create JWT header
+    const header = { alg: "RS256", typ: "JWT" };
+    
+    // Encode header and claims
+    const encodedHeader = btoa(JSON.stringify(header));
+    const encodedClaims = btoa(JSON.stringify(claims));
+    
+    // Create signature base
+    const signatureBase = `${encodedHeader}.${encodedClaims}`;
+    
+    // Import private key for signing
+    const privateKey = credentials.private_key;
+    const textEncoder = new TextEncoder();
+    const signData = textEncoder.encode(signatureBase);
+    
+    // Convert PEM format to ArrayBuffer format that crypto API can use
+    const pemHeader = "-----BEGIN PRIVATE KEY-----";
+    const pemFooter = "-----END PRIVATE KEY-----";
+    const pemContents = privateKey.substring(
+      privateKey.indexOf(pemHeader) + pemHeader.length,
+      privateKey.indexOf(pemFooter)
+    ).replace(/\s/g, '');
+    
+    const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+    
+    // Import the key
+    const cryptoKey = await crypto.subtle.importKey(
+      "pkcs8",
+      binaryDer,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    // Create signature
+    const signatureArrayBuffer = await crypto.subtle.sign(
+      { name: "RSASSA-PKCS1-v1_5" },
+      cryptoKey,
+      signData
+    );
+    
+    // Convert signature to base64url
+    const signature = btoa(String.fromCharCode(
+      ...new Uint8Array(signatureArrayBuffer)
+    )).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    
+    // Create JWT
+    const jwt = `${signatureBase}.${signature}`;
+    
+    // Exchange JWT for access token
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    });
+    
+    if (!tokenResponse.ok) {
+      throw new Error(`Failed to get token: ${tokenResponse.status} - ${tokenResponse.statusText}`);
+    }
+    
+    const tokenData = await tokenResponse.json();
+    return tokenData.access_token;
+    
+  } catch (error) {
+    console.error("Error in getGoogleAccessToken:", error);
+    throw error;
+  }
+}
+
 // Process the raw voices data from Google into a more usable format
 function processVoices(voices: any[]): any {
   const result: Record<string, any> = {};
   
   // Group voices by language code
   voices.forEach((voice) => {
-    const languageCode = voice.languageCode;
-    
-    if (!result[languageCode]) {
-      result[languageCode] = {
-        display_name: getLanguageDisplayName(languageCode),
-        voices: {
-          MALE: [],
-          FEMALE: [],
-        },
-      };
-    }
-    
-    // Add the voice to the appropriate gender category
-    if (voice.ssmlGender === "MALE" || voice.ssmlGender === "FEMALE") {
-      result[languageCode].voices[voice.ssmlGender].push({
-        name: voice.name,
-        ssml_gender: voice.ssmlGender,
-      });
-    }
+    voice.languageCodes.forEach((languageCode: string) => {
+      if (!result[languageCode]) {
+        result[languageCode] = {
+          display_name: getLanguageDisplayName(languageCode),
+          voices: {
+            MALE: [],
+            FEMALE: [],
+          },
+        };
+      }
+      
+      // Add the voice to the appropriate gender category
+      if (voice.ssmlGender === "MALE" || voice.ssmlGender === "FEMALE") {
+        result[languageCode].voices[voice.ssmlGender].push({
+          name: voice.name,
+          ssml_gender: voice.ssmlGender,
+        });
+      }
+    });
   });
   
   return result;
