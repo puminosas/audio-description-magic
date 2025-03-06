@@ -101,7 +101,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Button>
           </div>
         </Sidebar>
-        
         <div className="flex-1 overflow-auto">
           <main className="py-6">
             {children}
