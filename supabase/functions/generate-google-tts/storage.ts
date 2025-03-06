@@ -28,8 +28,20 @@ export async function uploadToGoogleStorage(
     
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error(`Failed to upload to Google Cloud Storage: ${errorText}`);
-      throw new Error(`Failed to upload to Google Cloud Storage: ${errorText}`);
+      
+      // Check for specific errors and provide better messages
+      let errorMessage = `Failed to upload to Google Cloud Storage: ${errorText}`;
+      
+      if (errorText.includes('permission') || errorText.includes('Access Denied') || uploadResponse.status === 403) {
+        errorMessage = `Google Cloud Storage permission denied. Make sure the service account has storage.objects.create permissions for bucket: ${bucketName}`;
+      } else if (uploadResponse.status === 404) {
+        errorMessage = `Google Cloud Storage bucket not found: ${bucketName}`;
+      } else if (errorText.includes('quota')) {
+        errorMessage = `Google Cloud Storage quota exceeded. Please check your storage limits.`;
+      }
+      
+      console.error(errorMessage);
+      throw new Error(errorMessage);
     }
     
     const uploadData = await uploadResponse.json();

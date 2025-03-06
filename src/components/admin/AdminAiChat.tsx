@@ -13,14 +13,9 @@ const AdminAiChat = () => {
   const {
     // Message handling
     messages,
-    input,
-    setInput,
-    isProcessing,
     isTyping,
     chatError,
     sendMessage,
-    handleKeyDown,
-    handleClearChat,
     retryLastMessage,
     
     // Chat sessions
@@ -41,6 +36,9 @@ const AdminAiChat = () => {
     handleFileSelect,
     handleSaveFile,
     handleAnalyzeWithAI,
+    
+    // Processing state
+    isProcessing,
     
     // Scroll handling
     messagesEndRef

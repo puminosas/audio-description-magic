@@ -75,6 +75,20 @@ export const useMessageHandling = () => {
     setMessages([]);
   };
 
+  const addSystemMessage = (content: string) => {
+    const systemMessage: Message = {
+      role: 'system',
+      content,
+      id: uuidv4(),
+      createdAt: new Date().toISOString()
+    };
+    setMessages([...messages, systemMessage]);
+  };
+
+  const addMessage = (message: Message) => {
+    setMessages([...messages, message]);
+  };
+
   const retryLastMessage = () => {
     if (messages.length > 0) {
       const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.role === 'user');
@@ -99,7 +113,11 @@ export const useMessageHandling = () => {
     sendMessage,
     handleKeyDown,
     handleClearChat,
-    retryLastMessage
+    retryLastMessage,
+    addSystemMessage,
+    addMessage,
+    setChatError: setError,
+    setIsTyping: setTypingStatus
   };
 };
 

@@ -69,7 +69,7 @@ export async function generateAudioDescription(
               folderUrl: null
             };
           } else {
-            console.log("OpenAI TTS failed, falling back to Google TTS");
+            console.log("OpenAI TTS failed, falling back to Google TTS:", openaiError || openaiData?.error || "Unknown error");
           }
         } catch (openaiErr) {
           console.log("OpenAI TTS error, falling back to Google TTS:", openaiErr);
@@ -88,7 +88,16 @@ export async function generateAudioDescription(
 
       if (error) {
         console.error('Error generating audio:', error);
-        return { error: error.message || 'Failed to generate audio' };
+        
+        // Improved error message based on error type
+        let errorMessage = error.message || 'Failed to generate audio';
+        if (error.message?.includes('Access Denied') || error.message?.includes('Permission denied')) {
+          errorMessage = 'Storage access denied. Please contact the administrator to check Google Cloud Storage permissions.';
+        } else if (error.message?.includes('timeout')) {
+          errorMessage = 'The request timed out. Please try with shorter text.';
+        }
+        
+        return { error: errorMessage };
       }
 
       if (!data || !data.success) {

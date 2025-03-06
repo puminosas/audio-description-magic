@@ -58,6 +58,15 @@ export const AudioErrorProvider = ({
       }
     }
     
+    // Check for Google Storage URLs with expected issues
+    if (audioUrl.includes('storage.googleapis.com') || audioUrl.includes('storage.cloud.google.com')) {
+      if (audioUrl.includes('403') || audioUrl.includes('Access Denied')) {
+        setError("Access denied to audio file. Please contact the administrator to check Google Cloud Storage permissions.");
+        setIsLoading(false);
+        return;
+      }
+    }
+    
     setIsLoading(true);
     
     // Create a new Audio element to precheck if the URL is valid
@@ -77,17 +86,21 @@ export const AudioErrorProvider = ({
             errorMessage = "Network error occurred while loading audio.";
             break;
           case MediaError.MEDIA_ERR_DECODE:
-            errorMessage = "Audio decoding failed. The file might be too large or in an unsupported format.";
+            errorMessage = "Audio decoding failed. Try another browser or download the file directly.";
             break;
           case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            errorMessage = "Audio format is not supported by your browser. Try a different browser or download the file.";
+            errorMessage = "Audio format is not supported by your browser. Try MP3 format.";
             break;
         }
       }
       
       // For external URLs, provide more specific Google Storage error messages
       if (audioUrl.includes('storage.googleapis.com') || audioUrl.includes('storage.cloud.google.com')) {
-        errorMessage = "Failed to load audio from Google Storage. This could be due to permission issues or the file may have been removed.";
+        if (audioUrl.includes('Access Denied') || audioUrl.includes('permission') || audioUrl.includes('403')) {
+          errorMessage = "Access denied to audio file. Please contact the administrator to check Google Cloud Storage permissions.";
+        } else {
+          errorMessage = "Failed to load audio from Google Storage. The file may have been removed or is not accessible.";
+        }
       }
       
       setError(errorMessage);
@@ -114,6 +127,8 @@ export const AudioErrorProvider = ({
           } else {
             setError("Audio loading timed out. Try a different browser or download the file.");
           }
+        } else if (audioUrl.includes('storage.googleapis.com') || audioUrl.includes('storage.cloud.google.com')) {
+          setError("Audio loading timed out. There might be a permission issue with Google Cloud Storage.");
         } else {
           setError("Audio loading timed out. Check your network connection or try again later.");
         }

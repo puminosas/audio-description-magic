@@ -1,5 +1,5 @@
 
-import { FileInfo, FileFilters, FileManagementState } from '../../types';
+import type { FileInfo, FileFilters } from '../../types';
 
 // Return type for useFileState hook
 export interface FileStateReturn {
