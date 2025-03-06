@@ -25,3 +25,10 @@ export interface ProjectFile {
   type: 'file' | 'directory';
   children?: ProjectFile[];
 }
+
+// File info model
+export interface FileInfo {
+  path: string;
+  content: string;
+  type?: 'script' | 'document' | 'style' | 'config' | 'unknown';
+}

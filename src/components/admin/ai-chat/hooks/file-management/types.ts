@@ -1,8 +1,5 @@
 
-export interface FileInfo {
-  path: string;
-  content: string;
-}
+import { FileInfo } from '../../types';
 
 export interface FileState {
   files: FileInfo[];
@@ -13,10 +10,40 @@ export interface FileState {
   isEditing: boolean;
 }
 
-export interface FileFilters {
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
+export interface FileManagementState {
+  files: FileInfo[];
   filteredFiles: FileInfo[];
+  isLoadingFiles: boolean;
+  selectedFile: string | null;
+  fileContent: string;
+  isEditing: boolean;
+  isLoadingContent: boolean;
+  error: string | null;
+  fileError: string | null;
+  activeFilters: FileFilters;
+}
+
+export interface FileStateReturn {
+  state: FileManagementState;
+  updateState: (updates: Partial<FileManagementState>) => void;
+  setSelectedFile: (filePath: string | null) => void;
+  setFileContent: (content: string) => void;
+  setIsEditing: (isEditing: boolean) => void;
+  setError: (error: string | null) => void;
+  setFileError: (fileError: string | null) => void;
+}
+
+export interface FileFilters {
+  types: string[];
+  searchQuery: string;
+}
+
+export interface FileFiltersReturn {
+  activeFilters: FileFilters;
+  setSearchQuery: (query: string) => void;
+  toggleFileTypeFilter: (type: string) => void;
+  clearFilters: () => void;
+  applyFilters: (files: FileInfo[]) => FileInfo[];
 }
 
 export interface FileOperations {
@@ -28,16 +55,10 @@ export interface FileOperations {
   handleAnalyzeWithAI: () => Promise<void>;
 }
 
-export type FileSystemResponse = {
-  files: FileInfo[];
-};
-
-export type FileContentResponse = {
-  content: string;
-  filePath: string;
-};
-
-export type FileSaveResponse = {
-  success: boolean;
-  message: string;
-};
+export interface FileOperationsReturn {
+  fetchFiles: () => Promise<FileInfo[]>;
+  fetchFileContent: (filePath: string) => Promise<string>;
+  saveFileContent: (filePath: string, content: string) => Promise<boolean>;
+  analyzeFileWithAI: (filePath: string, content: string) => Promise<string>;
+  refreshFiles: () => Promise<void>;
+}

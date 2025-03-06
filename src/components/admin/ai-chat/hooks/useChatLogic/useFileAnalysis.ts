@@ -1,18 +1,12 @@
 
 import { useState } from 'react';
 import { Message } from '../../types';
-import { FileAnalysisRequest } from './types';
 
-export const useFileAnalysis = (
-  messages: Message[],
-  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-  setTypingStatus: React.Dispatch<React.SetStateAction<string>>,
-  handleSendMessage: (customMessages?: Message[]) => Promise<Message[] | null>
-) => {
+export const useFileAnalysis = (sendMessage: (message: string) => void) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Request AI to analyze a file
-  const sendFileAnalysisRequest = async (filePath: string, fileContent: string) => {
+  const analyzeFileWithAI = async (filePath: string, fileContent: string) => {
     if (isAnalyzing) return;
     setIsAnalyzing(true);
     
@@ -27,34 +21,17 @@ export const useFileAnalysis = (
       if (['html'].includes(fileExtension)) fileType = 'HTML file';
       if (['json'].includes(fileExtension)) fileType = 'JSON file';
       
-      // Create a user message with the file analysis request
       // Format to make it clear in the chat that this is a file
-      const userMessage: Message = {
-        role: 'user',
-        content: `Please analyze this ${fileType} located at \`${filePath}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString()
-      };
+      const message = `Please analyze this ${fileType} located at \`${filePath}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``;
       
-      // Update state with the new message
-      const updatedMessages = [...messages, userMessage];
-      setMessages(updatedMessages);
-      setTypingStatus('processing');
-      
-      // Now send the message to the AI
-      const newMessages = await handleSendMessage(updatedMessages);
-      if (newMessages) {
-        // Save chat history after receiving AI response
-        setTimeout(() => {
-          // Note: saveChatHistory() needs to be called from the main hook
-        }, 500);
-      }
+      // Send the message to the AI
+      sendMessage(message);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   return {
-    sendFileAnalysisRequest
+    analyzeFileWithAI
   };
 };

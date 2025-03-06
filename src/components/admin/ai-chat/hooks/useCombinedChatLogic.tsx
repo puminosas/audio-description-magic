@@ -4,11 +4,7 @@ import { Message } from '../types';
 import { useMessageHandling } from './useMessageHandling';
 import { useChatSessions } from './useChatSessions';
 import { useScrollHandling } from './useScrollHandling';
-import { 
-  useFileState, 
-  useFileFilters, 
-  useFileOperations 
-} from './file-management';
+import { useFileState, useFileFilters, useFileOperations } from './file-management';
 import { useFileAnalysis } from './useChatLogic/useFileAnalysis';
 
 export const useCombinedChatLogic = (userId?: string | null) => {
@@ -38,23 +34,13 @@ export const useCombinedChatLogic = (userId?: string | null) => {
     deleteChatSession
   } = useChatSessions(messages, setMessages, userId);
 
-  // File management
+  // File management - initialize with empty objects for now
   const fileState = useFileState();
-  const fileFilters = useFileFilters(fileState.files);
-  const fileOperations = useFileOperations(fileState, sendMessage);
+  const fileFilters = useFileFilters(fileState.state.files);
+  const fileOperations = useFileOperations();
   
   // File analysis with AI
   const { analyzeFileWithAI } = useFileAnalysis(sendMessage);
-
-  // Enhanced file operations with AI analysis
-  const enhancedFileOperations = {
-    ...fileOperations,
-    handleAnalyzeWithAI: async () => {
-      if (fileState.selectedFile && fileState.fileContent) {
-        await analyzeFileWithAI(fileState.selectedFile, fileState.fileContent);
-      }
-    }
-  };
 
   // Scroll handling for chat
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -64,6 +50,37 @@ export const useCombinedChatLogic = (userId?: string | null) => {
   if (messages.length > 0 && currentSession) {
     saveChatHistory();
   }
+
+  // Handle file selection
+  const handleFileSelect = async (filePath: string) => {
+    fileState.setSelectedFile(filePath);
+    try {
+      const content = await fileOperations.fetchFileContent(filePath);
+      fileState.setFileContent(content);
+    } catch (error) {
+      fileState.setFileError(`Failed to load file: ${error.message}`);
+    }
+  };
+
+  // Handle file save
+  const handleSaveFile = async () => {
+    if (fileState.state.selectedFile && fileState.state.fileContent) {
+      await fileOperations.saveFileContent(
+        fileState.state.selectedFile,
+        fileState.state.fileContent
+      );
+    }
+  };
+
+  // Handle file analysis with AI
+  const handleAnalyzeWithAI = async () => {
+    if (fileState.state.selectedFile && fileState.state.fileContent) {
+      await analyzeFileWithAI(
+        fileState.state.selectedFile,
+        fileState.state.fileContent
+      );
+    }
+  };
 
   return {
     // Message handling
@@ -88,25 +105,25 @@ export const useCombinedChatLogic = (userId?: string | null) => {
     deleteChatSession,
     
     // File state
-    files: fileState.files,
-    selectedFile: fileState.selectedFile,
-    fileContent: fileState.fileContent,
-    isLoadingContent: fileState.isLoading,
-    fileError: fileState.fileError,
-    isEditing: fileState.isEditing,
+    files: fileState.state.files,
+    selectedFile: fileState.state.selectedFile,
+    fileContent: fileState.state.fileContent,
+    isLoadingContent: fileState.state.isLoadingContent,
+    fileError: fileState.state.fileError,
+    isEditing: fileState.state.isEditing,
     
     // File filters
-    searchTerm: fileFilters.searchTerm,
-    setSearchTerm: fileFilters.setSearchTerm,
-    filteredFiles: fileFilters.filteredFiles,
+    searchTerm: fileFilters.activeFilters.searchQuery,
+    setSearchTerm: fileFilters.setSearchQuery,
+    filteredFiles: fileFilters.applyFilters(fileState.state.files),
     
     // File operations
-    fetchFiles: enhancedFileOperations.fetchFiles,
-    handleFileSelect: enhancedFileOperations.handleFileSelect,
-    setFileContent: enhancedFileOperations.setFileContent,
-    setIsEditing: enhancedFileOperations.setIsEditing,
-    handleSaveFile: enhancedFileOperations.handleSaveFile,
-    handleAnalyzeWithAI: enhancedFileOperations.handleAnalyzeWithAI,
+    fetchFiles: fileOperations.fetchFiles,
+    handleFileSelect,
+    setFileContent: fileState.setFileContent,
+    setIsEditing: fileState.setIsEditing,
+    handleSaveFile,
+    handleAnalyzeWithAI,
     
     // Scroll handling
     messagesEndRef,

@@ -8,7 +8,7 @@ const initialFilters: FileFilters = {
   searchQuery: ''
 };
 
-export const useFileFilters = (): FileFiltersReturn => {
+export const useFileFilters = (files: FileInfo[] = []): FileFiltersReturn => {
   const [activeFilters, setActiveFilters] = useState<FileFilters>(initialFilters);
 
   const setSearchQuery = (query: string) => {
@@ -35,8 +35,8 @@ export const useFileFilters = (): FileFiltersReturn => {
     setActiveFilters(initialFilters);
   };
 
-  const applyFilters = (files: FileInfo[]): FileInfo[] => {
-    return files.filter(file => {
+  const applyFilters = (filesToFilter: FileInfo[]): FileInfo[] => {
+    return filesToFilter.filter(file => {
       // Apply search filter
       const matchesSearch = activeFilters.searchQuery
         ? file.path.toLowerCase().includes(activeFilters.searchQuery.toLowerCase())
@@ -44,7 +44,7 @@ export const useFileFilters = (): FileFiltersReturn => {
 
       // Apply type filter
       const matchesType = activeFilters.types.length > 0
-        ? activeFilters.types.includes(file.type)
+        ? activeFilters.types.includes(file.type || 'unknown')
         : true;
 
       return matchesSearch && matchesType;

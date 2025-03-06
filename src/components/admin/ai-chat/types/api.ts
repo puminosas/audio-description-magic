@@ -1,5 +1,5 @@
 
-import { FileInfo } from '../hooks/file-management/types';
+import { FileInfo } from '../types';
 
 // API Response types for file system operations
 export type FileSystemResponse = {
@@ -14,6 +14,25 @@ export type FileContentResponse = {
 export type FileSaveResponse = {
   success: boolean;
   message: string;
+};
+
+// Additional response types needed for file operations
+export type GetFilesResponse = {
+  success: boolean;
+  files: FileInfo[];
+  error?: string;
+};
+
+export type GetFileContentResponse = {
+  success: boolean;
+  content: string;
+  error?: string;
+};
+
+export type SaveFileContentResponse = {
+  success: boolean;
+  message: string;
+  error?: string;
 };
 
 // API Response types for chat operations

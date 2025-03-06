@@ -1,9 +1,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import { FileInfo } from '../../types';
 import { useFileState } from './useFileState';
 import { useFileFilters } from './useFileFilters';
 import { useFileOperations } from './useFileOperations';
-import { FileInfo } from '../../types';
+
+// Export hooks for use elsewhere
+export { useFileState } from './useFileState';
+export { useFileFilters } from './useFileFilters';
+export { useFileOperations } from './useFileOperations';
 
 export const useFileManagement = () => {
   const fileState = useFileState();
