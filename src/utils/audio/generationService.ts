@@ -58,7 +58,7 @@ export async function generateAudioDescription(
 
         if (descriptionError) {
           console.error('Error generating description:', descriptionError);
-        } else if (descriptionData && descriptionData.success && descriptionData.generated_text) {
+        } else if (descriptionData?.success && descriptionData?.generated_text) {
           finalText = descriptionData.generated_text;
           console.log('Successfully generated description:', finalText.substring(0, 50) + '...');
         } else {

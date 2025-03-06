@@ -132,7 +132,13 @@ async function fetchGoogleVoices() {
       throw new Error(`Google API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error("Error parsing response:", parseError);
+      throw new Error(`Failed to parse response: ${parseError.message}`);
+    }
     
     // Process voices to match the Python example format
     const voicesByLanguage = {};

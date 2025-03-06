@@ -76,15 +76,18 @@ export const useAudioGeneration = () => {
             }
           });
           
-          const { data: descData, error: descError } = await Promise.race([
+          const descResponse = await Promise.race([
             descPromise,
             descTimeoutPromise
           ]);
           
-          if (descError) {
-            console.error("Error generating description:", descError);
-          } else if (descData?.success && descData?.generated_text) {
-            enhancedText = descData.generated_text;
+          // Check for error first
+          if (descResponse.error) {
+            console.error("Error generating description:", descResponse.error);
+          } 
+          // Then check if we have data
+          else if (descResponse.data?.success && descResponse.data?.generated_text) {
+            enhancedText = descResponse.data.generated_text;
             console.log("Generated enhanced description:", enhancedText.substring(0, 100) + "...");
           }
         } catch (descErr) {

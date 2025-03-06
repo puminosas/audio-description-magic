@@ -6,8 +6,8 @@ import { formatVoiceName } from '../utils';
 
 // Initial default voices for fallback
 const DEFAULT_VOICES: VoiceOption[] = [
-  { id: 'en-US-Wavenet-A', name: 'Wavenet A (Male)', gender: 'male' },
-  { id: 'en-US-Wavenet-E', name: 'Wavenet E (Female)', gender: 'female' },
+  { id: 'en-US-Wavenet-A', name: 'Wavenet A (Male)', gender: 'MALE' },
+  { id: 'en-US-Wavenet-E', name: 'Wavenet E (Female)', gender: 'FEMALE' },
 ];
 
 export function useVoiceData(
@@ -41,13 +41,13 @@ export function useVoiceData(
           const maleVoices = (data[language].voices.MALE || []).map((v: any) => ({
             id: v.name,
             name: formatVoiceName(v.name),
-            gender: 'male' as const
+            gender: 'MALE' as const
           }));
           
           const femaleVoices = (data[language].voices.FEMALE || []).map((v: any) => ({
             id: v.name,
             name: formatVoiceName(v.name, 'female'),
-            gender: 'female' as const
+            gender: 'FEMALE' as const
           }));
           
           const formattedVoices = [...maleVoices, ...femaleVoices];
