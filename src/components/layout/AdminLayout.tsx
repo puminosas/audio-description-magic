@@ -29,8 +29,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
   
   return (
-    <SidebarProvider>
-      <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background">
+      <SidebarProvider defaultExpanded={true}>
         <Sidebar className="hidden md:flex w-64 border-r pt-5 px-3 flex-col justify-between">
           <div>
             <div className="px-3 py-2">
@@ -101,8 +101,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             {children}
           </main>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 };
 

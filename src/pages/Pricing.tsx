@@ -155,6 +155,43 @@ const Pricing = () => {
     }
   };
 
+  // Fixed rendering issue with Tabs component
+  const renderPricingCards = () => (
+    <div className="grid md:grid-cols-3 gap-8 w-full">
+      <PricingCard
+        name="Free"
+        price="Free"
+        description="Perfect for trying out the service."
+        features={freePlanFeatures}
+        buttonText={getPlanButtonText('free')}
+        buttonVariant="outline"
+        onSubscribe={() => handlePlanAction('free')}
+        isCurrentPlan={profile?.plan === 'free'}
+      />
+      
+      <PricingCard
+        name="Basic"
+        price={billingCycle === 'monthly' ? "$19" : "$15"}
+        description="For small businesses with moderate needs."
+        features={basicPlanFeatures}
+        popular={true}
+        buttonText={getPlanButtonText('basic')}
+        onSubscribe={() => handlePlanAction('basic')}
+        isCurrentPlan={profile?.plan === 'basic'}
+      />
+      
+      <PricingCard
+        name="Premium"
+        price={billingCycle === 'monthly' ? "$49" : "$39"}
+        description="For businesses with high-volume needs."
+        features={premiumPlanFeatures}
+        buttonText={getPlanButtonText('premium')}
+        onSubscribe={() => handlePlanAction('premium')}
+        isCurrentPlan={profile?.plan === 'premium'}
+      />
+    </div>
+  );
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-5xl mx-auto">
@@ -181,81 +218,15 @@ const Pricing = () => {
                 </span>
               </TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="monthly" className="mt-0 w-full">
+              {renderPricingCards()}
+            </TabsContent>
+            
+            <TabsContent value="annual" className="mt-0 w-full">
+              {renderPricingCards()}
+            </TabsContent>
           </Tabs>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          <TabsContent value="monthly" className="mt-0 w-full">
-            <div className="grid md:grid-cols-3 gap-8 w-full">
-              <PricingCard
-                name="Free"
-                price="Free"
-                description="Perfect for trying out the service."
-                features={freePlanFeatures}
-                buttonText={getPlanButtonText('free')}
-                buttonVariant="outline"
-                onSubscribe={() => handlePlanAction('free')}
-                isCurrentPlan={profile?.plan === 'free'}
-              />
-              
-              <PricingCard
-                name="Basic"
-                price="$19"
-                description="For small businesses with moderate needs."
-                features={basicPlanFeatures}
-                popular={true}
-                buttonText={getPlanButtonText('basic')}
-                onSubscribe={() => handlePlanAction('basic')}
-                isCurrentPlan={profile?.plan === 'basic'}
-              />
-              
-              <PricingCard
-                name="Premium"
-                price="$49"
-                description="For businesses with high-volume needs."
-                features={premiumPlanFeatures}
-                buttonText={getPlanButtonText('premium')}
-                onSubscribe={() => handlePlanAction('premium')}
-                isCurrentPlan={profile?.plan === 'premium'}
-              />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="annual" className="mt-0 w-full">
-            <div className="grid md:grid-cols-3 gap-8 w-full">
-              <PricingCard
-                name="Free"
-                price="Free"
-                description="Perfect for trying out the service."
-                features={freePlanFeatures}
-                buttonText={getPlanButtonText('free')}
-                buttonVariant="outline"
-                onSubscribe={() => handlePlanAction('free')}
-                isCurrentPlan={profile?.plan === 'free'}
-              />
-              
-              <PricingCard
-                name="Basic"
-                price="$15"
-                description="For small businesses with moderate needs."
-                features={basicPlanFeatures}
-                popular={true}
-                buttonText={getPlanButtonText('basic')}
-                onSubscribe={() => handlePlanAction('basic')}
-                isCurrentPlan={profile?.plan === 'basic'}
-              />
-              
-              <PricingCard
-                name="Premium"
-                price="$39"
-                description="For businesses with high-volume needs."
-                features={premiumPlanFeatures}
-                buttonText={getPlanButtonText('premium')}
-                onSubscribe={() => handlePlanAction('premium')}
-                isCurrentPlan={profile?.plan === 'premium'}
-              />
-            </div>
-          </TabsContent>
         </div>
 
         <div className="mt-16 glassmorphism rounded-xl p-8">

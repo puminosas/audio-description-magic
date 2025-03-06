@@ -48,8 +48,10 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ setMobileMenuOpen }) => {
     }
   };
   
+  const currentTab = getCurrentTab();
+  
   return (
-    <Tabs value={getCurrentTab()} className="space-y-6">
+    <Tabs value={currentTab} className="space-y-6">
       <div className="overflow-auto">
         <TabsList className="flex flex-wrap">
           <TabsTrigger 
