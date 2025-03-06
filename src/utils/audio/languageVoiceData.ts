@@ -1,8 +1,13 @@
 
 import { LanguageOption, VoiceOption } from './types';
 
-// Empty initial language list - will be populated from Google TTS API
-export const LANGUAGES: LanguageOption[] = [];
+// Default languages list - will be populated from Google TTS API
+export const LANGUAGES: LanguageOption[] = [
+  { id: 'en-US', code: 'en-US', name: 'English (US)' },
+  { id: 'es-ES', code: 'es-ES', name: 'Spanish (Spain)' },
+  { id: 'fr-FR', code: 'fr-FR', name: 'French (France)' },
+  { id: 'lt-LT', code: 'lt-LT', name: 'Lithuanian (Lithuania)' }
+];
 
 // Default voices for fallback
 const DEFAULT_VOICES: Record<string, VoiceOption[]> = {
@@ -68,7 +73,8 @@ export async function initializeGoogleVoices(): Promise<void> {
     const response = await fetch('https://cttaphbzhmheecbqhtjj.supabase.co/functions/v1/get-google-voices');
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch Google voices: ${response.statusText}`);
+      console.warn(`Failed to fetch Google voices: ${response.statusText}`);
+      return;
     }
     
     const data = await response.json();

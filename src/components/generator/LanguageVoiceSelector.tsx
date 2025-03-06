@@ -2,7 +2,7 @@
 import React from 'react';
 import LanguageSelector from '@/components/ui/LanguageSelector';
 import VoiceSelector from '@/components/ui/VoiceSelector';
-import { LanguageOption, VoiceOption } from '@/utils/audioGenerationService';
+import { LanguageOption, VoiceOption } from '@/utils/audio/types';
 
 interface LanguageVoiceSelectorProps {
   selectedLanguage: LanguageOption;
@@ -17,6 +17,19 @@ const LanguageVoiceSelector = ({
   onSelectLanguage,
   onSelectVoice
 }: LanguageVoiceSelectorProps) => {
+  // Make sure we have valid default objects to prevent "undefined" errors
+  const defaultLanguage: LanguageOption = selectedLanguage || {
+    id: 'en-US',
+    code: 'en-US',
+    name: 'English (US)'
+  };
+  
+  const defaultVoice: VoiceOption = selectedVoice || {
+    id: 'en-US-Wavenet-A',
+    name: 'Default Voice',
+    gender: 'MALE'
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -24,8 +37,8 @@ const LanguageVoiceSelector = ({
           Language
         </label>
         <LanguageSelector 
-          onSelect={onSelectLanguage as any} 
-          selectedLanguage={selectedLanguage as any}
+          onSelect={onSelectLanguage} 
+          selectedLanguage={defaultLanguage}
         />
       </div>
       
@@ -34,9 +47,9 @@ const LanguageVoiceSelector = ({
           Voice
         </label>
         <VoiceSelector 
-          onSelect={onSelectVoice as any} 
-          selectedVoice={selectedVoice as any}
-          language={selectedLanguage.code}
+          onSelect={onSelectVoice} 
+          selectedVoice={defaultVoice}
+          language={defaultLanguage.code}
         />
       </div>
     </div>
