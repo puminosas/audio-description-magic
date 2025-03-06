@@ -79,28 +79,23 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
     if (!user) return "Sign in to Generate";
     if (loading) return "Generating...";
     if (!text.trim()) return "Enter a product name";
-    return "Generate Audio Description";
+    return "Generate Audio";
   };
 
   return (
     <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="md:col-span-2">
-          <DescriptionInput 
-            value={text} 
-            onChange={handleTextChange}
-            placeholder="Enter a product name or brief description to generate an engaging audio description"
-          />
-        </div>
+        <DescriptionInput 
+          value={text} 
+          onChange={handleTextChange} 
+        />
         
-        <div className="md:col-span-1">
-          <LanguageVoiceSelector 
-            selectedLanguage={selectedLanguage}
-            selectedVoice={selectedVoice}
-            onSelectLanguage={handleSelectLanguage}
-            onSelectVoice={handleSelectVoice}
-          />
-        </div>
+        <LanguageVoiceSelector 
+          selectedLanguage={selectedLanguage}
+          selectedVoice={selectedVoice}
+          onSelectLanguage={handleSelectLanguage}
+          onSelectVoice={handleSelectVoice}
+        />
       </div>
 
       <div className="flex justify-between items-center">
@@ -117,7 +112,6 @@ const GeneratorForm = ({ onGenerate, loading }: GeneratorFormProps) => {
           onClick={handleSubmit} 
           disabled={isDisabled}
           className="gap-1"
-          size="lg"
         >
           {loading ? (
             <Loader2 size={18} className="animate-spin" />

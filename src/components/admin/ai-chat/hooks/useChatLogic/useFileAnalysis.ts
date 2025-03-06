@@ -1,175 +1,60 @@
 
 import { useState } from 'react';
 import { Message } from '../../types';
-import { ChatResponse, FileAnalysisResponse } from '../../types/api';
-import { v4 as uuidv4 } from 'uuid';
+import { FileAnalysisRequest } from './types';
 
-interface UseFileAnalysisProps {
-  addMessage: (message: Message) => void;
-  setIsTyping: (typing: boolean) => void;
-}
+export const useFileAnalysis = (
+  messages: Message[],
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+  setTypingStatus: React.Dispatch<React.SetStateAction<string>>,
+  handleSendMessage: (customMessages?: Message[]) => Promise<Message[] | null>
+) => {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-interface FileAnalysisReturn {
-  sendFileAnalysisRequest: (filePath: string, fileContent: string) => Promise<void>;
-  analyzeFileWithAI: (filePath: string, fileContent: string, query?: string, messageId?: string) => Promise<void>;
-}
-
-export const useFileAnalysis = ({ 
-  addMessage, 
-  setIsTyping 
-}: UseFileAnalysisProps): FileAnalysisReturn => {
-  const [error, setError] = useState<string | null>(null);
-
+  // Request AI to analyze a file
   const sendFileAnalysisRequest = async (filePath: string, fileContent: string) => {
-    setIsTyping(true);
-    setError(null);
-
+    if (isAnalyzing) return;
+    setIsAnalyzing(true);
+    
     try {
-      const fileName = filePath.split('/').pop() || filePath;
-      const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
-
-      const userMessageId = uuidv4();
+      // Create a context message about the file type
+      const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+      let fileType = 'text file';
+      
+      if (['js', 'jsx'].includes(fileExtension)) fileType = 'JavaScript file';
+      if (['ts', 'tsx'].includes(fileExtension)) fileType = 'TypeScript file';
+      if (['css', 'scss'].includes(fileExtension)) fileType = 'CSS/SCSS file';
+      if (['html'].includes(fileExtension)) fileType = 'HTML file';
+      if (['json'].includes(fileExtension)) fileType = 'JSON file';
+      
+      // Create a user message with the file analysis request
+      // Format to make it clear in the chat that this is a file
       const userMessage: Message = {
-        id: userMessageId,
         role: 'user',
-        content: `Analyze the file ${fileName} for me and provide any insights or suggestions.`,
-        createdAt: new Date().toISOString()
-      };
-      addMessage(userMessage);
-
-      // Determine file type based on extension
-      let fileType = 'unknown';
-      if (['js', 'jsx', 'ts', 'tsx'].includes(fileExtension)) {
-        fileType = 'JavaScript/TypeScript';
-      } else if (['html', 'css', 'scss', 'sass'].includes(fileExtension)) {
-        fileType = 'HTML/CSS';
-      } else if (['json', 'xml', 'yaml', 'yml'].includes(fileExtension)) {
-        fileType = 'Data Format';
-      } else if (['md', 'txt', 'docx'].includes(fileExtension)) {
-        fileType = 'Document';
-      }
-
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filePath,
-          fileContent,
-          fileType
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze file');
-      }
-
-      const analysisData: FileAnalysisResponse = await response.json();
-
-      const assistantMessage: Message = {
-        id: uuidv4(),
-        role: 'assistant',
-        content: analysisData.analysis || 'Analysis completed.',
-        createdAt: new Date().toISOString()
-      };
-
-      addMessage(assistantMessage);
-    } catch (error) {
-      console.error('Error analyzing file:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
-      
-      const errorMessage: Message = {
-        id: uuidv4(),
-        role: 'assistant',
-        content: `I encountered an error while analyzing the file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: `Please analyze this ${fileType} located at \`${filePath}\` and provide suggestions for improvements or explain what it does:\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``,
+        id: crypto.randomUUID(),
         createdAt: new Date().toISOString()
       };
       
-      addMessage(errorMessage);
+      // Update state with the new message
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      setTypingStatus('processing');
+      
+      // Now send the message to the AI
+      const newMessages = await handleSendMessage(updatedMessages);
+      if (newMessages) {
+        // Save chat history after receiving AI response
+        setTimeout(() => {
+          // Note: saveChatHistory() needs to be called from the main hook
+        }, 500);
+      }
     } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const analyzeFileWithAI = async (filePath: string, fileContent: string, query?: string, messageId?: string) => {
-    setIsTyping(true);
-    setError(null);
-
-    try {
-      const fileName = filePath.split('/').pop() || filePath;
-      
-      // Use provided message ID or generate a new one
-      const userMessageId = messageId || uuidv4();
-      
-      const userMessage: Message = {
-        id: userMessageId,
-        role: 'user',
-        content: query || `Analyze the file ${fileName} for me and provide any insights or suggestions.`,
-        createdAt: new Date().toISOString()
-      };
-      
-      if (!messageId) {
-        // Only add the message if we didn't receive an existing message ID
-        addMessage(userMessage);
-      }
-
-      const response = await fetch('/api/ai-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: `You are an AI assistant that analyzes code and other files. A user has shared the file "${fileName}" with you and wants insights. The content of the file is provided below:\n\n${fileContent}`
-            },
-            {
-              role: 'user',
-              content: query || `Analyze the file ${fileName}. Explain what it does, identify any potential issues, and suggest improvements if applicable.`
-            }
-          ]
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze file with AI');
-      }
-
-      const analysisData: ChatResponse = await response.json();
-
-      const assistantMessage: Message = {
-        id: uuidv4(),
-        role: 'assistant',
-        content: analysisData.content || 'Analysis completed.',
-        createdAt: new Date().toISOString()
-      };
-
-      addMessage(assistantMessage);
-    } catch (error) {
-      console.error('Error analyzing file with AI:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
-      
-      const errorMessage: Message = {
-        id: uuidv4(),
-        role: 'assistant',
-        content: `I encountered an error while analyzing the file: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        createdAt: new Date().toISOString()
-      };
-      
-      addMessage(errorMessage);
-    } finally {
-      setIsTyping(false);
+      setIsAnalyzing(false);
     }
   };
 
   return {
-    sendFileAnalysisRequest,
-    analyzeFileWithAI
+    sendFileAnalysisRequest
   };
 };
-
-export default useFileAnalysis;

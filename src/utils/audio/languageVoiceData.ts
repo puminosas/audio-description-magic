@@ -1,30 +1,29 @@
-
 import { LanguageOption, VoiceOption } from './types';
 
 // Default language options (will be replaced with actual data from Google TTS API)
 export const LANGUAGES: LanguageOption[] = [
-  { id: 'en-US', code: 'en-US', name: 'English (US)' },
-  { id: 'en-GB', code: 'en-GB', name: 'English (UK)' },
-  { id: 'es-ES', code: 'es-ES', name: 'Spanish' },
-  { id: 'fr-FR', code: 'fr-FR', name: 'French' },
-  { id: 'de-DE', code: 'de-DE', name: 'German' },
-  { id: 'it-IT', code: 'it-IT', name: 'Italian' },
-  { id: 'ja-JP', code: 'ja-JP', name: 'Japanese' },
-  { id: 'ko-KR', code: 'ko-KR', name: 'Korean' },
-  { id: 'pt-BR', code: 'pt-BR', name: 'Portuguese (Brazil)' },
-  { id: 'ru-RU', code: 'ru-RU', name: 'Russian' },
-  { id: 'zh-CN', code: 'zh-CN', name: 'Chinese (Simplified)' },
+  { id: 'en-US', code: 'en-US', name: 'English (US)', nativeText: 'English (US)', nativeName: 'English (US)' },
+  { id: 'en-GB', code: 'en-GB', name: 'English (UK)', nativeText: 'English (UK)', nativeName: 'English (UK)' },
+  { id: 'es-ES', code: 'es-ES', name: 'Spanish', nativeText: 'Español', nativeName: 'Spanish' },
+  { id: 'fr-FR', code: 'fr-FR', name: 'French', nativeText: 'Français', nativeName: 'French' },
+  { id: 'de-DE', code: 'de-DE', name: 'German', nativeText: 'Deutsch', nativeName: 'German' },
+  { id: 'it-IT', code: 'it-IT', name: 'Italian', nativeText: 'Italiano', nativeName: 'Italian' },
+  { id: 'ja-JP', code: 'ja-JP', name: 'Japanese', nativeText: '日本語', nativeName: 'Japanese' },
+  { id: 'ko-KR', code: 'ko-KR', name: 'Korean', nativeText: '한국어', nativeName: 'Korean' },
+  { id: 'pt-BR', code: 'pt-BR', name: 'Portuguese (Brazil)', nativeText: 'Português (Brasil)', nativeName: 'Portuguese (Brazil)' },
+  { id: 'ru-RU', code: 'ru-RU', name: 'Russian', nativeText: 'Русский', nativeName: 'Russian' },
+  { id: 'zh-CN', code: 'zh-CN', name: 'Chinese (Simplified)', nativeText: '简体中文', nativeName: 'Chinese (Simplified)' },
 ];
 
 // Default voices for fallback
 const DEFAULT_VOICES: Record<string, VoiceOption[]> = {
   'en-US': [
-    { id: 'en-US-Wavenet-A', name: 'Wavenet A (Male)', gender: 'MALE' },
-    { id: 'en-US-Wavenet-B', name: 'Wavenet B (Male)', gender: 'MALE' },
-    { id: 'en-US-Wavenet-C', name: 'Wavenet C (Female)', gender: 'FEMALE' },
-    { id: 'en-US-Wavenet-D', name: 'Wavenet D (Male)', gender: 'MALE' },
-    { id: 'en-US-Wavenet-E', name: 'Wavenet E (Female)', gender: 'FEMALE' },
-    { id: 'en-US-Wavenet-F', name: 'Wavenet F (Female)', gender: 'FEMALE' },
+    { id: 'en-US-Wavenet-A', name: 'Wavenet A (Male)', gender: 'male' },
+    { id: 'en-US-Wavenet-B', name: 'Wavenet B (Male)', gender: 'male' },
+    { id: 'en-US-Wavenet-C', name: 'Wavenet C (Female)', gender: 'female' },
+    { id: 'en-US-Wavenet-D', name: 'Wavenet D (Male)', gender: 'male' },
+    { id: 'en-US-Wavenet-E', name: 'Wavenet E (Female)', gender: 'female' },
+    { id: 'en-US-Wavenet-F', name: 'Wavenet F (Female)', gender: 'female' },
   ],
 };
 
@@ -88,6 +87,8 @@ export async function initializeGoogleVoices(): Promise<void> {
         id: code,
         code,
         name: data[code].display_name || code,
+        nativeText: data[code].display_name || code,
+        nativeName: data[code].display_name || code
       }));
       
       // Sort languages alphabetically
@@ -103,12 +104,12 @@ export async function initializeGoogleVoices(): Promise<void> {
             male: (langData.voices.MALE || []).map((v: any) => ({
               id: v.name,
               name: formatVoiceName(v.name),
-              gender: 'MALE' as const
+              gender: 'male' as const
             })),
             female: (langData.voices.FEMALE || []).map((v: any) => ({
               id: v.name,
               name: formatVoiceName(v.name, 'female'),
-              gender: 'FEMALE' as const
+              gender: 'female' as const
             })),
             neutral: []
           }

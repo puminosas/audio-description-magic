@@ -2,24 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { AudioGenerationResult, AudioSuccessResult, AudioErrorResult, LanguageOption, VoiceOption } from './types';
 
-// Create a simple rate limiter for API calls
-const apiCallTimestamps: Record<string, number[]> = {};
-
-const checkRateLimiting = (apiName: string, maxCalls: number, timeWindowMs: number): boolean => {
-  const now = Date.now();
-  const timestamps = apiCallTimestamps[apiName] || [];
-  
-  // Filter out timestamps older than our time window
-  const recentCalls = timestamps.filter(time => (now - time) < timeWindowMs);
-  
-  // Add current timestamp
-  recentCalls.push(now);
-  apiCallTimestamps[apiName] = recentCalls;
-  
-  // Check if we've exceeded our rate limit
-  return recentCalls.length <= maxCalls;
-};
-
 /**
  * Generate an audio description using Google Text-to-Speech via our Supabase Edge Function
  */
@@ -36,100 +18,52 @@ export async function generateAudioDescription(
       return { error: 'Authentication required to generate audio descriptions' };
     }
 
-    // Apply rate limiting - 10 calls per minute
-    if (!checkRateLimiting('generateDescription', 10, 60000)) {
-      return { error: 'Rate limit exceeded. Please wait a moment before generating more audio.' };
-    }
-
     // First determine if we need to generate a description
     let finalText = text;
     
-    if (text.length < 50) {
-      try {
-        console.log(`Generating description for: ${text} in language: ${language.code}`);
-        // This is likely a product name, so generate a description
-        const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-description', {
-          body: {
-            product_name: text,
-            language: language.code,
-            voice_name: voice.name
-          }
-        });
-
-        if (descriptionError) {
-          console.error('Error generating description:', descriptionError);
-        } else if (descriptionData?.success && descriptionData?.generated_text) {
-          finalText = descriptionData.generated_text;
-          console.log('Successfully generated description:', finalText.substring(0, 50) + '...');
-        } else {
-          console.warn('Description generation returned unexpected format:', descriptionData);
-        }
-      } catch (descError) {
-        console.error('Failed to connect to description service:', descError);
-      }
-    }
-
-    try {
-      console.log(`Generating audio for ${finalText.substring(0, 30)}... with voice ${voice.id}`);
-      
-      // Apply rate limiting - 5 calls per minute for TTS
-      if (!checkRateLimiting('generateAudio', 5, 60000)) {
-        return { error: 'Rate limit exceeded for audio generation. Please wait a moment before generating more audio.' };
-      }
-      
-      // Generate the audio using Google TTS
-      const { data, error } = await supabase.functions.invoke('generate-google-tts', {
+    if (text.length < 20) {
+      // This is likely a product name, so generate a description
+      const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-description', {
         body: {
-          text: finalText,
+          product_name: text,
           language: language.code,
-          voice: voice.id,
-          user_id: session.user.id
+          voice_name: voice.name
         }
       });
 
-      if (error) {
-        console.error('Error generating audio:', error);
-        
-        // Improved error message based on error type
-        let errorMessage = error.message || 'Failed to generate audio';
-        if (error.message?.includes('Access Denied') || error.message?.includes('Permission denied')) {
-          errorMessage = 'Storage access denied. Please contact the administrator to check storage permissions.';
-        } else if (error.message?.includes('timeout')) {
-          errorMessage = 'The request timed out. Please try with shorter text.';
-        }
-        
-        return { error: errorMessage };
+      if (descriptionError || !descriptionData.success) {
+        console.error('Error generating description:', descriptionError || descriptionData.error);
+        return { error: 'Failed to generate product description' };
       }
 
-      if (!data || !data.success) {
-        console.error('Invalid response from TTS service:', data);
-        return { error: data?.error || 'Failed to generate audio, invalid response from server' };
-      }
-
-      // Return success response
-      const result: AudioSuccessResult = {
-        audioUrl: data.audio_url,
-        text: finalText,
-        folderUrl: null, // No longer needed since we're using Supabase storage
-        id: data.fileName || crypto.randomUUID() // Store the filename as ID for reference
-      };
-
-      return result;
-    } catch (audioError) {
-      console.error('Connection error with audio generation service:', audioError);
-      
-      const errorMessage = audioError instanceof Error ? audioError.message : String(audioError);
-      const isFetchError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Failed to send');
-      
-      return { 
-        error: isFetchError 
-          ? 'Unable to connect to audio generation service. Please check your network connection and try again later.'
-          : 'Error generating audio. Please try again with different text or settings.'
-      };
+      finalText = descriptionData.generated_text;
     }
+
+    // Now generate the audio using Google TTS
+    const { data, error } = await supabase.functions.invoke('generate-google-tts', {
+      body: {
+        text: finalText,
+        language: language.code,
+        voice: voice.id,
+        user_id: session.user.id
+      }
+    });
+
+    if (error || !data.success) {
+      console.error('Error generating audio:', error || data.error);
+      return { error: error?.message || data?.error || 'Failed to generate audio' };
+    }
+
+    // Return success response
+    const result: AudioSuccessResult = {
+      audioUrl: data.audio_url,
+      text: finalText,
+    };
+
+    return result;
   } catch (error) {
     console.error('Error in generateAudioDescription:', error);
-    return { error: error instanceof Error ? error.message : 'Failed to generate audio description' };
+    return { error: error.message || 'Failed to generate audio description' };
   }
 }
 
@@ -138,13 +72,6 @@ export async function generateAudioDescription(
  */
 export async function fetchGoogleVoices() {
   try {
-    // Apply rate limiting - 1 call per minute for voice list
-    if (!checkRateLimiting('fetchVoices', 1, 60000)) {
-      console.warn('Rate limiting applied to voice fetching - using cached voices');
-      return getDefaultVoices();
-    }
-    
-    console.log('Fetching Google TTS voices...');
     const { data, error } = await supabase.functions.invoke('get-google-voices');
     
     if (error) {
@@ -152,43 +79,9 @@ export async function fetchGoogleVoices() {
       throw new Error(error.message);
     }
     
-    console.log('Successfully fetched Google TTS voices');
     return data;
   } catch (error) {
     console.error('Error in fetchGoogleVoices:', error);
-    return getDefaultVoices();
+    throw error;
   }
-}
-
-// Helper function to provide default voices when API call fails
-function getDefaultVoices() {
-  return {
-    "en-US": {
-      display_name: "English (US)",
-      voices: {
-        MALE: [
-          { name: "en-US-Wavenet-A", ssml_gender: "MALE" },
-          { name: "en-US-Wavenet-B", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "en-US-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "en-US-Wavenet-E", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "es-ES": {
-      display_name: "Spanish (Spain)",
-      voices: {
-        MALE: [{ name: "es-ES-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "es-ES-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "fr-FR": {
-      display_name: "French (France)",
-      voices: {
-        MALE: [{ name: "fr-FR-Wavenet-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "fr-FR-Wavenet-A", ssml_gender: "FEMALE" }]
-      }
-    }
-  };
 }

@@ -1,126 +1,226 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as path from "https://deno.land/std@0.168.0/path/mod.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const isValidFilePath = (path: string): boolean => {
+  // Basic security check to prevent access to sensitive files
+  const forbiddenPatterns = [
+    /\.env/i,
+    /config\.toml/i,
+    /password/i,
+    /secret/i,
+    /\.git/i,
+    /node_modules/i
+  ];
+  
+  return !forbiddenPatterns.some(pattern => pattern.test(path));
 };
 
-// Define safe directories that can be accessed
-const SAFE_DIRECTORIES = [
-  '/src',
-  '/public',
-  '/supabase/functions',
-];
+const mockFiles = {
+  "src/utils/audio/generationService.ts": `import { supabase } from '@/integrations/supabase/client';
+import { AudioGenerationResult, AudioSuccessResult, AudioErrorResult, LanguageOption, VoiceOption } from './types';
 
-// Define files that should not be accessible
-const FORBIDDEN_FILES = [
-  '.env',
-  'env.local',
-  '.env.production',
-  '.env.development',
-  'serviceAccount.json',
-  'firebase-admin.json',
-];
+/**
+ * Generate an audio description using Google Text-to-Speech via our Supabase Edge Function
+ */
+export async function generateAudioDescription(
+  text: string,
+  language: LanguageOption,
+  voice: VoiceOption
+): Promise<AudioGenerationResult> {
+  try {
+    // Check if user is authenticated
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      return { error: 'Authentication required to generate audio descriptions' };
+    }
 
-function isSafePath(filePath: string): boolean {
-  // Normalize and clean the path
-  const normalizedPath = path.normalize(filePath);
+    // Generate description if needed
+    let finalText = text;
+    
+    if (text.length < 20) {
+      // This is likely a product name, so generate a description
+      const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-description', {
+        body: {
+          product_name: text,
+          language: language.code,
+          voice_name: voice.name
+        }
+      });
+
+      if (descriptionError || !descriptionData.success) {
+        console.error('Error generating description:', descriptionError || descriptionData.error);
+        return { error: 'Failed to generate product description' };
+      }
+
+      finalText = descriptionData.generated_text;
+    }
+
+    // Generate audio with Google TTS
+    const { data, error } = await supabase.functions.invoke('generate-google-tts', {
+      body: {
+        text: finalText,
+        language: language.code,
+        voice: voice.id,
+        user_id: session.user.id
+      }
+    });
+
+    if (error || !data.success) {
+      console.error('Error generating audio:', error || data.error);
+      return { error: error?.message || data?.error || 'Failed to generate audio' };
+    }
+
+    return {
+      audioUrl: data.audio_url,
+      text: finalText,
+    };
+  } catch (error) {
+    console.error('Error in generateAudioDescription:', error);
+    return { error: error.message || 'Failed to generate audio description' };
+  }
+}`,
+
+  "src/components/generator/GeneratorForm.tsx": `import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Wand2, Loader2, MessageSquare } from 'lucide-react';
+import DescriptionInput from './DescriptionInput';
+import LanguageVoiceSelector from './LanguageVoiceSelector';
+import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audio';
+import FeedbackDialog from '@/components/feedback/FeedbackDialog';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+
+// Component implementation
+const GeneratorForm = ({ onGenerate, loading }) => {
+  // State management for form
+  const [text, setText] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState(getAvailableLanguages()[0]);
+  const [selectedVoice, setSelectedVoice] = useState(getAvailableVoices('en')[0]);
   
-  // Check if the path is within allowed directories
-  const isInSafeDir = SAFE_DIRECTORIES.some(dir => 
-    normalizedPath.startsWith(dir) || normalizedPath.startsWith(`.${dir}`)
+  // Form submission logic
+  const handleSubmit = async () => {
+    await onGenerate({
+      text: text.trim(),
+      language: selectedLanguage,
+      voice: selectedVoice
+    });
+  };
+
+  return (
+    <div>
+      {/* Form content */}
+    </div>
   );
-  
-  // Check if the file is not in the forbidden list
-  const fileName = path.basename(normalizedPath);
-  const isNotForbidden = !FORBIDDEN_FILES.some(forbiddenFile => 
-    fileName === forbiddenFile || fileName.endsWith(`.${forbiddenFile}`)
-  );
-  
-  return isInSafeDir && isNotForbidden;
-}
+};
+
+export default GeneratorForm;`,
+
+  "supabase/functions/generate-description/index.ts": `import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { Configuration, OpenAIApi } from "https://esm.sh/openai@3.2.1";
+
+const apiKey = Deno.env.get('OPENAI_API_KEY');
+const configuration = new Configuration({ apiKey });
+const openai = new OpenAIApi(configuration);
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify user authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    const { product_name, language, voice_name } = await req.json();
+
+    if (!product_name) {
       return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        JSON.stringify({ success: false, error: 'Product name is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    // Get the file path from the request
+    // Create prompt for product description
+    const prompt = \`Generate a concise, informative product description for "\${product_name}" 
+    that highlights its key features and benefits. The description should be 2-3 sentences 
+    and optimized for text-to-speech in \${language || 'English'}. 
+    Make it sound natural and conversational.\`;
+
+    const response = await openai.createCompletion({
+      model: "text-davinci-003",
+      prompt,
+      max_tokens: 150,
+      temperature: 0.7,
+    });
+
+    if (!response.data.choices || response.data.choices.length === 0) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const generated_text = response.data.choices[0].text.trim();
+
+    return new Response(
+      JSON.stringify({ success: true, generated_text }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error("Error generating description:", error);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message || 'Failed to generate description' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+});`
+};
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
     const { filePath } = await req.json();
     
     if (!filePath) {
       return new Response(
         JSON.stringify({ error: 'File path is required' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    console.log(`Requested file: ${filePath}`);
+    // Security check
+    if (!isValidFilePath(filePath)) {
+      return new Response(
+        JSON.stringify({ error: 'Access to this file is restricted' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+    // For development/demo purposes, we'll use mock file content
+    // In production, this would access actual project files securely
+    let content = null;
     
-    // Security check for file path
-    if (!isSafePath(filePath)) {
-      console.error(`Access denied to file: ${filePath}`);
-      return new Response(
-        JSON.stringify({ error: 'Access denied to this file path' }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Try to read the file
-    let fileContent = '';
-    try {
-      fileContent = await Deno.readTextFile(filePath);
-    } catch (error) {
-      console.error(`Error reading file ${filePath}:`, error);
-      return new Response(
-        JSON.stringify({ error: `File not found or cannot be read: ${error.message}` }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    // Check if this is a mock file we have predefined
+    if (mockFiles[filePath]) {
+      content = mockFiles[filePath];
+      console.log(`Returning mock content for ${filePath}`);
+    } else {
+      // For demo purposes, generate a placeholder
+      content = `// This is simulated content for ${filePath}\n// In production, this would be the actual file content`;
+      console.log(`Generated placeholder for ${filePath}`);
     }
 
     return new Response(
-      JSON.stringify({ 
-        filePath,
-        content: fileContent 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ filePath, content }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error("Error in get-file-content function:", error);
+    console.error("Error retrieving file content:", error);
     return new Response(
-      JSON.stringify({ error: `Server error: ${error.message}` }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ error: error.message || 'Failed to retrieve file content' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

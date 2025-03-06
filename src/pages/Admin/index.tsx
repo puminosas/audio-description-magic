@@ -4,8 +4,8 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import AdminLayout from '@/components/layout/AdminLayout';
+import { supabase } from '@/integrations/supabase/client';
+import { assignAdminRole } from '@/utils/supabaseHelper';
 
 // Admin pages
 import AdminAnalytics from './AdminAnalytics';
@@ -39,43 +39,27 @@ const Admin = () => {
   };
   
   // Emergency function to ensure the current user has admin access
+  // This helps during development and testing
   useEffect(() => {
     const setupCurrentUserAsAdmin = async () => {
       if (user && !isAdmin && !loading) {
-        // Check if the user is a.mackeliunas@gmail.com
-        if (user.email === 'a.mackeliunas@gmail.com') {
-          console.log("Detected admin email, attempting to assign admin role");
-          try {
-            // Import helper function dynamically to avoid circular dependencies
-            const { assignAdminRole } = await import('@/utils/supabaseHelper');
-            const success = await assignAdminRole(user.id);
-            
-            if (success) {
-              console.log("Admin role assigned successfully");
-              toast({
-                title: "Admin access granted",
-                description: "You now have admin permissions"
-              });
-              // Force a page reload to refresh the auth context
-              window.location.reload();
-            }
-          } catch (error) {
-            console.error("Failed to assign admin role:", error);
+        console.log("Attempting to assign admin role to current user:", user.id);
+        try {
+          // Assign admin role to the current user
+          const success = await assignAdminRole(user.id);
+          if (success) {
+            console.log("Admin role assigned successfully");
+            // Force a page reload to refresh the auth context
+            window.location.reload();
           }
-        } else {
-          toast({
-            title: "Access Denied",
-            description: "You don't have admin permissions",
-            variant: "destructive"
-          });
-          // Redirect with a slight delay to ensure toast is shown
-          setTimeout(() => navigate('/dashboard'), 1500);
+        } catch (error) {
+          console.error("Failed to assign admin role:", error);
         }
       }
     };
     
     setupCurrentUserAsAdmin();
-  }, [user, isAdmin, loading, navigate]);
+  }, [user, isAdmin, loading]);
   
   // Redirect if not admin
   if (!loading && (!user || !isAdmin)) {
@@ -109,90 +93,88 @@ const Admin = () => {
   };
   
   return (
-    <AdminLayout>
-      <div className="container max-w-7xl mx-auto px-4 py-8 pt-20 md:pt-8">
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your application and users</p>
+    <div className="container max-w-7xl mx-auto px-4 py-8 pt-20 md:pt-8">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage your application and users</p>
+        </div>
+        
+        <Tabs value={getCurrentTab()} className="space-y-6">
+          <div className="overflow-auto">
+            <TabsList className="flex flex-wrap">
+              <TabsTrigger 
+                value="analytics" 
+                onClick={() => handleTabClick('analytics')} 
+                className="flex-shrink-0"
+              >
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger 
+                value="audio-files" 
+                onClick={() => handleTabClick('audio-files')} 
+                className="flex-shrink-0"
+              >
+                Audio Files
+              </TabsTrigger>
+              <TabsTrigger 
+                value="users" 
+                onClick={() => handleTabClick('users')} 
+                className="flex-shrink-0"
+              >
+                Users
+              </TabsTrigger>
+              <TabsTrigger 
+                value="user-activity" 
+                onClick={() => handleTabClick('user-activity')} 
+                className="flex-shrink-0"
+              >
+                User Activity
+              </TabsTrigger>
+              <TabsTrigger 
+                value="user-update" 
+                onClick={() => handleTabClick('user-update')} 
+                className="flex-shrink-0"
+              >
+                Update User
+              </TabsTrigger>
+              <TabsTrigger 
+                value="feedback" 
+                onClick={() => handleTabClick('feedback')} 
+                className="flex-shrink-0"
+              >
+                Feedback
+              </TabsTrigger>
+              <TabsTrigger 
+                value="ai-chat" 
+                onClick={() => handleTabClick('ai-chat')} 
+                className="flex-shrink-0"
+              >
+                AI Chat
+              </TabsTrigger>
+              <TabsTrigger 
+                value="settings" 
+                onClick={() => handleTabClick('settings')} 
+                className="flex-shrink-0"
+              >
+                Settings
+              </TabsTrigger>
+            </TabsList>
           </div>
           
-          <Tabs value={getCurrentTab()} className="space-y-6">
-            <div className="overflow-auto">
-              <TabsList className="flex flex-wrap">
-                <TabsTrigger 
-                  value="analytics" 
-                  onClick={() => handleTabClick('analytics')} 
-                  className="flex-shrink-0"
-                >
-                  Analytics
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="audio-files" 
-                  onClick={() => handleTabClick('audio-files')} 
-                  className="flex-shrink-0"
-                >
-                  Audio Files
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="users" 
-                  onClick={() => handleTabClick('users')} 
-                  className="flex-shrink-0"
-                >
-                  Users
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="user-activity" 
-                  onClick={() => handleTabClick('user-activity')} 
-                  className="flex-shrink-0"
-                >
-                  User Activity
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="user-update" 
-                  onClick={() => handleTabClick('user-update')} 
-                  className="flex-shrink-0"
-                >
-                  Update User
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="feedback" 
-                  onClick={() => handleTabClick('feedback')} 
-                  className="flex-shrink-0"
-                >
-                  Feedback
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="ai-chat" 
-                  onClick={() => handleTabClick('ai-chat')} 
-                  className="flex-shrink-0"
-                >
-                  AI Chat
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="settings" 
-                  onClick={() => handleTabClick('settings')} 
-                  className="flex-shrink-0"
-                >
-                  Settings
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <Routes>
-              <Route path="/" element={<AdminAnalytics />} />
-              <Route path="/audio-files" element={<AdminAudioFiles />} />
-              <Route path="/users" element={<AdminUserManagement />} />
-              <Route path="/user-activity" element={<AdminUserActivity />} />
-              <Route path="/user-update" element={<AdminUserUpdate />} />
-              <Route path="/feedback" element={<AdminFeedback />} />
-              <Route path="/ai-chat" element={<AdminAiChatPage />} />
-              <Route path="/settings" element={<AdminSettings />} />
-            </Routes>
-          </Tabs>
-        </div>
+          <Routes>
+            <Route path="/" element={<AdminAnalytics />} />
+            <Route path="/audio-files" element={<AdminAudioFiles />} />
+            <Route path="/users" element={<AdminUserManagement />} />
+            <Route path="/user-activity" element={<AdminUserActivity />} />
+            <Route path="/user-update" element={<AdminUserUpdate />} />
+            <Route path="/feedback" element={<AdminFeedback />} />
+            <Route path="/ai-chat" element={<AdminAiChatPage />} />
+            <Route path="/settings" element={<AdminSettings />} />
+          </Routes>
+        </Tabs>
       </div>
-    </AdminLayout>
+    </div>
   );
 };
 

@@ -73,21 +73,3 @@ export interface ActionButtonsProps {
   isGenerating: boolean;
   embedCode?: string;
 }
-
-export interface AudioUrlValidationResult {
-  hasValidUrl: boolean;
-  isValidUrl: boolean;
-  validationDetails: Record<string, any>;
-}
-
-export interface AudioContainerProps {
-  audioUrl?: string;
-  fileName: string;
-  isGenerating: boolean;
-  validationResult: AudioUrlValidationResult;
-}
-
-export interface AudioUrlValidatorProps {
-  audioUrl?: string;
-  isGenerating?: boolean;
-}

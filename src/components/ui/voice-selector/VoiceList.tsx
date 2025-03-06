@@ -34,12 +34,6 @@ const VoiceList = ({
     );
   }
 
-  // Helper function to check if a gender is male regardless of format
-  const isMale = (gender: string) => gender === 'MALE' || gender === 'male';
-  
-  // Helper function to check if a gender is female regardless of format
-  const isFemale = (gender: string) => gender === 'FEMALE' || gender === 'female';
-
   return (
     <>
       {displayVoices.map((voice) => (
@@ -50,9 +44,9 @@ const VoiceList = ({
         >
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center">
-              {isMale(voice.gender) ? 
+              {voice.gender === 'male' ? 
                 <User className="h-4 w-4 mr-2 text-blue-500" /> : 
-                isFemale(voice.gender) ?
+                voice.gender === 'female' ?
                 <UserRound className="h-4 w-4 mr-2 text-pink-500" /> :
                 <Users className="h-4 w-4 mr-2 text-purple-500" />
               }

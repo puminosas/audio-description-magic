@@ -1,35 +1,17 @@
+
 import React from 'react';
-import { Bot } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 const EmptyChat: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
-      <div className="bg-primary/10 p-4 rounded-full">
-        <Bot className="h-10 w-10 text-primary" />
-      </div>
-      <h3 className="mt-4 text-lg font-medium">How can I help you today?</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Ask me anything about your project, code, or how to use specific features.
+    <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground p-4">
+      <Info className="mb-3 h-12 w-12 opacity-50" />
+      <h3 className="mb-2 text-lg font-medium">AI Assistant</h3>
+      <p className="max-w-md text-sm">
+        Ask me anything about your project, users, or administrative tasks.
+        I can help with troubleshooting, data analysis, and task automation.
       </p>
-      <div className="mt-6 grid grid-cols-1 gap-2">
-        <SuggestedPrompt text="How can I get started with audio descriptions?" />
-        <SuggestedPrompt text="Show me the most popular features" />
-        <SuggestedPrompt text="Help me debug an issue with my code" />
-        <SuggestedPrompt text="Give me tips for optimizing performance" />
-      </div>
     </div>
-  );
-};
-
-interface SuggestedPromptProps {
-  text: string;
-}
-
-const SuggestedPrompt: React.FC<SuggestedPromptProps> = ({ text }) => {
-  return (
-    <button className="bg-accent/50 hover:bg-accent px-4 py-2 rounded-lg text-sm text-left">
-      {text}
-    </button>
   );
 };
 

@@ -30,6 +30,52 @@ export const AudioErrorProvider = ({
       return;
     }
     
+    // Enhanced validation for data URLs
+    if (audioUrl.startsWith('data:audio/')) {
+      const parts = audioUrl.split('base64,');
+      
+      // Check for basic format validity
+      if (parts.length !== 2) {
+        setError("Invalid audio data format");
+        setIsLoading(false);
+        return;
+      }
+      
+      const base64Data = parts[1];
+      
+      // Check for minimum data length
+      if (base64Data.length < 10000) {
+        setError("Audio data is too small to be valid");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Check for truncation (invalid base64 padding)
+      if (base64Data.length % 4 !== 0) {
+        setError("Audio data appears to be truncated. Try generating with shorter text.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Check file size - warning for very large files
+      if (base64Data.length > 1500000) {
+        console.warn("Very large audio file detected:", Math.round(base64Data.length/1024), "KB");
+      }
+      
+      // Try to validate MP3 header (basic check)
+      try {
+        const headerBytes = atob(base64Data.substring(0, 8));
+        const validMP3Header = headerBytes.indexOf('ID3') === 0 || headerBytes.charCodeAt(0) === 0xFF;
+        if (!validMP3Header) {
+          setError("Audio data does not appear to be a valid MP3 file");
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking MP3 header:", err);
+      }
+    }
+    
     setIsLoading(true);
     
     // Create a new Audio element to precheck if the URL is valid
@@ -46,28 +92,45 @@ export const AudioErrorProvider = ({
             errorMessage = "Audio loading was aborted.";
             break;
           case MediaError.MEDIA_ERR_NETWORK:
-            errorMessage = "Network error occurred while loading audio. Check if the URL is accessible.";
+            errorMessage = "Network error occurred while loading audio.";
             break;
           case MediaError.MEDIA_ERR_DECODE:
-            errorMessage = "Audio decoding failed. Try another browser or download the file directly.";
+            errorMessage = "Audio decoding failed. The file might be too large or in an unsupported format.";
             break;
           case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            errorMessage = "Audio format is not supported by your browser. Try downloading the MP3 file directly.";
+            errorMessage = "Audio format is not supported by your browser. Try a different browser or download the file.";
             break;
         }
       }
       
-      // For Supabase storage URLs, provide more specific error messages
-      if (audioUrl.includes('supabase.co/storage/v1/object/') || 
-          audioUrl.includes('supabase.co/storage/v1/render/')) {
+      // For data URLs, provide more specific error messages
+      if (audioUrl.startsWith('data:audio/')) {
+        const base64Part = audioUrl.split('base64,')[1] || '';
+        const fileSizeKB = Math.round(base64Part.length/1024);
         
-        // Check for common cloud storage issues
-        if (audioUrl.includes('Access Denied') || audioUrl.includes('permission') || audioUrl.includes('403')) {
-          errorMessage = "Access denied to audio file. The file may have expired or requires authorization.";
-        } else if (audioUrl.includes('404') || audioUrl.includes('Not Found')) {
-          errorMessage = "Audio file not found. It may have been removed or relocated.";
-        } else {
-          errorMessage = "Failed to load audio from storage. Try downloading the file instead.";
+        // Log detailed information for debugging
+        console.log("Audio data diagnostics:", {
+          totalLength: audioUrl.length,
+          base64Length: base64Part.length,
+          sizeKB: fileSizeKB,
+          hasPadding: base64Part.endsWith('==') || base64Part.endsWith('='),
+          validPadding: base64Part.length % 4 === 0
+        });
+        
+        // If decoding failed and it's a data URL, suggest browser compatibility issues
+        if (audio.error?.code === MediaError.MEDIA_ERR_DECODE || 
+            audio.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+          
+          if (fileSizeKB > 1000) {
+            errorMessage = `Audio file (${fileSizeKB}KB) may be too large for browser playback. Try downloading the file instead.`;
+          } else {
+            errorMessage = "Your browser couldn't decode the audio. Try using a different browser or generating a shorter description.";
+          }
+        }
+        
+        // If data is potentially truncated
+        if (base64Part.length % 4 !== 0) {
+          errorMessage = "The audio data appears to be truncated. Try generating a shorter description.";
         }
       }
       
@@ -96,7 +159,7 @@ export const AudioErrorProvider = ({
             setError("Audio loading timed out. Try a different browser or download the file.");
           }
         } else {
-          setError("Audio loading timed out. The file may have expired or be unavailable. Try generating a new audio file.");
+          setError("Audio loading timed out. Check your network connection or try again later.");
         }
         setIsLoading(false);
       }
@@ -104,8 +167,13 @@ export const AudioErrorProvider = ({
     
     // Handle errors that might occur when setting the src
     try {
-      // Set CORS mode to anonymous for better error handling
-      audio.crossOrigin = "anonymous";
+      // Test the audio data before setting it as a source
+      if (audioUrl.startsWith('data:audio/')) {
+        const base64Part = audioUrl.split('base64,')[1];
+        if (!base64Part || base64Part.length < 5000) {
+          throw new Error("Invalid base64 audio data");
+        }
+      }
       
       // Set the audio source
       audio.src = audioUrl;

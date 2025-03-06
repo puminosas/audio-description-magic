@@ -1,10 +1,10 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Code, Save, X, Wand2, FileText, AlertCircle, Clipboard, RefreshCw } from 'lucide-react';
+import { Code, Save, X, Wand2, FileText, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
 
 interface FilePreviewPanelProps {
   selectedFile: string;
@@ -25,103 +25,69 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   handleSaveFile,
   handleAnalyzeWithAI
 }) => {
-  const { toast } = useToast();
-  
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(fileContent).then(
-      () => {
-        toast({
-          description: "Content copied to clipboard",
-          duration: 2000
-        });
-      },
-      (err) => {
-        console.error('Could not copy text: ', err);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to copy to clipboard"
-        });
-      }
-    );
-  };
-
-  const getFileExtension = () => {
-    return selectedFile.split('.').pop() || '';
-  };
-
-  const getLanguage = () => {
-    const ext = getFileExtension().toLowerCase();
-    if (['js', 'jsx'].includes(ext)) return 'JavaScript';
-    if (['ts', 'tsx'].includes(ext)) return 'TypeScript';
-    if (['css', 'scss', 'less'].includes(ext)) return 'CSS';
-    if (['html'].includes(ext)) return 'HTML';
+  // Determine file type from extension for syntax highlighting (can be expanded)
+  const getFileType = () => {
+    const ext = selectedFile.split('.').pop()?.toLowerCase();
+    if (['js', 'jsx', 'ts', 'tsx'].includes(ext)) return 'JavaScript/TypeScript';
+    if (['html', 'css', 'scss'].includes(ext)) return 'HTML/CSS';
     if (['json'].includes(ext)) return 'JSON';
-    if (['md'].includes(ext)) return 'Markdown';
     return 'Text';
   };
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-240px)]">
-      <div className="p-4 border-b flex justify-between items-center">
-        <div className="flex items-center">
-          <FileText className="h-4 w-4 mr-2" />
-          <span className="font-medium truncate max-w-[400px]">
-            {selectedFile.split('/').pop()}
-          </span>
-          <span className="ml-2 text-xs text-muted-foreground">
-            ({getLanguage()})
-          </span>
+    <Card className="p-4">
+      <h3 className="mb-3 flex items-center text-lg font-medium">
+        <Code className="mr-2 h-5 w-5" />
+        File: {selectedFile}
+        <span className="ml-2 text-xs text-muted-foreground">({getFileType()})</span>
+      </h3>
+      {isLoadingContent ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+          <span className="ml-2">Loading file content...</span>
         </div>
-        
+      ) : fileContent ? (
+        <Textarea
+          value={fileContent}
+          onChange={(e) => setFileContent(e.target.value)}
+          className="min-h-[300px] font-mono text-sm"
+        />
+      ) : (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load file content. The file may be empty or inaccessible.
+          </AlertDescription>
+        </Alert>
+      )}
+      <div className="mt-4 flex justify-between">
+        <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+          <X className="mr-2 h-4 w-4" />
+          Close
+        </Button>
         <div className="flex gap-2">
           <Button 
-            size="sm" 
             variant="outline" 
-            onClick={copyToClipboard}
-            title="Copy to clipboard"
-          >
-            <Clipboard className="h-4 w-4" />
-          </Button>
-          
-          <Button 
             size="sm" 
-            variant="outline" 
             onClick={handleAnalyzeWithAI}
-            title="Analyze with AI"
+            disabled={isLoadingContent || !fileContent}
           >
-            <Wand2 className="h-4 w-4" />
+            <Wand2 className="mr-2 h-4 w-4" />
+            Analyze with AI
           </Button>
-          
           <Button 
             size="sm" 
-            variant="default" 
             onClick={handleSaveFile}
-            title="Save changes"
+            disabled={isLoadingContent || !fileContent}
           >
-            <Save className="h-4 w-4 mr-2" />
-            Save
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
           </Button>
         </div>
       </div>
-      
-      {isLoadingContent ? (
-        <div className="flex justify-center items-center flex-1">
-          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="flex-1 overflow-auto">
-          <Textarea
-            value={fileContent}
-            onChange={(e) => {
-              setFileContent(e.target.value);
-              setIsEditing(true);
-            }}
-            className="font-mono text-sm h-full border-0 rounded-none focus-visible:ring-0 resize-none"
-            placeholder="File content will appear here..."
-          />
-        </div>
-      )}
+      <p className="mt-2 text-xs text-muted-foreground">
+        File content will be provided to the AI for analysis when using the "Analyze with AI" button
+      </p>
     </Card>
   );
 };

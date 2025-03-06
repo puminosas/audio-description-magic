@@ -1,25 +1,26 @@
 
-// Types for language and voice selection
+// Types for language and voice options
 export interface LanguageOption {
   id: string;
-  code: string;
   name: string;
-  nativeText?: string;
-  nativeName?: string;
+  nativeText: string;
+  code: string;
+  nativeName: string;
+  flag?: string;
 }
 
 export interface VoiceOption {
   id: string;
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'male' | 'female' | 'neutral';
+  gender: "male" | "female" | "neutral";
+  preview?: string;
+  premium?: boolean;
 }
 
-// Types for audio generation results
 export interface AudioSuccessResult {
   audioUrl: string;
-  text: string;
-  folderUrl: null; // Updated to be null since we're using Supabase Storage only
-  id?: string; // Added ID field for tracking
+  text?: string;
+  id?: string;
 }
 
 export interface AudioErrorResult {
@@ -27,3 +28,9 @@ export interface AudioErrorResult {
 }
 
 export type AudioGenerationResult = AudioSuccessResult | AudioErrorResult;
+
+export interface GenerationStats {
+  total: number;
+  today: number;
+  history: any[];
+}

@@ -1,110 +1,128 @@
 
-import { useState } from 'react';
-import { Message, TypingStatus } from '../types';
+import { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Message, TypingStatus } from '../types';
 
-export const useMessageHandling = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+export const useMessageHandling = (
+  messages: Message[],
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+  userId?: string | null
+) => {
+  const { toast } = useToast();
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [typingStatus, setTypingStatus] = useState<TypingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const sendMessage = async (content: string, customMessages?: Message[]) => {
-    if (!content.trim() || isProcessing) return;
+  // Send a message to the AI
+  const sendMessage = async (customMessages?: Message[]) => {
+    if ((!input.trim() && !customMessages) || isProcessing) return;
+
+    // Use custom messages if provided, otherwise create a new user message
+    let updatedMessages: Message[];
     
-    const userMessage: Message = { 
-      role: 'user', 
-      content, 
-      id: uuidv4(), 
-      createdAt: new Date().toISOString() 
-    };
-    
-    const messagesToSend = customMessages || [...messages, userMessage];
-    
-    if (!customMessages) {
-      setMessages(messagesToSend);
+    if (customMessages) {
+      updatedMessages = customMessages;
+    } else {
+      const userMessage: Message = { 
+        role: 'user', 
+        content: input,
+        id: uuidv4(),
+        createdAt: new Date().toISOString()
+      };
+      updatedMessages = [...messages, userMessage];
+      setInput('');
     }
     
+    setMessages(updatedMessages);
     setIsProcessing(true);
-    setTypingStatus('typing');
+    setTypingStatus('processing');
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: messagesToSend }),
+      console.log('Sending message to AI...');
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: { 
+          messages: updatedMessages,
+          userId: userId
+        },
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get response from AI');
+
+      if (error) {
+        console.error('Error invoking ai-chat function:', error);
+        throw new Error(error.message || 'Failed to get response from AI');
       }
+
+      if (!data || !data.content) {
+        console.error('Invalid response from ai-chat function:', data);
+        throw new Error('Invalid response from AI');
+      }
+
+      console.log('AI response received');
       
-      const data = await response.json();
-      
+      // Create assistant message
       const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.content,
+        ...data,
         id: uuidv4(),
         createdAt: new Date().toISOString()
       };
       
-      setMessages(customMessages 
-        ? [userMessage, assistantMessage] 
-        : [...messagesToSend, assistantMessage]
-      );
+      // Update messages with AI response
+      const newMessages = [...updatedMessages, assistantMessage];
+      setMessages(newMessages);
+      setTypingStatus('idle');
+      
+      return newMessages;
     } catch (error) {
       console.error('Error sending message:', error);
-      setError(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(`Failed to get response from AI: ${error.message}`);
+      setTypingStatus('error');
+      toast({
+        title: 'Error',
+        description: 'Failed to get response from AI',
+        variant: 'destructive',
+      });
+      return null;
     } finally {
       setIsProcessing(false);
-      setTypingStatus('idle');
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(input);
-      setInput('');
-    }
-  };
-
-  const handleClearChat = () => {
-    setMessages([]);
-  };
-
-  const addSystemMessage = (content: string) => {
-    const systemMessage: Message = {
-      role: 'system',
-      content,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
-    setMessages([...messages, systemMessage]);
-  };
-
-  const addMessage = (message: Message) => {
-    setMessages([...messages, message]);
-  };
-
+  // Try sending the message again after an error
   const retryLastMessage = () => {
     if (messages.length > 0) {
       const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.role === 'user');
       if (lastUserMessageIndex !== -1) {
         const lastUserMessage = messages[messages.length - 1 - lastUserMessageIndex];
-        // Remove messages after the last user message
-        setMessages(messages.slice(0, messages.length - lastUserMessageIndex));
-        // Resend the last user message
-        sendMessage(lastUserMessage.content);
+        setInput(lastUserMessage.content);
+        // Remove the last user message and any subsequent messages
+        setMessages(messages.slice(0, messages.length - 1 - lastUserMessageIndex));
+        setError(null);
       }
     }
   };
 
+  // Clear the chat
+  const handleClearChat = () => {
+    setMessages([]);
+    setError(null);
+    toast({
+      title: 'Chat Cleared',
+      description: 'All chat messages have been cleared',
+    });
+  };
+
+  // Handle "Enter" key press
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
   return {
-    messages,
-    setMessages,
     input,
     setInput,
     isProcessing,
@@ -113,12 +131,6 @@ export const useMessageHandling = () => {
     sendMessage,
     handleKeyDown,
     handleClearChat,
-    retryLastMessage,
-    addSystemMessage,
-    addMessage,
-    setChatError: setError,
-    setIsTyping: setTypingStatus
+    retryLastMessage
   };
 };
-
-export default useMessageHandling;

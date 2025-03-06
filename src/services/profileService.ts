@@ -4,8 +4,6 @@ import { convertTemporaryFilesToUserFiles, getOrCreateGuestSessionId } from '@/u
 
 export const fetchUserProfile = async (userId: string) => {
   try {
-    console.log('Fetching profile for user:', userId);
-    
     // Use the normal supabase client directly
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -18,8 +16,6 @@ export const fetchUserProfile = async (userId: string) => {
       // If profile doesn't exist, create one with admin plan for the specified user
       if (profileError.code === 'PGRST116') {
         if (userId) {
-          console.log('Profile not found, creating one for user:', userId);
-          
           const { data: newProfile, error: insertError } = await supabase
             .from('profiles')
             .insert({
@@ -31,45 +27,18 @@ export const fetchUserProfile = async (userId: string) => {
             .select('*')
             .single();
             
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-            throw insertError;
-          }
-          
-          console.log('Created new profile for user:', userId);
-          
-          // Check if admin using the RPC function
-          try {
-            const { data: isAdminResult, error: roleError } = await supabase.rpc('has_role', { role: 'admin' });
-            
-            if (roleError) {
-              console.error('Error checking admin role:', roleError);
-              throw roleError;
-            }
-            
-            console.log('Admin check result:', isAdminResult);
-            return { profile: newProfile, isAdmin: !!isAdminResult };
-          } catch (roleError) {
-            console.error('Error checking admin role:', roleError);
-            return { profile: newProfile, isAdmin: false };
-          }
+          if (insertError) throw insertError;
+          return { profile: newProfile, isAdmin: false };
         }
       } else {
         throw profileError;
       }
     } else {
-      console.log('Profile found for user:', userId);
-      
       // Check if admin using the RPC function
       try {
         const { data: isAdminResult, error: roleError } = await supabase.rpc('has_role', { role: 'admin' });
         
-        if (roleError) {
-          console.error('Error checking admin role:', roleError);
-          throw roleError;
-        }
-        
-        console.log('Admin check result:', isAdminResult);
+        if (roleError) throw roleError;
         return { profile: profileData, isAdmin: !!isAdminResult };
       } catch (roleError) {
         console.error('Error checking admin role:', roleError);
@@ -77,7 +46,6 @@ export const fetchUserProfile = async (userId: string) => {
       }
     }
     
-    console.log('No profile data found and no new profile created for user:', userId);
     return { profile: null, isAdmin: false };
   } catch (error) {
     console.error('Error fetching user profile:', error);

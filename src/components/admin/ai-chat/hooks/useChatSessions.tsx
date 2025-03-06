@@ -153,39 +153,6 @@ export const useChatSessions = (
     }
   };
 
-  // Delete a chat session
-  const deleteChatSession = async (sessionId: string) => {
-    try {
-      const { error } = await supabaseTyped.custom
-        .from('chat_sessions')
-        .delete()
-        .eq('id', sessionId);
-      
-      if (error) throw error;
-      
-      // Update local state
-      setChatSessions(prev => prev.filter(session => session.id !== sessionId));
-      
-      // If the current session was deleted, start a new one
-      if (currentSession === sessionId) {
-        setMessages([]);
-        setCurrentSession(null);
-      }
-      
-      toast({
-        title: 'Success',
-        description: 'Chat session deleted successfully',
-      });
-    } catch (error) {
-      console.error('Error deleting chat session:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete chat session',
-        variant: 'destructive',
-      });
-    }
-  };
-
   // Start a new chat session
   const startNewChat = () => {
     setMessages([]);
@@ -202,7 +169,6 @@ export const useChatSessions = (
     currentSession,
     saveChatHistory,
     loadChatSession,
-    startNewChat,
-    deleteChatSession
+    startNewChat
   };
 };

@@ -1,135 +1,137 @@
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { FileInfo } from '../../types';
+import { FileInfo } from '../../types';
 
-export const useFileOperations = (
-  setFiles: React.Dispatch<React.SetStateAction<FileInfo[]>>,
-  setSelectedFile: React.Dispatch<React.SetStateAction<FileInfo | null>>,
-  setIsLoadingFiles: React.Dispatch<React.SetStateAction<boolean>>,
-  setIsLoadingFile: React.Dispatch<React.SetStateAction<boolean>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>
-) => {
-  // Get all project files
-  const getFiles = useCallback(async () => {
-    setIsLoadingFiles(true);
-    setError(null);
+export const useFileOperations = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [fetchCount, setFetchCount] = useState(0);
+
+  // Fetch project files
+  const fetchFiles = useCallback(async (): Promise<FileInfo[]> => {
+    if (!user) return [];
     
-    try {
-      const { data, error } = await supabase.functions.invoke('project-files', {
-        body: {}
-      });
-      
-      if (error) throw new Error(error.message);
-      
-      const fileInfos: FileInfo[] = (data?.files || []).map((file: any) => ({
-        path: file.path,
-        content: '',
-        type: detectFileType(file.path)
-      }));
-      
-      setFiles(fileInfos);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch files.');
-    } finally {
-      setIsLoadingFiles(false);
+    setFetchCount(prev => prev + 1);
+    if (fetchCount > 5) {
+      console.warn('Too many file fetch attempts, throttling...');
+      return [];
     }
-  }, [setFiles, setIsLoadingFiles, setError]);
-
-  // Get content of a specific file
-  const getFileContent = useCallback(async (filePath: string) => {
-    setIsLoadingFile(true);
+    
     setError(null);
     
     try {
+      console.log('Fetching project files...');
+      const { data, error } = await supabase.functions.invoke('project-files', {
+        method: 'GET',
+      });
+
+      if (error) {
+        console.error('Error invoking project-files function:', error);
+        throw new Error(error.message || 'Failed to load project files');
+      }
+      
+      if (!data || !Array.isArray(data)) {
+        console.error('Invalid response from project-files function:', data);
+        throw new Error('Invalid response from server');
+      }
+      
+      console.log('Project files loaded:', data.length);
+      
+      setTimeout(() => setFetchCount(0), 5000);
+      
+      return data as FileInfo[];
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      setError(`Failed to load project files: ${error.message}`);
+      toast({
+        title: 'Error',
+        description: 'Failed to load project files',
+        variant: 'destructive',
+      });
+      return [];
+    }
+  }, [toast, user, fetchCount]);
+
+  // Fetch file content
+  const fetchFileContent = async (filePath: string): Promise<string | null> => {
+    setIsLoadingContent(true);
+    setError(null);
+    
+    try {
+      console.log(`Fetching content for file: ${filePath}`);
       const { data, error } = await supabase.functions.invoke('get-file-content', {
         body: { filePath }
       });
-      
-      if (error) throw new Error(error.message);
-      
-      const content = data?.content || '';
-      
-      // Update files array with content
-      setFiles(prevFiles => 
-        prevFiles.map(file => 
-          file.path === filePath ? { ...file, content } : file
-        )
-      );
-      
-      // Update selected file if it matches
-      setSelectedFile(prevSelectedFile => 
-        prevSelectedFile && prevSelectedFile.path === filePath 
-          ? { ...prevSelectedFile, content } 
-          : prevSelectedFile
-      );
-      
-      return content;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch file content.');
-      throw err;
-    } finally {
-      setIsLoadingFile(false);
-    }
-  }, [setFiles, setSelectedFile, setIsLoadingFile, setError]);
 
-  // Save changes to a file
-  const saveFileContent = useCallback(async (filePath: string, content: string): Promise<boolean> => {
-    setIsLoadingFile(true);
-    setError(null);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('edit-file', {
-        body: { filePath, content }
+      if (error) {
+        console.error('Error fetching file content:', error);
+        throw new Error(error.message || 'Failed to fetch file content');
+      }
+      
+      if (!data || typeof data.content !== 'string') {
+        console.error('Invalid response for file content:', data);
+        throw new Error('Invalid response from server');
+      }
+      
+      console.log('File content loaded successfully');
+      return data.content;
+    } catch (error) {
+      console.error('Error fetching file content:', error);
+      setError(`Failed to load file content: ${error.message}`);
+      toast({
+        title: 'Error',
+        description: 'Failed to load file content',
+        variant: 'destructive',
       });
-      
-      if (error) throw new Error(error.message);
-      
-      // Update files array with new content
-      setFiles(prevFiles => 
-        prevFiles.map(file => 
-          file.path === filePath ? { ...file, content } : file
-        )
-      );
-      
-      // Update selected file if it matches
-      setSelectedFile(prevSelectedFile => 
-        prevSelectedFile && prevSelectedFile.path === filePath 
-          ? { ...prevSelectedFile, content } 
-          : prevSelectedFile
-      );
-      
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save file content.');
-      return false;
+      return null;
     } finally {
-      setIsLoadingFile(false);
+      setIsLoadingContent(false);
     }
-  }, [setFiles, setSelectedFile, setIsLoadingFile, setError]);
+  };
 
-  // Detect file type based on extension
-  const detectFileType = (filePath: string): 'script' | 'document' | 'style' | 'config' | 'unknown' => {
-    const extension = filePath.split('.').pop()?.toLowerCase() || '';
-    
-    if (['js', 'jsx', 'ts', 'tsx', 'py', 'rb', 'php', 'sh'].includes(extension)) {
-      return 'script';
-    } else if (['html', 'md', 'txt', 'rtf', 'pdf', 'doc', 'docx'].includes(extension)) {
-      return 'document';
-    } else if (['css', 'scss', 'sass', 'less'].includes(extension)) {
-      return 'style';
-    } else if (['json', 'yaml', 'yml', 'toml', 'ini', 'env'].includes(extension)) {
-      return 'config';
-    } else {
-      return 'unknown';
+  // Save file content
+  const saveFileContent = async (filePath: string, content: string): Promise<boolean> => {
+    try {
+      console.log(`Saving changes to file: ${filePath}`);
+      const { data, error } = await supabase.functions.invoke('edit-file', {
+        body: { 
+          filePath: filePath,
+          newContent: content
+        }
+      });
+
+      if (error) {
+        console.error('Error saving file:', error);
+        throw new Error(error.message || 'Failed to save file changes');
+      }
+      
+      console.log('File saved successfully:', data);
+      toast({
+        title: 'Success',
+        description: 'File changes saved successfully',
+      });
+      return true;
+    } catch (error) {
+      console.error('Error saving file:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to save file: ${error.message}`,
+        variant: 'destructive',
+      });
+      return false;
     }
   };
 
   return {
-    getFiles,
-    getFileContent,
-    saveFileContent
+    fetchFiles,
+    fetchFileContent,
+    saveFileContent,
+    isLoadingContent,
+    error,
   };
 };
-
-export default useFileOperations;

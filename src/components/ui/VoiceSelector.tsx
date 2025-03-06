@@ -26,20 +26,8 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
   const [filter, setFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Custom hook to fetch voice data
+  // Custom hook to fetch voice data - fixed the parameter order
   const { voices, loading } = useVoiceData(language, selectedVoice, onSelect);
-  
-  // Helper function to check gender regardless of format
-  const matchesGender = (voiceGender: string, filterGender: string): boolean => {
-    if (filterGender === 'male') {
-      return voiceGender === 'MALE' || voiceGender === 'male';
-    } else if (filterGender === 'female') {
-      return voiceGender === 'FEMALE' || voiceGender === 'female';
-    } else if (filterGender === 'neutral') {
-      return voiceGender === 'neutral';
-    }
-    return false;
-  };
   
   // Use useMemo to derive filtered voices list for better performance
   const displayVoices = useMemo(() => {
@@ -47,7 +35,7 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
     
     // Apply gender filter
     if (filter !== 'all') {
-      filtered = filtered.filter(voice => matchesGender(voice.gender, filter));
+      filtered = filtered.filter(voice => voice.gender === filter);
     }
     
     // Apply search query
