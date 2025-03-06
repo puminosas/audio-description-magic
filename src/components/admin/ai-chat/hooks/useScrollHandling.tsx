@@ -1,21 +1,16 @@
 
-import { useRef, useCallback, useEffect } from 'react';
-import { Message } from '../types';
+import { useEffect } from 'react';
 
-export const useScrollHandling = (messages: Message[]) => {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Scroll to bottom of messages
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
+export const useScrollHandling = (messagesEndRef: React.RefObject<HTMLDivElement>) => {
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  return {
-    messagesEndRef,
-    scrollToBottom
+  }, []);
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+  
+  return { scrollToBottom };
 };
+
+export default useScrollHandling;

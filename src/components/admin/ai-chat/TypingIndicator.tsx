@@ -1,16 +1,21 @@
-
 import React from 'react';
+import { Bot } from 'lucide-react';
 
 const TypingIndicator: React.FC = () => {
   return (
-    <div className="flex justify-start mb-4">
-      <div className="flex max-w-[85%] items-center rounded-lg bg-muted px-4 py-3">
-        <div className="mr-2 flex space-x-1">
-          <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{animationDelay: '0ms'}}></div>
-          <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{animationDelay: '300ms'}}></div>
-          <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{animationDelay: '600ms'}}></div>
+    <div className="flex gap-3 p-3 rounded-lg bg-muted">
+      <div className="flex-shrink-0">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary">
+          <Bot className="h-5 w-5" />
         </div>
-        <span className="text-sm text-muted-foreground">AI is thinking...</span>
+      </div>
+      <div className="flex items-center">
+        <div className="flex space-x-1">
+          <div className="w-2 h-2 rounded-full bg-current animate-bounce" />
+          <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.2s]" />
+          <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.4s]" />
+        </div>
+        <span className="ml-2 text-sm text-muted-foreground">AI is thinking...</span>
       </div>
     </div>
   );

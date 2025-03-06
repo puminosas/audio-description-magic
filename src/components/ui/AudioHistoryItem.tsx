@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface AudioHistoryItemProps {
   id?: string;
@@ -35,14 +36,29 @@ const AudioHistoryItem = ({
   onDelete
 }: AudioHistoryItemProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audio] = useState(new Audio(audioUrl));
+  const [audio] = useState(new Audio());
+  const { toast } = useToast();
   const createdDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
 
   const togglePlayPause = () => {
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play();
+      // Set CORS mode to anonymous for better error handling
+      audio.crossOrigin = "anonymous";
+      
+      // Reset src before setting it again to avoid stale state
+      audio.src = '';
+      audio.src = audioUrl;
+      
+      audio.play().catch(error => {
+        console.error('Error playing audio:', error);
+        toast({
+          title: 'Error',
+          description: 'Could not play audio file. Try downloading instead.',
+          variant: 'destructive',
+        });
+      });
     }
     setIsPlaying(!isPlaying);
   };
@@ -50,6 +66,16 @@ const AudioHistoryItem = ({
   // Listen for audio end
   audio.onended = () => {
     setIsPlaying(false);
+  };
+
+  // Listen for audio error
+  audio.onerror = () => {
+    setIsPlaying(false);
+    toast({
+      title: 'Error',
+      description: 'Failed to play audio. Try downloading the file instead.',
+      variant: 'destructive',
+    });
   };
 
   const embedCode = `<iframe 
@@ -62,7 +88,10 @@ const AudioHistoryItem = ({
 
   const copyEmbedCode = () => {
     navigator.clipboard.writeText(embedCode);
-    // Could add a toast notification here
+    toast({
+      title: 'Success',
+      description: 'Embed code copied to clipboard',
+    });
   };
 
   return (

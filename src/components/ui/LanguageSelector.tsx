@@ -34,7 +34,7 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
     const query = searchQuery.toLowerCase().trim();
     return languages.filter(lang => 
       lang.name.toLowerCase().includes(query) || 
-      lang.nativeText.toLowerCase().includes(query) ||
+      (lang.nativeText && lang.nativeText.toLowerCase().includes(query)) ||
       lang.code.toLowerCase().includes(query)
     );
   }, [searchQuery, languages]);
@@ -47,7 +47,7 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
       try {
         setLoading(true);
         
-        // Call our Edge Function to get voices, which also includes languages
+        // Call our Edge Function to get voices
         const { data, error } = await supabase.functions.invoke('get-google-voices');
         
         if (error || !data) {
@@ -147,7 +147,7 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
                     <Globe className="h-4 w-4 mr-2" />
                     <div>
                       <div>{language.name}</div>
-                      {language.nativeText !== language.name && (
+                      {language.nativeText && language.nativeText !== language.name && (
                         <div className="text-xs text-muted-foreground">{language.nativeText}</div>
                       )}
                     </div>

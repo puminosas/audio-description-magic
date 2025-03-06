@@ -14,14 +14,34 @@ const GeneratorContainer = () => {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState('generate');
   const { generationStats, fetchGenerationStats } = useGenerationStats();
-  const { loading, generatedAudio, error, handleGenerate, setError } = useGenerationLogic();
+  const { loading, generatedAudio, error, handleGenerate, setError, isCached } = useGenerationLogic();
 
   const handleGenerateAudio = async (formData: {
     text: string;
     language: LanguageOption;
     voice: VoiceOption;
   }) => {
-    await handleGenerate(formData, activeTab, fetchGenerationStats);
+    try {
+      if (!formData.text || formData.text.trim() === '') {
+        setError('Please enter text to generate audio');
+        return;
+      }
+      
+      if (!formData.language) {
+        setError('Please select a language');
+        return;
+      }
+      
+      if (!formData.voice) {
+        setError('Please select a voice');
+        return;
+      }
+      
+      await handleGenerate(formData, activeTab, fetchGenerationStats);
+    } catch (err) {
+      console.error("Error during generation:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+    }
   };
 
   return (
@@ -47,6 +67,7 @@ const GeneratorContainer = () => {
                 generatedText={generatedAudio?.text || null} 
                 isGenerating={loading}
                 error={error}
+                isCached={isCached}
               />
             </div>
           )}

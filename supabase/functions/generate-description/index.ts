@@ -1,11 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "@supabase/supabase-js";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
+import { OpenAI } from "https://esm.sh/openai@4.20.1";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,87 +9,68 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openaiApiKey) {
+    console.error("Missing OPENAI_API_KEY environment variable");
+    return new Response(
+      JSON.stringify({ success: false, error: "API configuration error" }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
-    // Get request body
-    const { product_name, language = 'en', voice_name = 'default' } = await req.json();
-
+    const { product_name, language, voice_name } = await req.json();
+    
     if (!product_name) {
-      throw new Error('Missing required field: product_name');
-    }
-
-    console.log(`Generating description for product: ${product_name}, language: ${language}`);
-
-    // Set up a simple default description if OpenAI fails
-    const defaultDescription = `${product_name} is a high-quality product designed to meet your needs. It features excellent craftsmanship and reliable performance.`;
-
-    // Try to generate with OpenAI
-    try {
-      const openAIKey = Deno.env.get('OPENAI_API_KEY');
-      
-      if (!openAIKey) {
-        console.log('No OpenAI API key found, returning default description');
-        return new Response(
-          JSON.stringify({ success: true, generated_text: defaultDescription }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an AI product description generator. Create a concise, engaging product description for "${product_name}" in ${language} language.
-              The description should be 2-3 sentences highlighting key features and benefits. Make it sound natural for text-to-speech conversion.`
-            },
-            { 
-              role: 'user', 
-              content: `Write a product description for: ${product_name}` 
-            }
-          ],
-          max_tokens: 250,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.error || !data.choices || !data.choices[0]) {
-        console.error('OpenAI API error:', data.error || 'No choices returned');
-        throw new Error('Failed to generate description using AI');
-      }
-
-      const generatedText = data.choices[0].message.content.trim();
-      console.log('Successfully generated description with OpenAI');
-
       return new Response(
-        JSON.stringify({ success: true, generated_text: generatedText }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (openAiError) {
-      console.error('Error with OpenAI description generation:', openAiError);
-      // Fall back to default description
-      return new Response(
-        JSON.stringify({ success: true, generated_text: defaultDescription }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: "Product name is required" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Generating description for "${product_name}" in ${language} with voice ${voice_name}`);
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({ apiKey: openaiApiKey });
+
+    // Create enhanced system prompt
+    const systemPrompt = `
+      Create an engaging product description in ${language} for an online electronics store. 
+      Focus on the most important features and benefits that appeal to customers of all ages. 
+      Write in clear, accessible language that's easy to understand when read aloud or converted to audio. 
+      Structure the description logically, avoiding unnecessary symbols or characters. 
+      Keep the length suitable for a 60-second audio clip. 
+      Match the language to the user's selection (${language}) and consider the voice name "${voice_name}" for the audio output.
+    `;
+
+    // Generate description
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Write a concise and engaging audio description for this product: ${product_name}` }
+      ]
+    });
+
+    const generatedText = response.choices[0].message.content;
+    
+    console.log("Successfully generated description");
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        generated_text: generatedText
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error('Error in generate-description function:', error);
+    console.error("Error in generate-description:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+        error: error instanceof Error ? error.message : String(error)
       }),
-      { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
