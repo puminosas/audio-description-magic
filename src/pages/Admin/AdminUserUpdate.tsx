@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +13,6 @@ interface UserData {
   id?: string;
   email: string;
   role: string;
-  credits: number;
   plan: string;
   daily_limit: number;
   remaining_generations: number;
@@ -27,7 +25,6 @@ const AdminUserUpdate: React.FC = () => {
   const [userData, setUserData] = useState<UserData>({
     email: '',
     role: 'user',
-    credits: 0,
     plan: 'free',
     daily_limit: 10,
     remaining_generations: 10
@@ -67,8 +64,7 @@ const AdminUserUpdate: React.FC = () => {
           id: userId,
           email: authData.user?.email || '',
           role: roleData?.role || 'user',
-          credits: profileData?.credits || 0,
-          plan: profileData?.subscription_tier || 'free',
+          plan: profileData?.plan || 'free',
           daily_limit: profileData?.daily_limit || 10,
           remaining_generations: profileData?.remaining_generations || 0
         });
@@ -96,8 +92,7 @@ const AdminUserUpdate: React.FC = () => {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          credits: userData.credits,
-          subscription_tier: userData.plan,
+          plan: userData.plan,
           daily_limit: userData.daily_limit,
           remaining_generations: userData.remaining_generations
         })
@@ -199,17 +194,7 @@ const AdminUserUpdate: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="credits">Credits</Label>
-                  <Input
-                    id="credits"
-                    name="credits"
-                    type="number"
-                    value={userData.credits}
-                    onChange={handleNumberChange}
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="plan">Subscription Plan</Label>
                   <Select
