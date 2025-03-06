@@ -3,7 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { getGoogleAccessToken } from "./auth.ts";
-import { uploadToGoogleStorage } from "./storage.ts";
 import { generateSpeech } from "./tts.ts";
 import { validateTTSRequest, validateEnvironment } from "./validation.ts";
 
@@ -26,12 +25,26 @@ serve(async (req) => {
     const { 
       SUPABASE_URL, 
       SUPABASE_SERVICE_ROLE_KEY, 
-      GOOGLE_STORAGE_BUCKET, 
       credentials 
     } = validateEnvironment();
 
-    // Initialize Supabase client for metadata storage
+    // Initialize Supabase client for storage and metadata
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    // Get user email for folder organization
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .eq('id', user_id)
+      .single();
+      
+    if (userError) {
+      console.warn("Warning: Couldn't fetch user email:", userError.message);
+    }
+    
+    // Generate a folder path based on user email or fallback to user ID
+    const userEmail = userData?.email || user_id;
+    const sanitizedUserIdentifier = userEmail.replace(/[^a-zA-Z0-9_-]/g, '_');
     
     console.log("Getting access token for Google API");
     // Get access token using the credentials
@@ -43,24 +56,40 @@ serve(async (req) => {
     console.log(`Prepared ${binaryAudio.length} bytes of audio data`);
     
     // Create user folder path for storage
-    const userFolderPath = `audio-files/${user_id}`;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString();
     const sanitizedText = text.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `${sanitizedText}_${language}_${timestamp}.mp3`;
-    const filePath = `${userFolderPath}/${fileName}`;
+    const filePath = `${sanitizedUserIdentifier}/${fileName}`;
     
-    console.log(`Preparing to upload ${binaryAudio.length} bytes of audio to Google Cloud Storage`);
+    console.log(`Preparing to upload ${binaryAudio.length} bytes of audio to Supabase Storage`);
     
-    // Upload to Google Cloud Storage
-    const uploadResult = await uploadToGoogleStorage(
-      accessToken,
-      GOOGLE_STORAGE_BUCKET,
-      filePath,
-      binaryAudio,
-      'audio/mpeg'
-    );
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin
+      .storage
+      .from('audio_files')
+      .upload(filePath, binaryAudio, {
+        contentType: 'audio/mpeg',
+        cacheControl: '3600',
+        upsert: false
+      });
+      
+    if (uploadError) {
+      throw new Error(`Error uploading to Supabase Storage: ${uploadError.message}`);
+    }
     
-    console.log("Successfully uploaded audio to Google Cloud Storage:", uploadResult.publicUrl);
+    console.log("Successfully uploaded audio to Supabase Storage:", filePath);
+    
+    // Get the public URL for the uploaded file
+    const { data: publicUrlData } = supabaseAdmin
+      .storage
+      .from('audio_files')
+      .getPublicUrl(filePath);
+      
+    if (!publicUrlData || !publicUrlData.publicUrl) {
+      throw new Error("Failed to generate public URL for the uploaded file");
+    }
+    
+    const publicUrl = publicUrlData.publicUrl;
     
     // Store metadata in Supabase
     const { data: metadataData, error: metadataError } = await supabaseAdmin
@@ -69,7 +98,7 @@ serve(async (req) => {
         user_id: user_id,
         file_name: fileName,
         file_path: filePath,
-        google_storage_url: uploadResult.publicUrl,
+        storage_url: publicUrl,
         file_size: binaryAudio.length,
         language: language,
         voice: voice,
@@ -83,13 +112,10 @@ serve(async (req) => {
       console.log("Stored file metadata in Supabase");
     }
     
-    const folderUrl = `https://storage.googleapis.com/${GOOGLE_STORAGE_BUCKET}/${userFolderPath}`;
-    
     return new Response(
       JSON.stringify({
         success: true, 
-        audio_url: uploadResult.publicUrl,
-        folder_url: folderUrl,
+        audio_url: publicUrl,
         fileName: fileName
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

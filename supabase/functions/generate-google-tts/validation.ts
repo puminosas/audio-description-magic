@@ -38,11 +38,6 @@ export function validateEnvironment() {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
   }
   
-  const GOOGLE_STORAGE_BUCKET = Deno.env.get('GCS_BUCKET_NAME');
-  if (!GOOGLE_STORAGE_BUCKET) {
-    throw new Error('GCS_BUCKET_NAME environment variable is required');
-  }
-  
   const GOOGLE_APPLICATION_CREDENTIALS = Deno.env.get('GOOGLE_APPLICATION_CREDENTIALS_JSON');
   if (!GOOGLE_APPLICATION_CREDENTIALS) {
     throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is required');
@@ -57,7 +52,7 @@ export function validateEnvironment() {
       throw new Error('Google credentials JSON missing required fields');
     }
     
-    return { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_STORAGE_BUCKET, credentials };
+    return { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, credentials };
   } catch (e) {
     throw new Error('Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format: ' + e.message);
   }

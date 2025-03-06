@@ -65,7 +65,7 @@ export async function generateAudioDescription(
         // Improved error message based on error type
         let errorMessage = error.message || 'Failed to generate audio';
         if (error.message?.includes('Access Denied') || error.message?.includes('Permission denied')) {
-          errorMessage = 'Storage access denied. Please contact the administrator to check Google Cloud Storage permissions.';
+          errorMessage = 'Storage access denied. Please contact the administrator to check storage permissions.';
         } else if (error.message?.includes('timeout')) {
           errorMessage = 'The request timed out. Please try with shorter text.';
         }
@@ -82,7 +82,7 @@ export async function generateAudioDescription(
       const result: AudioSuccessResult = {
         audioUrl: data.audio_url,
         text: finalText,
-        folderUrl: data.folder_url || null
+        folderUrl: null // No longer needed since we're using Supabase storage
       };
 
       return result;

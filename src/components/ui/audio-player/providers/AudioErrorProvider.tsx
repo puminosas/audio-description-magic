@@ -57,10 +57,9 @@ export const AudioErrorProvider = ({
         }
       }
       
-      // For external URLs, provide more specific error messages
-      if (audioUrl.includes('storage.googleapis.com') || 
-          audioUrl.includes('storage.cloud.google.com') ||
-          audioUrl.includes('supabase.co/storage')) {
+      // For Supabase storage URLs, provide more specific error messages
+      if (audioUrl.includes('supabase.co/storage/v1/object/') || 
+          audioUrl.includes('supabase.co/storage/v1/render/')) {
         
         // Check for common cloud storage issues
         if (audioUrl.includes('Access Denied') || audioUrl.includes('permission') || audioUrl.includes('403')) {
@@ -68,7 +67,7 @@ export const AudioErrorProvider = ({
         } else if (audioUrl.includes('404') || audioUrl.includes('Not Found')) {
           errorMessage = "Audio file not found. It may have been removed or relocated.";
         } else {
-          errorMessage = "Failed to load audio from cloud storage. Try downloading the file instead.";
+          errorMessage = "Failed to load audio from storage. Try downloading the file instead.";
         }
       }
       
@@ -105,6 +104,9 @@ export const AudioErrorProvider = ({
     
     // Handle errors that might occur when setting the src
     try {
+      // Set CORS mode to anonymous for better error handling
+      audio.crossOrigin = "anonymous";
+      
       // Set the audio source
       audio.src = audioUrl;
       
