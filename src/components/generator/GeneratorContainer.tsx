@@ -9,12 +9,15 @@ import GeneratorSidebar from '@/components/generator/GeneratorSidebar';
 import { useGenerationStats } from './hooks/useGenerationStats';
 import { useGenerationLogic } from './hooks/useGenerationLogic';
 import { LanguageOption, VoiceOption } from '@/utils/audio';
+import { useApiErrorHandler } from '@/hooks/useApiErrorHandler';
+import ApiErrorBoundary from '@/components/error/ApiErrorBoundary';
 
 const GeneratorContainer = () => {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState('generate');
   const { generationStats, fetchGenerationStats } = useGenerationStats();
   const { loading, generatedAudio, error, handleGenerate, setError, isCached } = useGenerationLogic();
+  const { handleError } = useApiErrorHandler();
 
   const handleGenerateAudio = async (formData: {
     text: string;
@@ -40,7 +43,7 @@ const GeneratorContainer = () => {
       await handleGenerate(formData, activeTab, fetchGenerationStats);
     } catch (err) {
       console.error("Error during generation:", err);
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      handleError(err);
     }
   };
 
@@ -73,11 +76,13 @@ const GeneratorContainer = () => {
           )}
         </div>
         
-        <GeneratorSidebar 
-          user={user} 
-          profile={profile} 
-          generationStats={generationStats} 
-        />
+        <ApiErrorBoundary errorMessage="Failed to load sidebar information">
+          <GeneratorSidebar 
+            user={user} 
+            profile={profile} 
+            generationStats={generationStats} 
+          />
+        </ApiErrorBoundary>
       </div>
     </div>
   );

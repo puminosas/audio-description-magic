@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useApiErrorHandler } from '@/hooks/useApiErrorHandler';
 
 interface AdminAccessManagerProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface AdminAccessManagerProps {
 const AdminAccessManager: React.FC<AdminAccessManagerProps> = ({ children }) => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const { handleError } = useApiErrorHandler();
   
   // Emergency function to ensure the current user has admin access
   useEffect(() => {
@@ -34,7 +36,7 @@ const AdminAccessManager: React.FC<AdminAccessManagerProps> = ({ children }) => 
               window.location.reload();
             }
           } catch (error) {
-            console.error("Failed to assign admin role:", error);
+            handleError(error);
           }
         } else {
           toast({
@@ -49,7 +51,7 @@ const AdminAccessManager: React.FC<AdminAccessManagerProps> = ({ children }) => 
     };
     
     setupCurrentUserAsAdmin();
-  }, [user, isAdmin, loading, navigate]);
+  }, [user, isAdmin, loading, navigate, handleError]);
   
   // Show loading state
   if (loading) {

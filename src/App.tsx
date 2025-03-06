@@ -13,6 +13,8 @@ import IntegrationDocs from './pages/IntegrationDocs';
 import Admin from './pages/Admin';
 import Dashboard from './pages/Dashboard';
 import MainNavbar from './components/layout/MainNavbar';
+import ErrorBoundary from './components/error/ErrorBoundary';
+import ErrorPage from './components/error/ErrorPage';
 
 // Layout component with navbar
 const RootLayout = () => {
@@ -30,26 +32,32 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "/",
         element: <Generator />,
+        errorElement: <ErrorPage />
       },
       {
         path: "/pricing",
         element: <Pricing />,
+        errorElement: <ErrorPage />
       },
       {
         path: "/integration-docs",
         element: <IntegrationDocs />,
+        errorElement: <ErrorPage />
       },
       {
         path: "/dashboard",
         element: <Dashboard />,
+        errorElement: <ErrorPage />
       },
       {
         path: "/admin/*",
         element: <Admin />,
+        errorElement: <ErrorPage />
       }
     ]
   }
@@ -57,9 +65,11 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
