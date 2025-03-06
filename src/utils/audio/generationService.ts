@@ -33,12 +33,12 @@ export async function generateAudioDescription(
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.user) {
-      return { error: 'Authentication required to generate audio descriptions' };
+      return { success: false, error: 'Authentication required to generate audio descriptions' };
     }
 
     // Apply rate limiting - 10 calls per minute
     if (!checkRateLimiting('generateDescription', 10, 60000)) {
-      return { error: 'Rate limit exceeded. Please wait a moment before generating more audio.' };
+      return { success: false, error: 'Rate limit exceeded. Please wait a moment before generating more audio.' };
     }
 
     // First determine if we need to generate a description
@@ -74,7 +74,7 @@ export async function generateAudioDescription(
       
       // Apply rate limiting - 5 calls per minute for TTS
       if (!checkRateLimiting('generateAudio', 5, 60000)) {
-        return { error: 'Rate limit exceeded for audio generation. Please wait a moment before generating more audio.' };
+        return { success: false, error: 'Rate limit exceeded for audio generation. Please wait a moment before generating more audio.' };
       }
       
       // Generate the audio using Google TTS
@@ -98,19 +98,19 @@ export async function generateAudioDescription(
           errorMessage = 'The request timed out. Please try with shorter text.';
         }
         
-        return { error: errorMessage };
+        return { success: false, error: errorMessage };
       }
 
       if (!data || !data.success) {
         console.error('Invalid response from TTS service:', data);
-        return { error: data?.error || 'Failed to generate audio, invalid response from server' };
+        return { success: false, error: data?.error || 'Failed to generate audio, invalid response from server' };
       }
 
       // Return success response
       const result: AudioSuccessResult = {
+        success: true,
         audioUrl: data.audio_url,
         text: finalText,
-        folderUrl: null, // No longer needed since we're using Supabase storage
         id: data.fileName || crypto.randomUUID() // Store the filename as ID for reference
       };
 
@@ -122,6 +122,7 @@ export async function generateAudioDescription(
       const isFetchError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Failed to send');
       
       return { 
+        success: false,
         error: isFetchError 
           ? 'Unable to connect to audio generation service. Please check your network connection and try again later.'
           : 'Error generating audio. Please try again with different text or settings.'
@@ -129,7 +130,7 @@ export async function generateAudioDescription(
     }
   } catch (error) {
     console.error('Error in generateAudioDescription:', error);
-    return { error: error instanceof Error ? error.message : 'Failed to generate audio description' };
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to generate audio description' };
   }
 }
 
