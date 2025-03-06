@@ -9,6 +9,8 @@ import Generator from './pages/Generator';
 import { AuthProvider } from './context/AuthContext';
 import Pricing from './pages/Pricing';
 import IntegrationDocs from './pages/IntegrationDocs';
+import Admin from './pages/Admin';
+import Dashboard from './pages/Dashboard';
 
 const router = createBrowserRouter([
   {
@@ -22,6 +24,14 @@ const router = createBrowserRouter([
   {
     path: "/integration-docs",
     element: <IntegrationDocs />,
+  },
+  {
+    path: "/dashboard",
+    element: <Dashboard />,
+  },
+  {
+    path: "/admin/*",
+    element: <Admin />,
   }
 ]);
 

@@ -29,7 +29,7 @@ const Admin = () => {
     switch (path) {
       case 'audio-files': return 'audio-files';
       case 'users': return 'users';
-      case 'user-update': return 'user-update';
+      case 'user-update': return 'users';
       case 'user-activity': return 'user-activity';
       case 'feedback': return 'feedback';
       case 'ai-chat': return 'ai-chat';
@@ -149,13 +149,6 @@ const Admin = () => {
                   User Activity
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="user-update" 
-                  onClick={() => handleTabClick('user-update')} 
-                  className="flex-shrink-0"
-                >
-                  Update User
-                </TabsTrigger>
-                <TabsTrigger 
                   value="feedback" 
                   onClick={() => handleTabClick('feedback')} 
                   className="flex-shrink-0"
@@ -179,16 +172,27 @@ const Admin = () => {
               </TabsList>
             </div>
             
-            <Routes>
-              <Route path="/" element={<AdminAnalytics />} />
-              <Route path="/audio-files" element={<AdminAudioFiles />} />
-              <Route path="/users" element={<AdminUserManagement />} />
-              <Route path="/user-activity" element={<AdminUserActivity />} />
-              <Route path="/user-update" element={<AdminUserUpdate />} />
-              <Route path="/feedback" element={<AdminFeedback />} />
-              <Route path="/ai-chat" element={<AdminAiChatPage />} />
-              <Route path="/settings" element={<AdminSettings />} />
-            </Routes>
+            <TabsContent value="analytics">
+              <AdminAnalytics />
+            </TabsContent>
+            <TabsContent value="audio-files">
+              <AdminAudioFiles />
+            </TabsContent>
+            <TabsContent value="users">
+              <AdminUserManagement />
+            </TabsContent>
+            <TabsContent value="user-activity">
+              <AdminUserActivity />
+            </TabsContent>
+            <TabsContent value="feedback">
+              <AdminFeedback />
+            </TabsContent>
+            <TabsContent value="ai-chat">
+              <AdminAiChatPage />
+            </TabsContent>
+            <TabsContent value="settings">
+              <AdminSettings />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
