@@ -170,9 +170,9 @@ const Pricing = () => {
             defaultValue="monthly"
             value={billingCycle}
             onValueChange={(value) => setBillingCycle(value as 'monthly' | 'annual')}
-            className="w-fit"
+            className="w-full max-w-[400px]"
           >
-            <TabsList className="grid w-[400px] grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="monthly">Monthly Billing</TabsTrigger>
               <TabsTrigger value="annual">
                 Annual Billing
@@ -184,9 +184,9 @@ const Pricing = () => {
           </Tabs>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <TabsContent value="monthly" className="mt-0 w-full">
-            <div className="grid md:grid-cols-3 gap-8 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {billingCycle === 'monthly' ? (
+            <>
               <PricingCard
                 name="Free"
                 price="Free"
@@ -218,11 +218,9 @@ const Pricing = () => {
                 onSubscribe={() => handlePlanAction('premium')}
                 isCurrentPlan={profile?.plan === 'premium'}
               />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="annual" className="mt-0 w-full">
-            <div className="grid md:grid-cols-3 gap-8 w-full">
+            </>
+          ) : (
+            <>
               <PricingCard
                 name="Free"
                 price="Free"
@@ -254,8 +252,8 @@ const Pricing = () => {
                 onSubscribe={() => handlePlanAction('premium')}
                 isCurrentPlan={profile?.plan === 'premium'}
               />
-            </div>
-          </TabsContent>
+            </>
+          )}
         </div>
 
         <div className="mt-16 glassmorphism rounded-xl p-8">

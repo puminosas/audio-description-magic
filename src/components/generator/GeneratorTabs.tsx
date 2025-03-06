@@ -6,6 +6,7 @@ import GeneratorForm from '@/components/generator/GeneratorForm';
 import HistoryTab from '@/components/generator/HistoryTab';
 import TextToAudioTab from '@/components/generator/TextToAudioTab';
 import { LanguageOption, VoiceOption } from '@/utils/audio';
+import { Loader2 } from 'lucide-react';
 
 interface GeneratorTabsProps {
   activeTab: string;
@@ -30,11 +31,33 @@ const GeneratorTabs = ({
 }: GeneratorTabsProps) => {
   return (
     <Card className="overflow-hidden">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab}
+        defaultValue="generate"
+      >
         <TabsList className="w-full rounded-none bg-muted/50 flex-wrap justify-center md:justify-start">
-          <TabsTrigger value="generate" className="flex-1 max-w-[150px] text-xs sm:text-sm">Generate</TabsTrigger>
-          <TabsTrigger value="text-to-audio" className="flex-1 max-w-[150px] text-xs sm:text-sm">Text to Audio</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1 max-w-[150px] text-xs sm:text-sm">History</TabsTrigger>
+          <TabsTrigger 
+            value="generate" 
+            className="flex-1 max-w-[150px] text-xs sm:text-sm"
+            disabled={loading}
+          >
+            Generate
+          </TabsTrigger>
+          <TabsTrigger 
+            value="text-to-audio" 
+            className="flex-1 max-w-[150px] text-xs sm:text-sm"
+            disabled={loading}
+          >
+            Text to Audio
+          </TabsTrigger>
+          <TabsTrigger 
+            value="history" 
+            className="flex-1 max-w-[150px] text-xs sm:text-sm"
+            disabled={loading}
+          >
+            History
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="generate" className="p-4 md:p-6">
@@ -53,10 +76,16 @@ const GeneratorTabs = ({
         </TabsContent>
         
         <TabsContent value="history" className="p-4 md:p-6">
-          <HistoryTab 
-            user={user} 
-            onRefreshStats={onRefreshStats}
-          />
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <HistoryTab 
+              user={user} 
+              onRefreshStats={onRefreshStats}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </Card>

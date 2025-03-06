@@ -9,12 +9,14 @@ import GeneratorSidebar from '@/components/generator/GeneratorSidebar';
 import { useGenerationStats } from './hooks/useGenerationStats';
 import { useGenerationLogic } from './hooks/useGenerationLogic';
 import { LanguageOption, VoiceOption } from '@/utils/audio';
+import { useToast } from '@/hooks/use-toast';
 
 const GeneratorContainer = () => {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState('generate');
   const { generationStats, fetchGenerationStats } = useGenerationStats();
   const { loading, generatedAudio, error, handleGenerate, setError, isCached } = useGenerationLogic();
+  const { toast } = useToast();
 
   const handleGenerateAudio = async (formData: {
     text: string;
@@ -40,7 +42,13 @@ const GeneratorContainer = () => {
       await handleGenerate(formData, activeTab, fetchGenerationStats);
     } catch (err) {
       console.error("Error during generation:", err);
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
+      toast({
+        title: "Generation Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
   };
 

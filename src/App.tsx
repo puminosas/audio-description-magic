@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
@@ -18,6 +18,7 @@ import NotFound from '@/pages/NotFound';
 import Admin from '@/pages/Admin';
 import '@/App.css';
 import { initializeGoogleVoices } from '@/utils/audio';
+import { useToast } from '@/hooks/use-toast';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -30,19 +31,30 @@ function ScrollToTop() {
 }
 
 function App() {
+  const [voicesInitialized, setVoicesInitialized] = useState(false);
+  const { toast } = useToast();
+
   useEffect(() => {
     // Initialize Google TTS voices data when the app starts
     const preloadServices = async () => {
       try {
-        // Pre-fetch Google TTS voices data
-        await initializeGoogleVoices();
+        if (!voicesInitialized) {
+          // Pre-fetch Google TTS voices data
+          await initializeGoogleVoices();
+          setVoicesInitialized(true);
+        }
       } catch (error) {
         console.error('Error initializing services:', error);
+        toast({
+          title: "Service Initialization Error",
+          description: "Some services may not be available. Please refresh the page or try again later.",
+          variant: "destructive",
+        });
       }
     };
     
     preloadServices();
-  }, []);
+  }, [voicesInitialized, toast]);
 
   return (
     <ThemeProvider>
