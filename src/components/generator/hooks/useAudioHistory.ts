@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
-import { getAudioHistory, deleteAudioFile } from '@/utils/audio';
+import { getAudioHistory, deleteAudioFile } from '@/utils/audio/historyService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promise<void>) => {

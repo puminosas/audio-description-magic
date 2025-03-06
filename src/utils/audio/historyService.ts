@@ -30,6 +30,29 @@ export const fetchUserAudios = async (userId: string, limit?: number) => {
 };
 
 /**
+ * Get audio history for the current user
+ * @returns Array of audio files
+ */
+export const getAudioHistory = async () => {
+  try {
+    // Get the current user's session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user?.id) {
+      // For non-authenticated users, try to get temporary files from local storage
+      return [];
+    }
+    
+    // Fetch authenticated user's files
+    const { data } = await fetchUserAudios(session.user.id);
+    return data || [];
+  } catch (error) {
+    console.error('Failed to get audio history:', error);
+    return [];
+  }
+};
+
+/**
  * Save audio to history
  * @param audioUrl The audio URL
  * @param text The text content

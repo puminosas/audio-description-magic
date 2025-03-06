@@ -2,7 +2,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Play, Download, Code, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,8 +26,8 @@ interface FileItem {
 interface AudioHistoryItemProps {
   file: FileItem;
   audioPlaying: string | null;
-  handlePlayPause: (audioUrl: string) => void;
-  handleDeleteFile: () => void;
+  handlePlayPause: (fileId: string) => void;
+  handleDeleteFile: (fileId: string) => Promise<void>;
   setDeleteFileId: (id: string) => void;
   copyEmbedCode: (id: string, audioUrl: string) => void;
   formatDate: (date: Date) => string;
@@ -53,8 +52,8 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => file.audioUrl && handlePlayPause(file.audioUrl)}>
-          {audioPlaying === file.audioUrl ? (
+        <Button variant="ghost" size="icon" onClick={() => handlePlayPause(file.id)}>
+          {audioPlaying === file.id ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Play className="h-4 w-4" />
@@ -89,7 +88,7 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
               <AlertDialogCancel onClick={() => setDeleteFileId('')}>
                 Cancel
               </AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteFile}>
+              <AlertDialogAction onClick={() => handleDeleteFile(file.id)}>
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>

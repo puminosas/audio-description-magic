@@ -66,8 +66,8 @@ export function getAvailableVoices(languageCode: string): VoiceOption[] {
   return getVoicesForLanguage(languageCode);
 }
 
-// Function to fetch and set Google TTS languages and voices from API
-export async function initializeGoogleVoices(): Promise<void> {
+// Function to fetch and store Google TTS voices
+export const fetchAndStoreGoogleVoices = async (): Promise<void> => {
   try {
     // Call our Edge Function to get voices
     const response = await fetch('https://cttaphbzhmheecbqhtjj.supabase.co/functions/v1/get-google-voices');
@@ -118,10 +118,15 @@ export async function initializeGoogleVoices(): Promise<void> {
       console.log(`Loaded ${languages.length} languages from Google TTS API`);
     }
   } catch (error) {
-    console.error('Error initializing Google voices:', error);
+    console.error('Error fetching Google voices:', error);
     // Fall back to default data if there's an error
   }
-}
+};
+
+// Function to initialize Google voices (renamed for clarity)
+export const initializeGoogleVoices = async (): Promise<void> => {
+  return fetchAndStoreGoogleVoices();
+};
 
 // Helper function for formatting voice names
 function formatVoiceName(voiceName: string, gender?: string): string {

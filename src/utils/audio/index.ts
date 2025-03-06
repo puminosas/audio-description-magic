@@ -16,8 +16,8 @@ export const initializeGoogleVoices = async () => {
     }
     
     // Import languageVoiceData dynamically to avoid circular dependencies
-    const { fetchAndStoreGoogleVoices } = await import('./languageVoiceData');
-    await fetchAndStoreGoogleVoices();
+    const { initializeGoogleVoices } = await import('./languageVoiceData');
+    await initializeGoogleVoices();
     googleVoicesInitialized = true;
     console.log('Google voices initialized successfully');
   } catch (error) {

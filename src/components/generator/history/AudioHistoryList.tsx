@@ -18,8 +18,8 @@ interface AudioHistoryListProps {
   files: FileItem[];
   user: User | null;
   audioPlaying: string | null;
-  handlePlayPause: (audioUrl: string) => void;
-  handleDeleteFile: () => void;
+  handlePlayPause: (fileId: string) => void;
+  handleDeleteFile: (fileId: string) => Promise<void>;
   setDeleteFileId: (id: string) => void;
   copyEmbedCode: (id: string, audioUrl: string) => void;
   formatDate: (date: Date) => string;
