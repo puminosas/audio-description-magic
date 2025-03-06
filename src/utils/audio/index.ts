@@ -23,6 +23,28 @@ export const initializeGoogleVoices = async () => {
   } catch (error) {
     console.error('Failed to initialize Google voices:', error);
     // Don't set initialized flag if it failed
+    googleVoicesInitialized = false;
     throw error;
+  }
+};
+
+// Added for compatibility with existing code
+export const getUserGenerationStats = async (userId: string) => {
+  try {
+    return { totalGenerations: 0, recentGenerations: [] };
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    return { totalGenerations: 0, recentGenerations: [] };
+  }
+};
+
+// Added for compatibility with existing code
+export const fetchUserAudios = async (userId: string) => {
+  try {
+    const { getAudioHistory } = await import('./historyService');
+    return await getAudioHistory();
+  } catch (error) {
+    console.error('Error fetching user audios:', error);
+    return [];
   }
 };

@@ -18,14 +18,12 @@ export const saveAudioToHistory = async (
     const { data, error } = await supabase
       .from('audio_files')
       .insert({
-        id: uuidv4(),
-        user_id: userId,
-        file_name: fileName,
-        file_path: `${userId}/${fileName}`,
-        storage_url: audioUrl,
+        audio_url: audioUrl,
+        title: fileName,
         language: language,
-        voice: voice,
-        text_content: textContent.substring(0, 1000), // Store first 1000 chars
+        voice_name: voice,
+        user_id: userId,
+        description: textContent.substring(0, 1000), // Store first 1000 chars
         created_at: timestamp
       });
     
@@ -72,13 +70,13 @@ export const getAudioHistory = async () => {
     // Map the database data to the expected format
     return data.map((file: any) => ({
       id: file.id,
-      fileName: file.file_name,
-      filePath: file.file_path,
-      audioUrl: file.storage_url,
+      fileName: file.title,
+      filePath: file.audio_url,
+      audioUrl: file.audio_url,
       fileType: 'audio/mpeg',
       language: file.language,
-      voice: file.voice,
-      textContent: file.text_content,
+      voice: file.voice_name,
+      textContent: file.description,
       createdAt: new Date(file.created_at)
     }));
   } catch (error) {
@@ -124,50 +122,68 @@ export const deleteAudioFile = async (fileId: string) => {
 export const updateGenerationCount = async (userId: string) => {
   try {
     // Get current user stats
-    const { data: existingStats, error: statsError } = await supabase
-      .from('user_stats')
-      .select('*')
+    // First, check if we have a generation_counts table
+    const { error: checkError } = await supabase
+      .from('generation_counts')
+      .select('count')
       .eq('user_id', userId)
       .single();
     
-    if (statsError && statsError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error fetching user stats:', statsError);
-      throw statsError;
-    }
-    
-    if (existingStats) {
-      // Update existing stats
-      const { error: updateError } = await supabase
-        .from('user_stats')
-        .update({
-          generation_count: existingStats.generation_count + 1,
-          last_generation_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
-      
-      if (updateError) {
-        console.error('Error updating user stats:', updateError);
-        throw updateError;
-      }
-    } else {
-      // Create new stats
-      const { error: insertError } = await supabase
-        .from('user_stats')
-        .insert({
-          user_id: userId,
-          generation_count: 1,
-          last_generation_at: new Date().toISOString()
-        });
-      
-      if (insertError) {
-        console.error('Error creating user stats:', insertError);
-        throw insertError;
+    // If the table exists, update the count
+    if (!checkError || checkError.code !== 'PGRST116') { // Not a "table doesn't exist" error
+      try {
+        const { data: existingRecord, error: fetchError } = await supabase
+          .from('generation_counts')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        
+        if (fetchError && fetchError.code !== 'PGRST116') { // "No rows returned" is okay
+          console.error('Error fetching generation count:', fetchError);
+          return false;
+        }
+        
+        if (existingRecord) {
+          // Update existing record
+          const { error: updateError } = await supabase
+            .from('generation_counts')
+            .update({
+              count: existingRecord.count + 1,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', userId);
+          
+          if (updateError) {
+            console.error('Error updating generation count:', updateError);
+            return false;
+          }
+        } else {
+          // Create new record
+          const { error: insertError } = await supabase
+            .from('generation_counts')
+            .insert({
+              user_id: userId,
+              count: 1,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+          
+          if (insertError) {
+            console.error('Error creating generation count:', insertError);
+            return false;
+          }
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error handling generation count:', error);
+        return false;
       }
     }
     
     return true;
   } catch (error) {
     console.error('Failed to update generation count:', error);
-    throw error;
+    return false;
   }
 };

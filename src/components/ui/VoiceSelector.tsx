@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from 'react';
-import { Mic, ChevronDown, Loader2 } from 'lucide-react';
+import { Mic, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import SearchInput from './voice-selector/SearchInput';
 import FilterButtons from './voice-selector/FilterButtons';
 import VoiceList from './voice-selector/VoiceList';
 import { useVoiceData } from './voice-selector/hooks/useVoiceData';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface VoiceSelectorProps {
   onSelect: (voice: VoiceOption) => void;
@@ -27,7 +28,7 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
   const [searchQuery, setSearchQuery] = useState('');
   
   // Custom hook to fetch voice data
-  const { voices, loading } = useVoiceData(language, selectedVoice, onSelect);
+  const { voices, loading, error } = useVoiceData(language, selectedVoice, onSelect);
   
   // Helper function to check gender regardless of format
   const matchesGender = (voiceGender: string, filterGender: string): boolean => {
@@ -62,48 +63,67 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
     return filtered;
   }, [voices, filter, searchQuery]);
   
-  // Default to the first voice if none selected
-  const effectiveSelectedVoice = selectedVoice || (voices.length > 0 ? voices[0] : null);
+  // Get the selected voice display
+  const selectedVoiceDisplay = selectedVoice?.name || 'Select Voice';
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-between">
-          <span className="flex items-center">
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+    <div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="w-full justify-between" disabled={loading || !!error}>
+            <span className="flex items-center">
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : error ? (
+                <AlertTriangle className="mr-2 h-4 w-4 text-destructive" />
+              ) : (
+                <Mic className="mr-2 h-4 w-4" />
+              )}
+              <span>{error ? 'No Voices Available' : selectedVoiceDisplay}</span>
+            </span>
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-[300px]">
+          <DropdownMenuLabel>Select Voice</DropdownMenuLabel>
+          <div className="px-2 py-2">
+            <SearchInput 
+              searchQuery={searchQuery} 
+              setSearchQuery={setSearchQuery} 
+            />
+            <FilterButtons 
+              filter={filter} 
+              setFilter={setFilter} 
+            />
+          </div>
+          <DropdownMenuSeparator />
+          <div className="max-h-64 overflow-y-auto">
+            {error ? (
+              <div className="p-4">
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">{error}</AlertDescription>
+                </Alert>
+              </div>
             ) : (
-              <Mic className="mr-2 h-4 w-4" />
+              <VoiceList 
+                loading={loading}
+                displayVoices={displayVoices}
+                effectiveSelectedVoice={selectedVoice}
+                onSelect={onSelect}
+                searchQuery={searchQuery}
+              />
             )}
-            <span>{effectiveSelectedVoice?.name || 'Select Voice'}</span>
-          </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[300px]">
-        <DropdownMenuLabel>Select Voice</DropdownMenuLabel>
-        <div className="px-2 py-2">
-          <SearchInput 
-            searchQuery={searchQuery} 
-            setSearchQuery={setSearchQuery} 
-          />
-          <FilterButtons 
-            filter={filter} 
-            setFilter={setFilter} 
-          />
-        </div>
-        <DropdownMenuSeparator />
-        <div className="max-h-64 overflow-y-auto">
-          <VoiceList 
-            loading={loading}
-            displayVoices={displayVoices}
-            effectiveSelectedVoice={effectiveSelectedVoice}
-            onSelect={onSelect}
-            searchQuery={searchQuery}
-          />
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
+      {error && (
+        <p className="text-destructive text-xs mt-1">
+          Google TTS voices unavailable. {error}
+        </p>
+      )}
+    </div>
   );
 };
 

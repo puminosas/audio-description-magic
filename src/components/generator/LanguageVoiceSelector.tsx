@@ -3,21 +3,27 @@ import React from 'react';
 import LanguageSelector from '@/components/ui/LanguageSelector';
 import VoiceSelector from '@/components/ui/VoiceSelector';
 import { LanguageOption, VoiceOption } from '@/utils/audio/types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 interface LanguageVoiceSelectorProps {
-  selectedLanguage: LanguageOption;
-  selectedVoice: VoiceOption;
+  selectedLanguage: LanguageOption | null;
+  selectedVoice: VoiceOption | null;
   onSelectLanguage: (language: LanguageOption) => void;
   onSelectVoice: (voice: VoiceOption) => void;
+  disabled?: boolean;
+  error?: string | null;
 }
 
 const LanguageVoiceSelector = ({
   selectedLanguage,
   selectedVoice,
   onSelectLanguage,
-  onSelectVoice
+  onSelectVoice,
+  disabled = false,
+  error = null
 }: LanguageVoiceSelectorProps) => {
-  // Make sure we have valid default objects to prevent "undefined" errors
+  // Create default objects to avoid undefined errors
   const defaultLanguage: LanguageOption = selectedLanguage || {
     id: 'en-US',
     code: 'en-US',
@@ -32,13 +38,20 @@ const LanguageVoiceSelector = ({
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <div>
         <label className="block text-sm font-medium mb-2">
           Language
         </label>
         <LanguageSelector 
           onSelect={onSelectLanguage} 
-          selectedLanguage={defaultLanguage}
+          selectedLanguage={selectedLanguage}
         />
       </div>
       
@@ -48,8 +61,8 @@ const LanguageVoiceSelector = ({
         </label>
         <VoiceSelector 
           onSelect={onSelectVoice} 
-          selectedVoice={defaultVoice}
-          language={defaultLanguage.code}
+          selectedVoice={selectedVoice}
+          language={selectedLanguage?.code || 'en-US'}
         />
       </div>
     </div>
