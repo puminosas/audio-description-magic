@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import useCombinedChatLogic from './ai-chat/hooks/useCombinedChatLogic';
 import ChatInterface from './ai-chat/components/ChatInterface';
 import FileFiltersComponent from './ai-chat/components/FileFiltersComponent';
 import FileList from './ai-chat/components/FileList';
-import { FileInfo } from './ai-chat/types';
+import type { FileInfo } from './ai-chat/types';
 
 interface AdminAiChatProps {
   // Define any props here

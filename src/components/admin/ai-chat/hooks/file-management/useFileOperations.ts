@@ -58,10 +58,10 @@ export const useFileOperations = (
       );
       
       // Update selected file if it matches
-      setSelectedFile(prevFile => 
-        prevFile && prevFile.path === filePath 
-          ? { ...prevFile, content } 
-          : prevFile
+      setSelectedFile(prevSelectedFile => 
+        prevSelectedFile && prevSelectedFile.path === filePath 
+          ? { ...prevSelectedFile, content } 
+          : prevSelectedFile
       );
       
       return content;
@@ -93,10 +93,10 @@ export const useFileOperations = (
       );
       
       // Update selected file if it matches
-      setSelectedFile(prevFile => 
-        prevFile && prevFile.path === filePath 
-          ? { ...prevFile, content } 
-          : prevFile
+      setSelectedFile(prevSelectedFile => 
+        prevSelectedFile && prevSelectedFile.path === filePath 
+          ? { ...prevSelectedFile, content } 
+          : prevSelectedFile
       );
       
       return true;

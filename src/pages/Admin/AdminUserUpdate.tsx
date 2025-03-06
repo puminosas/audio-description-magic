@@ -2,189 +2,273 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import AdminLayout from '@/components/layout/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
-const AdminUserUpdate = () => {
-  const { userId } = useParams();
+interface UserData {
+  id?: string;
+  email: string;
+  role: string;
+  credits: number;
+  plan: string;
+  daily_limit: number;
+  remaining_generations: number;
+}
+
+const AdminUserUpdate: React.FC = () => {
+  const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  // Create a type for user data that includes all expected fields
-  interface UserData {
-    id: string;
-    email: string;
-    plan: string;
-    role?: string; // Optional fields that might not be in the original data
-    credits?: number;
-    subscription_tier?: string;
-    created_at: string;
-    updated_at: string;
-    daily_limit: number;
-    remaining_generations: number;
-  }
-  
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState('');
-  const [credits, setCredits] = useState(0);
-  const [plan, setPlan] = useState('');
-  
+  const [userData, setUserData] = useState<UserData>({
+    email: '',
+    role: 'user',
+    credits: 0,
+    plan: 'free',
+    daily_limit: 10,
+    remaining_generations: 10
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!userId) return;
+      
+      setIsLoading(true);
       try {
-        setLoading(true);
+        // First fetch the user's auth data
+        const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
         
-        // Replace with your actual user data fetching logic
-        const { data, error } = await supabase
-          .from('users')
+        if (authError) throw authError;
+        
+        // Then fetch the user's profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
           .select('*')
           .eq('id', userId)
           .single();
         
-        if (error) throw error;
+        if (profileError) throw profileError;
         
-        setUserData(data);
-        // Initialize form values with defaults if needed
-        setRole(data.role || 'user');
-        setCredits(data.credits || 0);
-        setPlan(data.subscription_tier || data.plan || 'free');
+        // Then fetch the user's role data
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
         
+        if (roleError && roleError.code !== 'PGRST116') throw roleError;
+        
+        setUserData({
+          id: userId,
+          email: authData.user?.email || '',
+          role: roleData?.role || 'user',
+          credits: profileData?.credits || 0,
+          plan: profileData?.subscription_tier || 'free',
+          daily_limit: profileData?.daily_limit || 10,
+          remaining_generations: profileData?.remaining_generations || 0
+        });
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error('Error fetching user data:', error);
         toast({
-          title: "Error",
-          description: "Failed to load user data",
-          variant: "destructive"
+          title: 'Error',
+          description: 'Failed to load user data',
+          variant: 'destructive',
         });
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
-    
-    if (userId) {
-      fetchUserData();
-    }
+
+    fetchUserData();
   }, [userId, toast]);
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const handleSave = async () => {
+    if (!userId) return;
     
+    setIsLoading(true);
     try {
-      const updates = {
-        plan: plan,
-        role: role,
-        credits: credits,
-        updated_at: new Date().toISOString()
-      };
-      
-      const { error } = await supabase
-        .from('users')
-        .update(updates)
+      // Update the user's profile data
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          credits: userData.credits,
+          subscription_tier: userData.plan,
+          daily_limit: userData.daily_limit,
+          remaining_generations: userData.remaining_generations
+        })
         .eq('id', userId);
       
-      if (error) throw error;
+      if (profileError) throw profileError;
+      
+      // Update the user's role
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (existingRole) {
+        // Update existing role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .update({ role: userData.role })
+          .eq('user_id', userId);
+        
+        if (roleError) throw roleError;
+      } else {
+        // Insert new role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: userData.role });
+        
+        if (roleError) throw roleError;
+      }
       
       toast({
-        title: "Success",
-        description: "User updated successfully",
+        title: 'Success',
+        description: 'User data updated successfully',
       });
       
       navigate('/admin/users');
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error updating user data:', error);
       toast({
-        title: "Error",
-        description: "Failed to update user",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to update user data',
+        variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  if (loading) {
-    return <div>Loading user data...</div>;
-  }
-  
-  if (!userData) {
-    return <div>User not found</div>;
-  }
-  
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setUserData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserData(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
+  };
+
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Update User</CardTitle>
-        <CardDescription>Modify user account details</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={userData.email} disabled />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">User</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="moderator">Moderator</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="plan">Subscription Plan</Label>
-            <Select value={plan} onValueChange={setPlan}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select plan" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="credits">Credits</Label>
-            <Input 
-              id="credits" 
-              type="number" 
-              value={credits}
-              onChange={e => setCredits(Number(e.target.value))}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="createdAt">Created At</Label>
-            <Input 
-              id="createdAt" 
-              value={new Date(userData.created_at).toLocaleString()} 
-              disabled 
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => navigate('/admin/users')}
-          >
-            Cancel
-          </Button>
-          <Button type="submit">Update User</Button>
-        </CardFooter>
-      </form>
-    </Card>
+    <AdminLayout>
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit User: {userData.email}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    value={userData.email}
+                    onChange={handleInputChange}
+                    disabled
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select
+                    value={userData.role}
+                    onValueChange={(value) => handleSelectChange('role', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="moderator">Moderator</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="credits">Credits</Label>
+                  <Input
+                    id="credits"
+                    name="credits"
+                    type="number"
+                    value={userData.credits}
+                    onChange={handleNumberChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="plan">Subscription Plan</Label>
+                  <Select
+                    value={userData.plan}
+                    onValueChange={(value) => handleSelectChange('plan', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Free</SelectItem>
+                      <SelectItem value="basic">Basic</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="daily_limit">Daily Limit</Label>
+                  <Input
+                    id="daily_limit"
+                    name="daily_limit"
+                    type="number"
+                    value={userData.daily_limit}
+                    onChange={handleNumberChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="remaining_generations">Remaining Generations</Label>
+                  <Input
+                    id="remaining_generations"
+                    name="remaining_generations"
+                    type="number"
+                    value={userData.remaining_generations}
+                    onChange={handleNumberChange}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/admin/users')}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={isLoading}>
+                  {isLoading ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
   );
 };
 

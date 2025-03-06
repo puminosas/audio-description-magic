@@ -7,6 +7,14 @@ export interface Message {
   createdAt: string;
 }
 
+// Chat message interface for our application
+export interface ChatMessage {
+  id: string;
+  text: string;
+  isUserMessage: boolean;
+  timestamp: string;
+}
+
 // Chat session model
 export interface ChatSession {
   id: string;

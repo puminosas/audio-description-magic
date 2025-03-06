@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { Message } from '../types';
 
 export interface ChatMessage {
   id: string;

@@ -12,7 +12,6 @@ export const useAIChat = () => {
     
     try {
       // Here you'd implement the actual API call to send messages to your AI service
-      // This is a placeholder implementation
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: { message, filePath }
       });
