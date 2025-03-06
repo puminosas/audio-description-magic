@@ -9,7 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Process base64 in chunks to prevent memory issues (stack overflow)
+// Process base64 in chunks to prevent memory issues
 function binaryToBase64(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
   const chunks: string[] = [];

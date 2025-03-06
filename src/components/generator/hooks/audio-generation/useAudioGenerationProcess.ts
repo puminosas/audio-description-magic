@@ -60,12 +60,14 @@ export const useAudioGenerationProcess = () => {
     console.log(`Generating audio with ${enhancedText !== text ? 'enhanced' : 'original'} text...`);
     
     try {
-      // Add a timeout to prevent long-running requests
-      const audioPromise = generateAudioDescription(
-        enhancedText,
-        language,
-        voice
-      );
+      // Try using the generate-audio fallback function
+      const audioPromise = supabase.functions.invoke('generate-audio', {
+        body: {
+          text: enhancedText,
+          language: language.code,
+          voice: voice.gender === 'MALE' ? 'echo' : 'alloy'
+        }
+      });
       
       const timeoutPromise = new Promise<AudioErrorResult>((resolve) => {
         setTimeout(() => {
@@ -73,22 +75,34 @@ export const useAudioGenerationProcess = () => {
             success: false, 
             error: 'The request took too long to complete. Try with a shorter text.' 
           });
-        }, 60000);
+        }, 30000);
       });
       
       // Race the generation with a timeout
       const result = await Promise.race([audioPromise, timeoutPromise]);
       
-      if (!result.success) {
-        return result as AudioErrorResult;
+      if (!result) {
+        return { success: false, error: 'Failed to generate audio: No response from server' };
       }
       
-      // Create the audio object with the required folderUrl property
+      if ('error' in result || (result.data && 'error' in result.data)) {
+        const errorMessage = result.error || (result.data && result.data.error) || 'Unknown error';
+        console.error("Error in audio generation:", errorMessage);
+        return { success: false, error: errorMessage as string };
+      }
+      
+      const resultData = result.data || result;
+      
+      if (!resultData.success) {
+        return { success: false, error: resultData.error || 'Generation failed for unknown reason' };
+      }
+      
+      // Create the audio object
       const audioData: GeneratedAudio = {
-        audioUrl: result.audioUrl || '',
-        text: result.text || enhancedText,
+        audioUrl: resultData.audioUrl,
+        text: resultData.text || enhancedText,
         folderUrl: null, // Adding null as required by GeneratedAudio type
-        id: result.id || crypto.randomUUID(),
+        id: resultData.id || crypto.randomUUID(),
         timestamp: Date.now()
       };
       

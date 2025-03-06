@@ -3,7 +3,9 @@ import React from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
-  Outlet
+  Outlet,
+  Route,
+  Routes
 } from "react-router-dom";
 import './App.css';
 import Generator from './pages/Generator';
@@ -69,6 +71,11 @@ const router = createBrowserRouter([
       {
         path: "/admin/*",
         element: <Admin />,
+        errorElement: <ErrorPage />
+      },
+      {
+        path: "/generator",
+        element: <Generator />,
         errorElement: <ErrorPage />
       }
     ]

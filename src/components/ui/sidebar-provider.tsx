@@ -12,8 +12,15 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 export function useSidebar() {
   const context = useContext(SidebarContext);
   
-  if (context === undefined) {
-    throw new Error('useSidebar must be used within a SidebarProvider.');
+  // Return a default implementation if context is not available
+  // This prevents crashes when the hook is used outside a provider
+  if (!context) {
+    console.warn('useSidebar was called outside of SidebarProvider. Using fallback values.');
+    return {
+      expanded: true,
+      setExpanded: () => {},
+      toggleExpand: () => {}
+    };
   }
   
   return context;
