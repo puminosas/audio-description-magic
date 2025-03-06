@@ -1,71 +1,57 @@
-
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useMobile } from '@/hooks/useMobile';
 
-export interface NavLink {
-  name: string;
-  path: string;
-}
-
-interface NavLinksProps {
-  links: NavLink[];
-  variant?: 'desktop' | 'mobile';
-  onLinkClick?: () => void;
-}
-
-const NavLinks = ({ links, variant = 'desktop', onLinkClick }: NavLinksProps) => {
+const NavLinks = () => {
+  const { user } = useAuth();
+  const isAdmin = useAdminCheck();
   const location = useLocation();
+  const isMobile = useMobile();
   
-  const handleClick = () => {
-    if (onLinkClick) {
-      onLinkClick();
-    }
+  const linkContainerClasses = `
+    flex 
+    ${isMobile ? 'flex-col items-center w-full' : 'items-center gap-6'}
+  `;
+
+  const navLinkClasses = ({ isActive }: { isActive: boolean }) => {
+    return `
+      text-sm 
+      font-medium 
+      ${isMobile ? 'w-full text-center py-3' : ''}
+      hover:text-primary 
+      transition-colors 
+      duration-200
+      ${isActive ? 'text-primary' : 'text-secondary-foreground'}
+    `;
   };
-
-  if (variant === 'mobile') {
-    return (
-      <>
-        {links.map((link) => {
-          const isActive = location.pathname === link.path || 
-                          (link.path !== '/' && location.pathname.startsWith(link.path));
-          
-          return (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`py-3 px-2 text-sm font-medium transition-colors hover:text-primary block w-full text-left ${
-                isActive ? 'text-primary' : 'text-foreground/70'
-              }`}
-              onClick={handleClick}
-            >
-              {link.name}
-            </Link>
-          );
-        })}
-      </>
-    );
-  }
-
+  
+  const NavItem = ({ to, children, isActive }: { to: string, children: React.ReactNode, isActive: boolean }) => (
+    <NavLink to={to} className={navLinkClasses} >
+      {children}
+    </NavLink>
+  );
+  
   return (
-    <>
-      {links.map((link) => {
-        const isActive = location.pathname === link.path || 
-                        (link.path !== '/' && location.pathname.startsWith(link.path));
-        
-        return (
-          <Link
-            key={link.path}
-            to={link.path}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors hover:text-foreground hover:bg-secondary ${
-              isActive ? 'bg-secondary text-foreground' : 'text-foreground/70'
-            }`}
-            onClick={handleClick}
-          >
-            {link.name}
-          </Link>
-        );
-      })}
-    </>
+    <div className={linkContainerClasses}>
+      <NavItem to="/" isActive={location.pathname === "/"}>Home</NavItem>
+      
+      {/* Add link to embed audio documentation */}
+      <NavItem to="/embed-audio-docs" isActive={location.pathname === "/embed-audio-docs"}>
+        Integration Docs
+      </NavItem>
+      
+      <NavItem to="/generator" isActive={location.pathname === "/generator"}>Generator</NavItem>
+      
+      {user && isAdmin && (
+        <NavItem to="/admin" isActive={location.pathname === "/admin"}>Admin</NavItem>
+      )}
+      
+      {user ? (
+        <NavItem to="/history" isActive={location.pathname === "/history"}>History</NavItem>
+      ) : null}
+    </div>
   );
 };
 

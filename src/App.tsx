@@ -1,77 +1,72 @@
+import React from 'react';
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router-dom";
+import './App.css';
+import Generator from './pages/Generator';
+import History from './pages/History';
+import Settings from './pages/Settings';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
+import Pricing from './pages/Pricing';
+import Home from './pages/Home';
+import EmbedAudioDoc from "./pages/EmbedAudioDoc";
 
-import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@/context/ThemeContext';
-import { AuthProvider } from '@/context/AuthContext';
-import { Toaster } from '@/components/ui/toaster';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import Index from '@/pages/Index';
-import Auth from '@/pages/Auth';
-import Dashboard from '@/pages/Dashboard';
-import Generator from '@/pages/Generator';
-import ApiDocs from '@/pages/ApiDocs';
-import ApiClient from '@/pages/ApiClient';
-import Pricing from '@/pages/Pricing';
-import Contact from '@/pages/Contact';
-import NotFound from '@/pages/NotFound';
-import Admin from '@/pages/Admin';
-import '@/App.css';
-import { initializeGoogleVoices } from '@/utils/audio';
-
-function ScrollToTop() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  return null;
-}
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Home />,
+  },
+  {
+    path: "/signin",
+    element: <SignIn />,
+  },
+  {
+    path: "/signup",
+    element: <SignUp />,
+  },
+  {
+    path: "/pricing",
+    element: <Pricing />,
+  },
+  {
+    path: "/generator",
+    element: (
+      <ProtectedRoute>
+        <Generator />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/history",
+    element: (
+      <ProtectedRoute>
+        <History />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/settings",
+    element: (
+      <ProtectedRoute>
+        <Settings />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/embed-audio-docs",
+    element: <EmbedAudioDoc />,
+  },
+]);
 
 function App() {
-  useEffect(() => {
-    // Initialize Google TTS voices data when the app starts
-    const preloadServices = async () => {
-      try {
-        // Pre-fetch Google TTS voices data
-        await initializeGoogleVoices();
-      } catch (error) {
-        console.error('Error initializing services:', error);
-      }
-    };
-    
-    preloadServices();
-  }, []);
-
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <ScrollToTop />
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/generator" element={<Generator />} />
-                <Route path="/api-docs" element={<ApiDocs />} />
-                <Route path="/api" element={<Navigate to="/api-docs" replace />} />
-                <Route path="/api-client" element={<ApiClient />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/admin/*" element={<Admin />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-          <Toaster />
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   );
 }
 
