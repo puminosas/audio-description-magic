@@ -128,7 +128,7 @@ export const useAudioGeneration = () => {
         setGeneratedAudio({
           audioUrl: result.audioUrl,
           text: result.text || enhancedText,
-          folderUrl: result.folderUrl || null
+          folderUrl: null // Removing folderUrl since we only use Supabase Storage
         });
       }, 100);
       

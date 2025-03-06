@@ -3,15 +3,12 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import AudioPlayer from '@/components/ui/AudioPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { FolderOpen } from 'lucide-react';
 
 interface AudioOutputProps {
   audioUrl: string | null;
   generatedText: string | null;
   isGenerating: boolean;
   error: string | null;
-  folderUrl?: string | null;
 }
 
 const AudioOutput: React.FC<AudioOutputProps> = ({
@@ -19,7 +16,6 @@ const AudioOutput: React.FC<AudioOutputProps> = ({
   generatedText,
   isGenerating,
   error,
-  folderUrl
 }) => {
   if (!audioUrl && !isGenerating) return null;
 
@@ -40,23 +36,6 @@ const AudioOutput: React.FC<AudioOutputProps> = ({
                     audioUrl={audioUrl}
                     fileName="audio-description.mp3"
                   />
-                </div>
-              )}
-
-              {folderUrl && (
-                <div className="flex items-center mt-4 text-sm text-muted-foreground">
-                  <Badge variant="outline" className="gap-1 mr-2">
-                    <FolderOpen size={14} />
-                    <a 
-                      href={folderUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="hover:underline"
-                    >
-                      View Files Folder
-                    </a>
-                  </Badge>
-                  <span className="text-xs">Your generated files are stored here</span>
                 </div>
               )}
 
