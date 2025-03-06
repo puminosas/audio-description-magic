@@ -150,6 +150,46 @@ serve(async (req) => {
     
     console.log(`Preparing to upload ${binaryAudio.length} bytes of audio to Supabase Storage`);
     
+    // Check if the audio_files bucket exists, and create it if it doesn't
+    try {
+      const { data: buckets, error } = await supabaseAdmin
+        .storage
+        .listBuckets();
+        
+      if (error) {
+        throw new Error(`Error listing buckets: ${error.message}`);
+      }
+      
+      const bucketExists = buckets.some(bucket => bucket.name === 'audio_files');
+      
+      if (!bucketExists) {
+        console.log("Creating audio_files bucket as it doesn't exist");
+        const { error: createError } = await supabaseAdmin
+          .storage
+          .createBucket('audio_files', { 
+            public: true,
+            fileSizeLimit: 52428800, // 50MB
+          });
+          
+        if (createError) {
+          throw new Error(`Error creating audio_files bucket: ${createError.message}`);
+        }
+        console.log("Successfully created audio_files bucket");
+      }
+    } catch (bucketError) {
+      console.error("Bucket setup error:", bucketError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Failed to setup storage. Please contact administrator." 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
     // Upload to Supabase Storage
     let uploadData;
     try {
