@@ -4,46 +4,43 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export interface NavLink {
+  title: string;
   href: string;
-  label: string;
-  name?: string; // Added name property to fix TypeScript errors
+  isActive?: boolean;
 }
 
 export interface NavLinksProps {
   links: NavLink[];
-  variant?: string;
+  variant?: 'default' | 'mobile';
   onLinkClick?: () => void;
 }
 
-const NavLinks: React.FC<NavLinksProps> = ({ links, variant = 'default', onLinkClick }) => {
-  const handleClick = () => {
-    if (onLinkClick) {
-      onLinkClick();
-    }
-  };
-
+const NavLinks = ({ links, variant = 'default', onLinkClick }: NavLinksProps) => {
   return (
-    <nav className={cn(
-      "flex gap-6",
-      variant === 'mobile' && "flex-col",
-      variant === 'dropdown' && "flex-col"
+    <ul className={cn(
+      "flex gap-1", 
+      variant === 'default' ? "flex-row items-center" : "flex-col w-full"
     )}>
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          to={link.href}
-          onClick={handleClick}
-          className={cn(
-            "text-sm font-medium transition-colors hover:text-primary",
-            variant === 'default' && "text-foreground/60 hover:text-foreground/80",
-            variant === 'mobile' && "text-foreground",
-            variant === 'dropdown' && "text-foreground/80 hover:bg-accent px-2 py-1.5 rounded-md"
-          )}
-        >
-          {link.label}
-        </Link>
+      {links.map((link, index) => (
+        <li key={index} className="w-full">
+          <Link 
+            to={link.href} 
+            className={cn(
+              "px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              variant === 'default' 
+                ? "hover:bg-primary/10" 
+                : "block w-full hover:bg-primary/10 py-3",
+              link.isActive 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            {link.title}
+          </Link>
+        </li>
       ))}
-    </nav>
+    </ul>
   );
 };
 
