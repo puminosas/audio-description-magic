@@ -9,7 +9,18 @@ import {
   AudioSuccessResult
 } from '@/utils/audio';
 import { GeneratedAudio } from '../useGenerationState';
-import { FunctionsResponse } from '@supabase/supabase-js';
+
+// Define a type for the Supabase function response
+type SupabaseFunctionResponse = {
+  data: {
+    success: boolean;
+    audioUrl?: string;
+    text?: string;
+    id?: string;
+    error?: string;
+  } | null;
+  error: Error | null;
+};
 
 export const useAudioGenerationProcess = () => {
   const generateEnhancedAudio = async (
@@ -81,35 +92,41 @@ export const useAudioGenerationProcess = () => {
       });
       
       // Race the generation with a timeout
-      const result = await Promise.race([audioPromise, timeoutPromise]);
+      const result = await Promise.race([audioPromise, timeoutPromise]) as SupabaseFunctionResponse | AudioErrorResult;
       
       // Handle the case where result is undefined
       if (!result) {
         return { success: false, error: 'Failed to generate audio: No response from server' };
       }
       
-      // Check if the result is an error (either direct error or inside data)
-      if ('error' in result) {
-        const errorMessage = result.error || 'Unknown error';
-        console.error("Error in audio generation:", errorMessage);
-        return { success: false, error: errorMessage as string };
+      // If it's already an AudioErrorResult (from the timeout), just return it
+      if ('success' in result && result.success === false) {
+        return result;
       }
       
-      // Now we know result has a data property
-      const resultData = result.data;
+      // Now we're dealing with a SupabaseFunctionResponse
+      // Check if there's an error in the response
+      if ('error' in result && result.error) {
+        const errorMessage = result.error?.message || 'Unknown error';
+        console.error("Error in audio generation:", errorMessage);
+        return { success: false, error: errorMessage };
+      }
       
-      // Check if the data indicates a failure
-      if (!resultData || !resultData.success) {
-        const errorMessage = resultData && resultData.error ? resultData.error : 'Generation failed for unknown reason';
+      // Check if data exists and has the success property
+      const responseData = 'data' in result ? result.data : null;
+      
+      // Handle missing data or failed generation
+      if (!responseData || responseData.success === false) {
+        const errorMessage = responseData?.error || 'Generation failed for unknown reason';
         return { success: false, error: errorMessage };
       }
       
       // Create the audio object
       const audioData: GeneratedAudio = {
-        audioUrl: resultData.audioUrl,
-        text: resultData.text || enhancedText,
+        audioUrl: responseData.audioUrl || '',
+        text: responseData.text || enhancedText,
         folderUrl: null, // Adding null as required by GeneratedAudio type
-        id: resultData.id || crypto.randomUUID(),
+        id: responseData.id || crypto.randomUUID(),
         timestamp: Date.now()
       };
       
