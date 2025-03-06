@@ -107,7 +107,7 @@ export const useAudioGenerationProcess = () => {
       // Now we're dealing with a SupabaseFunctionResponse
       // Check if there's an error in the response
       if ('error' in result && result.error) {
-        const errorMessage = result.error?.message || 'Unknown error';
+        const errorMessage = result.error instanceof Error ? result.error.message : 'Unknown error';
         console.error("Error in audio generation:", errorMessage);
         return { success: false, error: errorMessage };
       }

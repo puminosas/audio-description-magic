@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useApiErrorHandler } from '@/hooks/useApiErrorHandler';
 
 interface AdminAccessManagerProps {
@@ -12,6 +12,7 @@ interface AdminAccessManagerProps {
 const AdminAccessManager: React.FC<AdminAccessManagerProps> = ({ children }) => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { handleError } = useApiErrorHandler();
   
   // Emergency function to ensure the current user has admin access
@@ -51,7 +52,7 @@ const AdminAccessManager: React.FC<AdminAccessManagerProps> = ({ children }) => 
     };
     
     setupCurrentUserAsAdmin();
-  }, [user, isAdmin, loading, navigate, handleError]);
+  }, [user, isAdmin, loading, navigate, handleError, toast]);
   
   // Show loading state
   if (loading) {
