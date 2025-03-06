@@ -6,8 +6,10 @@ import {
   VoiceOption,
   AudioGenerationResult,
   AudioErrorResult,
+  AudioSuccessResult
 } from '@/utils/audio';
 import { GeneratedAudio } from '../useGenerationState';
+import { FunctionsResponse } from '@supabase/supabase-js';
 
 export const useAudioGenerationProcess = () => {
   const generateEnhancedAudio = async (
@@ -81,20 +83,25 @@ export const useAudioGenerationProcess = () => {
       // Race the generation with a timeout
       const result = await Promise.race([audioPromise, timeoutPromise]);
       
+      // Handle the case where result is undefined
       if (!result) {
         return { success: false, error: 'Failed to generate audio: No response from server' };
       }
       
-      if ('error' in result || (result.data && 'error' in result.data)) {
-        const errorMessage = result.error || (result.data && result.data.error) || 'Unknown error';
+      // Check if the result is an error (either direct error or inside data)
+      if ('error' in result) {
+        const errorMessage = result.error || 'Unknown error';
         console.error("Error in audio generation:", errorMessage);
         return { success: false, error: errorMessage as string };
       }
       
-      const resultData = result.data || result;
+      // Now we know result has a data property
+      const resultData = result.data;
       
-      if (!resultData.success) {
-        return { success: false, error: resultData.error || 'Generation failed for unknown reason' };
+      // Check if the data indicates a failure
+      if (!resultData || !resultData.success) {
+        const errorMessage = resultData && resultData.error ? resultData.error : 'Generation failed for unknown reason';
+        return { success: false, error: errorMessage };
       }
       
       // Create the audio object
