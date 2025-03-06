@@ -1,10 +1,12 @@
+
 import { useState, useCallback } from 'react';
 import { useFileState } from './file-management/useFileState';
 import { useFileFilters } from './file-management/useFileFilters';
 import { useFileOperations } from './file-management/useFileOperations';
 import { useChatState } from './useChatState';
 import { useAIChat } from './useAIChat';
-import type { FileInfo } from '../../types';
+import type { FileInfo } from '../types';
+import { v4 as uuidv4 } from 'uuid';
 
 const useCombinedChatLogic = () => {
   // File Management Logic
@@ -26,15 +28,42 @@ const useCombinedChatLogic = () => {
 
   // AI Chat Logic
   const aiChat = useAIChat();
-  const { sendMessage } = aiChat;
+  const { sendMessage, sendFileAnalysisRequest } = aiChat;
 
   // Combined Logic
   const handleSendMessage = async (message: string) => {
+    if (!message.trim()) return;
+    
     setIsLoading(true);
     setError(null);
+    
+    // Create a new message object for the user's message
+    const userMessage = {
+      id: uuidv4(),
+      text: message,
+      isUser: true,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Add user message to chat
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    
     try {
+      // Get AI response
       const response = await sendMessage(message, selectedFile?.path);
-      setMessages(prevMessages => [...prevMessages, { text: message, isUser: true }, { text: response, isUser: false }]);
+      
+      // Create AI response message object
+      const aiMessage = {
+        id: uuidv4(),
+        text: response,
+        isUser: false,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add AI response to chat
+      setMessages(prevMessages => [...prevMessages, aiMessage]);
+      
+      // Clear input field
       setInput('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message.');
@@ -48,7 +77,10 @@ const useCombinedChatLogic = () => {
     setIsLoadingFile(true);
     setFileError(null);
     try {
-      await fileOperations.getFileContent(file.path);
+      // Only fetch content if not already loaded
+      if (!file.content) {
+        await fileOperations.getFileContent(file.path);
+      }
     } catch (err) {
       setFileError(err instanceof Error ? err.message : 'Failed to load file content.');
     } finally {
@@ -56,13 +88,29 @@ const useCombinedChatLogic = () => {
     }
   };
 
-  const analyzeFileWithAI = async (filePath: string) => {
+  const handleAnalyzeFile = async (file: FileInfo) => {
+    if (!file || !file.content) {
+      setError('No file content available for analysis');
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
+    
     try {
-      if (selectedFile && selectedFile.content) {
-        await aiChat.sendFileAnalysisRequest(selectedFile.path, selectedFile.content);
-      }
+      // Send file for AI analysis
+      const analysisResult = await sendFileAnalysisRequest(file.path, file.content);
+      
+      // Create AI analysis message
+      const aiMessage = {
+        id: uuidv4(),
+        text: analysisResult,
+        isUser: false,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add analysis to chat
+      setMessages(prevMessages => [...prevMessages, aiMessage]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze file.');
     } finally {
@@ -74,25 +122,39 @@ const useCombinedChatLogic = () => {
     setIsLoadingFile(true);
     setFileError(null);
     try {
+      // Save file content
       const success = await fileOperations.saveFileContent(file.path, content);
+      
       if (success) {
-        // Update the file content in the local state
-        setFiles(prevFiles =>
-          prevFiles.map(f => (f.path === file.path ? { ...f, content } : f))
+        // Update files list with new content
+        const updatedFiles = files.map(f => 
+          f.path === file.path ? { ...f, content } : f
         );
-        setSelectedFile({ ...file, content });
-        return true; // Indicate success
+        
+        setFiles(updatedFiles);
+        
+        // Update selected file
+        if (selectedFile && selectedFile.path === file.path) {
+          setSelectedFile({ ...file, content });
+        }
+        
+        return true;
       } else {
         setFileError('Failed to save file content.');
-        return false; // Indicate failure
+        return false;
       }
     } catch (err) {
       setFileError(err instanceof Error ? err.message : 'Failed to save file.');
-      return false; // Indicate failure
+      return false;
     } finally {
       setIsLoadingFile(false);
     }
   };
+
+  // Initialize files when hook is first used
+  useCallback(() => {
+    fileOperations.getFiles();
+  }, []);
 
   return {
     // File Management
@@ -117,7 +179,7 @@ const useCombinedChatLogic = () => {
 
     // AI Chat
     handleSendMessage,
-    analyzeFileWithAI,
+    handleAnalyzeFile,
     handleSaveFile,
   };
 };

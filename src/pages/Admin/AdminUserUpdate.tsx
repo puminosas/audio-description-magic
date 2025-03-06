@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,44 +17,33 @@ interface User {
 }
 
 const AdminUserUpdate = () => {
-  const [userId, setUserId] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = useSupabaseClient();
-  const router = useRouter();
-
-  useEffect(() => {
-    // Extract user ID from query parameters
-    const { id } = router.query;
-    if (typeof id === 'string') {
-      setUserId(id);
-    }
-  }, [router.query]);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Fetch user data when userId is available
-    if (userId) {
-      fetchUser(userId);
+    if (id) {
+      fetchUser(id);
     }
-  }, [userId, supabase]);
+  }, [id]);
 
   const fetchUser = async (userId: string) => {
     setLoading(true);
     setError(null);
     try {
-      // If you have the user's ID:
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-      
-      // Or if you need to search by email, use a different approach:
-      // const { data: userData, error: userError } = await supabase
-      //   .from('users')
-      //   .select('*')
-      //   .eq('email', email)
-      //   .single();
+      // Fetch user from the profiles table
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
       
       if (userError) throw userError;
-      setUser(userData?.user || null);
+      
+      setUser(userData || null);
     } catch (error) {
       console.error('Error fetching user:', error);
       setError('Failed to fetch user details');
@@ -66,12 +56,12 @@ const AdminUserUpdate = () => {
     setLoading(true);
     setError(null);
     try {
-      // Implement your user update logic here
+      // Implement your user update logic here using Supabase
       // Example:
       // const { data, error } = await supabase
-      //   .from('users')
+      //   .from('profiles')
       //   .update({ /* updated fields */ })
-      //   .eq('id', userId);
+      //   .eq('id', id);
 
       // if (error) throw error;
 

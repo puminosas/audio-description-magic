@@ -1,5 +1,6 @@
+
 import { useState, useCallback } from 'react';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { supabase } from '@/integrations/supabase/client';
 import type { FileInfo } from '../../types';
 import type { FileOperationsReturn } from './types';
 
@@ -10,12 +11,11 @@ export const useFileOperations = (
   setIsLoadingFile: (isLoading: boolean) => void,
   setFileError: (error: string | null) => void
 ): FileOperationsReturn => {
-  const supabase = useSupabaseClient();
-
   const getFiles = useCallback(async () => {
     setIsLoadingFiles(true);
     setFileError(null);
     try {
+      // Example of fetching files from a supabase bucket
       const { data, error } = await supabase.storage
         .from('admin-chat-files')
         .list('', { // Fetch files from the root directory
@@ -30,9 +30,10 @@ export const useFileOperations = (
 
       // Map the data to the FileInfo type
       const filesInfo: FileInfo[] = data.map(file => ({
-        name: file.name,
         path: file.name, // Use name as path for simplicity
-        type: file.metadata?.mimetype || 'unknown',
+        type: file.metadata?.mimetype?.includes('text') ? 'document' : 
+              file.metadata?.mimetype?.includes('javascript') || 
+              file.metadata?.mimetype?.includes('typescript') ? 'script' : 'unknown',
         size: file.metadata?.size || 0,
         createdAt: file.created_at,
         updatedAt: file.updated_at,
@@ -63,7 +64,7 @@ export const useFileOperations = (
         const fileContent = await data.text();
 
         // Update the selected file with content
-        setSelectedFile(prevFile => {
+        setSelectedFile((prevFile) => {
           if (prevFile && prevFile.path === filePath) {
             return { ...prevFile, content: fileContent };
           }
@@ -96,22 +97,15 @@ export const useFileOperations = (
         throw new Error(`Error uploading file: ${error.message}`);
       }
 
-      // Update the selected file with new content
-      setSelectedFile(prevFile => {
-        if (prevFile && prevFile.path === filePath) {
-          return { ...prevFile, content: content };
-        }
-        return prevFile;
-      });
-
-      return true; // Indicate success
+      // Update was successful
+      return true;
     } catch (err) {
       setFileError(`Failed to save file content: ${(err as Error).message}`);
-      return false; // Indicate failure
+      return false;
     } finally {
       setIsLoadingFile(false);
     }
-  }, [supabase, setSelectedFile, setIsLoadingFile, setFileError]);
+  }, [supabase, setIsLoadingFile, setFileError]);
 
   return {
     getFiles,

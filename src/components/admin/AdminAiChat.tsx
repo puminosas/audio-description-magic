@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCombinedChatLogic } from './ai-chat/hooks/useCombinedChatLogic';
+import useCombinedChatLogic from './ai-chat/hooks/useCombinedChatLogic';
 
 interface ChatMessage {
   id: string;
@@ -128,7 +128,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="flex flex-col space-y-4 p-4">
           {messages.map((message) => (
             <div key={message.id} className={`flex items-start ${message.isUserMessage ? 'justify-end' : 'justify-start'}`}>
-              {/* Conditionally render Avatar only for AI messages */}
               {!message.isUserMessage && (
                 <Avatar className="w-8 h-8 mr-3">
                   <AvatarImage src="https://github.com/shadcn.png" alt="AI Avatar" />
@@ -158,7 +157,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </ScrollArea>
 
-      {/* Action Buttons */}
       <div className="flex items-center justify-between p-4 border-t">
         <div className="flex items-center space-x-2">
           <Button size="sm" variant="outline" onClick={handleSaveClick} disabled={!selectedFile}>
@@ -184,7 +182,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Save File Dialog */}
       <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -249,8 +246,8 @@ const FileFiltersComponent: React.FC<FileFiltersProps> = ({
         </Label>
         <Checkbox
           id="type-text"
-          checked={filters.type.includes('text')}
-          onCheckedChange={() => toggleTypeFilter('text')}
+          checked={filters.types.document}
+          onCheckedChange={() => toggleTypeFilter('document')}
         />
 
         <Label htmlFor="type-code" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed">
@@ -258,8 +255,8 @@ const FileFiltersComponent: React.FC<FileFiltersProps> = ({
         </Label>
         <Checkbox
           id="type-code"
-          checked={filters.type.includes('code')}
-          onCheckedChange={() => toggleTypeFilter('code')}
+          checked={filters.types.script}
+          onCheckedChange={() => toggleTypeFilter('script')}
         />
       </div>
       <Button variant="outline" size="sm" onClick={resetFilters}>
@@ -285,8 +282,8 @@ const FileList: React.FC<FileListProps> = ({ files, selectedFile, onFileSelect }
           onClick={() => onFileSelect(file)}
         >
           <CardContent className="flex items-center justify-between p-3">
-            <div className="text-sm font-medium">{file.name}</div>
-            <Badge variant="secondary">{file.type}</Badge>
+            <div className="text-sm font-medium">{file.path.split('/').pop()}</div>
+            <Badge variant="secondary">{file.type || 'unknown'}</Badge>
           </CardContent>
         </Card>
       ))}
@@ -324,7 +321,6 @@ const AdminAiChat: React.FC<AdminAiChatProps> = () => {
       <h1 className="text-2xl font-bold mb-4">AI Chat Interface</h1>
 
       <div className="flex flex-grow">
-        {/* File Management Section */}
         <div className="w-1/4 p-4 border-r">
           <h3 className="text-lg font-semibold mb-2">File Management</h3>
           <FileFiltersComponent
@@ -340,16 +336,14 @@ const AdminAiChat: React.FC<AdminAiChatProps> = () => {
           />
         </div>
 
-        {/* Chat Interface Section */}
         <div className="flex-grow flex flex-col">
-          
           <ChatInterface 
             messages={messages}
-            isLoading={isLoading} // Ensure this is a boolean, not a string
+            isLoading={isLoading}
             onSendMessage={handleSendMessage}
-            selectedFile={selectedFile as FileInfo} // Type cast to FileInfo
-            onSaveFile={handleSaveFile as (file: FileInfo, content: string) => Promise<boolean>} // Type cast with correct signature
-            onAnalyzeFile={handleAnalyzeFile as (file: FileInfo) => Promise<void>} // Type cast with correct signature
+            selectedFile={selectedFile as FileInfo}
+            onSaveFile={handleSaveFile as (file: FileInfo, content: string) => Promise<boolean>}
+            onAnalyzeFile={handleAnalyzeFile as (file: FileInfo) => Promise<void>}
             error={error}
           />
         </div>
