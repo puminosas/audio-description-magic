@@ -1,65 +1,77 @@
 
-import React from 'react';
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Outlet
-} from "react-router-dom";
-import './App.css';
-import Generator from './pages/Generator';
-import { AuthProvider } from './context/AuthContext';
-import Pricing from './pages/Pricing';
-import IntegrationDocs from './pages/IntegrationDocs';
-import Admin from './pages/Admin';
-import Dashboard from './pages/Dashboard';
-import MainNavbar from './components/layout/MainNavbar';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { Toaster } from '@/components/ui/toaster';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import Index from '@/pages/Index';
+import Auth from '@/pages/Auth';
+import Dashboard from '@/pages/Dashboard';
+import Generator from '@/pages/Generator';
+import ApiDocs from '@/pages/ApiDocs';
+import ApiClient from '@/pages/ApiClient';
+import Pricing from '@/pages/Pricing';
+import Contact from '@/pages/Contact';
+import NotFound from '@/pages/NotFound';
+import Admin from '@/pages/Admin';
+import '@/App.css';
+import { initializeGoogleVoices } from '@/utils/audio';
 
-// Layout component with navbar
-const RootLayout = () => {
-  return (
-    <>
-      <MainNavbar />
-      <main className="pt-16">
-        <Outlet />
-      </main>
-    </>
-  );
-};
+function ScrollToTop() {
+  const { pathname } = useLocation();
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <RootLayout />,
-    children: [
-      {
-        path: "/",
-        element: <Generator />,
-      },
-      {
-        path: "/pricing",
-        element: <Pricing />,
-      },
-      {
-        path: "/integration-docs",
-        element: <IntegrationDocs />,
-      },
-      {
-        path: "/dashboard",
-        element: <Dashboard />,
-      },
-      {
-        path: "/admin/*",
-        element: <Admin />,
-      }
-    ]
-  }
-]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 function App() {
+  useEffect(() => {
+    // Initialize Google TTS voices data when the app starts
+    const preloadServices = async () => {
+      try {
+        // Pre-fetch Google TTS voices data
+        await initializeGoogleVoices();
+      } catch (error) {
+        console.error('Error initializing services:', error);
+      }
+    };
+    
+    preloadServices();
+  }, []);
+
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <ScrollToTop />
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/generator" element={<Generator />} />
+                <Route path="/api-docs" element={<ApiDocs />} />
+                <Route path="/api" element={<Navigate to="/api-docs" replace />} />
+                <Route path="/api-client" element={<ApiClient />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/admin/*" element={<Admin />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+          <Toaster />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

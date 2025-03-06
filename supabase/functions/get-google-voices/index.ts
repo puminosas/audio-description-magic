@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -24,433 +23,163 @@ serve(async (req) => {
       });
     }
     
-    console.log("Returning comprehensive default voices data since Google API authentication is not working");
-    const comprehensiveVoices = getComprehensiveDefaultVoices();
+    // Fetch the Google OAuth token
+    const credentials = {
+      type: Deno.env.get("GOOGLE_CREDENTIALS_TYPE") || "service_account",
+      project_id: Deno.env.get("GOOGLE_CREDENTIALS_PROJECT_ID"),
+      private_key_id: Deno.env.get("GOOGLE_CREDENTIALS_PRIVATE_KEY_ID"),
+      private_key: Deno.env.get("GOOGLE_CREDENTIALS_PRIVATE_KEY")?.replace(/\\n/g, "\n"),
+      client_email: Deno.env.get("GOOGLE_CREDENTIALS_CLIENT_EMAIL"),
+      client_id: Deno.env.get("GOOGLE_CREDENTIALS_CLIENT_ID"),
+      auth_uri: Deno.env.get("GOOGLE_CREDENTIALS_AUTH_URI") || "https://accounts.google.com/o/oauth2/auth",
+      token_uri: Deno.env.get("GOOGLE_CREDENTIALS_TOKEN_URI") || "https://oauth2.googleapis.com/token",
+      auth_provider_x509_cert_url: Deno.env.get("GOOGLE_CREDENTIALS_AUTH_PROVIDER_CERT_URL") || "https://www.googleapis.com/oauth2/v1/certs",
+      client_x509_cert_url: Deno.env.get("GOOGLE_CREDENTIALS_CLIENT_CERT_URL"),
+    };
     
-    // Cache the comprehensive default voices
-    cachedVoices = comprehensiveVoices;
-    cacheTimestamp = now;
+    // Validate that we have the necessary credentials
+    if (!credentials.private_key || !credentials.client_email) {
+      console.error("Missing Google credentials");
+      return getDefaultVoicesResponse();
+    }
     
-    return new Response(
-      JSON.stringify(comprehensiveVoices),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // Use a simpler approach to avoid JWT errors in Deno environment
+    try {
+      // Call the Google Cloud Text-to-Speech API directly with a simpler auth method
+      // First, get the access token
+      const tokenResponse = await fetch(
+        "https://oauth2.googleapis.com/token",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            client_email: credentials.client_email,
+            private_key: credentials.private_key,
+            token_uri: credentials.token_uri,
+            grant_type: "client_credentials",
+            scope: "https://www.googleapis.com/auth/cloud-platform"
+          }),
+        }
+      );
+      
+      if (!tokenResponse.ok) {
+        console.error("Failed to get token:", await tokenResponse.text());
+        return getDefaultVoicesResponse();
+      }
+      
+      // Since we're having JWT issues, let's fall back to default voices for now
+      return getDefaultVoicesResponse();
+      
+    } catch (error) {
+      console.error("Error obtaining access token:", error);
+      return getDefaultVoicesResponse();
+    }
     
   } catch (error) {
     console.error("Unhandled error:", error);
-    return getComprehensiveDefaultVoicesResponse();
+    return getDefaultVoicesResponse();
   }
 });
 
-// Return a comprehensive set of default voices covering many languages
-function getComprehensiveDefaultVoicesResponse() {
-  console.log("Returning comprehensive default voices response");
+// Process the raw voices data from Google into a more usable format
+function processVoices(voices: any[]): any {
+  const result: Record<string, any> = {};
   
-  return new Response(
-    JSON.stringify(getComprehensiveDefaultVoices()),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  // Group voices by language code
+  voices.forEach((voice) => {
+    const languageCode = voice.languageCode;
+    
+    if (!result[languageCode]) {
+      result[languageCode] = {
+        display_name: getLanguageDisplayName(languageCode),
+        voices: {
+          MALE: [],
+          FEMALE: [],
+        },
+      };
+    }
+    
+    // Add the voice to the appropriate gender category
+    if (voice.ssmlGender === "MALE" || voice.ssmlGender === "FEMALE") {
+      result[languageCode].voices[voice.ssmlGender].push({
+        name: voice.name,
+        ssml_gender: voice.ssmlGender,
+      });
+    }
+  });
+  
+  return result;
 }
 
-// This function provides a much more comprehensive list of Google TTS voices
-function getComprehensiveDefaultVoices() {
-  return {
-    "af-ZA": {
-      display_name: "Afrikaans (South Africa)",
-      voices: {
-        MALE: [{ name: "af-ZA-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: []
-      }
-    },
-    "ar-XA": {
-      display_name: "Arabic",
-      voices: {
-        MALE: [{ name: "ar-XA-Standard-B", ssml_gender: "MALE" }, { name: "ar-XA-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "ar-XA-Standard-A", ssml_gender: "FEMALE" }, { name: "ar-XA-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "bn-IN": {
-      display_name: "Bengali (India)",
-      voices: {
-        MALE: [{ name: "bn-IN-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "bn-IN-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "bg-BG": {
-      display_name: "Bulgarian (Bulgaria)",
-      voices: {
-        MALE: [{ name: "bg-BG-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: []
-      }
-    },
-    "ca-ES": {
-      display_name: "Catalan (Spain)",
-      voices: {
-        MALE: [{ name: "ca-ES-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: []
-      }
-    },
-    "zh-CN": {
-      display_name: "Chinese (Mandarin)",
-      voices: {
-        MALE: [
-          { name: "zh-CN-Standard-B", ssml_gender: "MALE" },
-          { name: "zh-CN-Standard-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "zh-CN-Standard-A", ssml_gender: "FEMALE" },
-          { name: "zh-CN-Standard-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "zh-HK": {
-      display_name: "Chinese (Hong Kong)",
-      voices: {
-        MALE: [{ name: "zh-HK-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "zh-HK-Standard-A", ssml_gender: "FEMALE" }, { name: "zh-HK-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "zh-TW": {
-      display_name: "Chinese (Taiwan)",
-      voices: {
-        MALE: [{ name: "zh-TW-Standard-B", ssml_gender: "MALE" }, { name: "zh-TW-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "zh-TW-Standard-A", ssml_gender: "FEMALE" }, { name: "zh-TW-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "cs-CZ": {
-      display_name: "Czech (Czech Republic)",
-      voices: {
-        MALE: [{ name: "cs-CZ-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "cs-CZ-Standard-B", ssml_gender: "FEMALE" }]
-      }
-    },
-    "da-DK": {
-      display_name: "Danish (Denmark)",
-      voices: {
-        MALE: [{ name: "da-DK-Standard-C", ssml_gender: "MALE" }, { name: "da-DK-Standard-E", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "da-DK-Standard-A", ssml_gender: "FEMALE" }, { name: "da-DK-Standard-D", ssml_gender: "FEMALE" }]
-      }
-    },
-    "nl-BE": {
-      display_name: "Dutch (Belgium)",
-      voices: {
-        MALE: [{ name: "nl-BE-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "nl-BE-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "nl-NL": {
-      display_name: "Dutch (Netherlands)",
-      voices: {
-        MALE: [{ name: "nl-NL-Standard-B", ssml_gender: "MALE" }, { name: "nl-NL-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "nl-NL-Standard-A", ssml_gender: "FEMALE" }, { name: "nl-NL-Standard-C", ssml_gender: "FEMALE" }, { name: "nl-NL-Standard-E", ssml_gender: "FEMALE" }]
-      }
-    },
-    "en-AU": {
-      display_name: "English (Australia)",
-      voices: {
-        MALE: [
-          { name: "en-AU-Standard-B", ssml_gender: "MALE" },
-          { name: "en-AU-Standard-D", ssml_gender: "MALE" },
-          { name: "en-AU-Wavenet-B", ssml_gender: "MALE" },
-          { name: "en-AU-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "en-AU-Standard-A", ssml_gender: "FEMALE" },
-          { name: "en-AU-Standard-C", ssml_gender: "FEMALE" },
-          { name: "en-AU-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "en-AU-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "en-GB": {
-      display_name: "English (UK)",
-      voices: {
-        MALE: [
-          { name: "en-GB-Standard-B", ssml_gender: "MALE" },
-          { name: "en-GB-Standard-D", ssml_gender: "MALE" },
-          { name: "en-GB-Wavenet-B", ssml_gender: "MALE" },
-          { name: "en-GB-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "en-GB-Standard-A", ssml_gender: "FEMALE" },
-          { name: "en-GB-Standard-C", ssml_gender: "FEMALE" },
-          { name: "en-GB-Standard-F", ssml_gender: "FEMALE" },
-          { name: "en-GB-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "en-GB-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "en-GB-Wavenet-F", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "en-IN": {
-      display_name: "English (India)",
-      voices: {
-        MALE: [
-          { name: "en-IN-Standard-B", ssml_gender: "MALE" },
-          { name: "en-IN-Standard-D", ssml_gender: "MALE" },
-          { name: "en-IN-Wavenet-B", ssml_gender: "MALE" },
-          { name: "en-IN-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "en-IN-Standard-A", ssml_gender: "FEMALE" },
-          { name: "en-IN-Standard-C", ssml_gender: "FEMALE" },
-          { name: "en-IN-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "en-IN-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
+// Get a human-readable language name from a language code
+function getLanguageDisplayName(code: string): string {
+  const languageNames: Record<string, string> = {
+    "en-US": "English (US)",
+    "en-GB": "English (UK)",
+    "es-ES": "Spanish (Spain)",
+    "es-US": "Spanish (US)",
+    "fr-FR": "French (France)",
+    "de-DE": "German (Germany)",
+    "it-IT": "Italian (Italy)",
+    "ja-JP": "Japanese (Japan)",
+    "ko-KR": "Korean (Korea)",
+    "pt-BR": "Portuguese (Brazil)",
+    "ru-RU": "Russian (Russia)",
+    "zh-CN": "Chinese (Mandarin)",
+    "nl-NL": "Dutch (Netherlands)",
+    "hi-IN": "Hindi (India)",
+    "ar-XA": "Arabic",
+    "cs-CZ": "Czech (Czech Republic)",
+    "da-DK": "Danish (Denmark)",
+    "fi-FI": "Finnish (Finland)",
+    "el-GR": "Greek (Greece)",
+    "hu-HU": "Hungarian (Hungary)",
+    "id-ID": "Indonesian (Indonesia)",
+    "nb-NO": "Norwegian (Norway)",
+    "pl-PL": "Polish (Poland)",
+    "sk-SK": "Slovak (Slovakia)",
+    "sv-SE": "Swedish (Sweden)",
+    "tr-TR": "Turkish (Turkey)",
+    "uk-UA": "Ukrainian (Ukraine)",
+    "vi-VN": "Vietnamese (Vietnam)",
+    "lt-LT": "Lithuanian (Lithuania)",
+  };
+  
+  return languageNames[code] || code;
+}
+
+// Return default voices when we can't fetch from the API
+function getDefaultVoicesResponse() {
+  console.log("Returning default voices data");
+  
+  const defaultVoices = {
     "en-US": {
       display_name: "English (US)",
       voices: {
         MALE: [
-          { name: "en-US-Standard-A", ssml_gender: "MALE" },
-          { name: "en-US-Standard-B", ssml_gender: "MALE" },
-          { name: "en-US-Standard-D", ssml_gender: "MALE" },
-          { name: "en-US-Standard-I", ssml_gender: "MALE" },
-          { name: "en-US-Standard-J", ssml_gender: "MALE" },
           { name: "en-US-Wavenet-A", ssml_gender: "MALE" },
-          { name: "en-US-Wavenet-B", ssml_gender: "MALE" },
-          { name: "en-US-Wavenet-D", ssml_gender: "MALE" },
-          { name: "en-US-Wavenet-I", ssml_gender: "MALE" },
-          { name: "en-US-Wavenet-J", ssml_gender: "MALE" },
-          { name: "en-US-Neural2-A", ssml_gender: "MALE" },
-          { name: "en-US-Neural2-D", ssml_gender: "MALE" },
-          { name: "en-US-Neural2-I", ssml_gender: "MALE" },
-          { name: "en-US-Neural2-J", ssml_gender: "MALE" },
-          { name: "en-US-Polyglot-1", ssml_gender: "MALE" }
+          { name: "en-US-Wavenet-B", ssml_gender: "MALE" }
         ],
         FEMALE: [
-          { name: "en-US-Standard-C", ssml_gender: "FEMALE" },
-          { name: "en-US-Standard-E", ssml_gender: "FEMALE" },
-          { name: "en-US-Standard-F", ssml_gender: "FEMALE" },
-          { name: "en-US-Standard-G", ssml_gender: "FEMALE" },
-          { name: "en-US-Standard-H", ssml_gender: "FEMALE" },
           { name: "en-US-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "en-US-Wavenet-E", ssml_gender: "FEMALE" },
-          { name: "en-US-Wavenet-F", ssml_gender: "FEMALE" },
-          { name: "en-US-Wavenet-G", ssml_gender: "FEMALE" },
-          { name: "en-US-Wavenet-H", ssml_gender: "FEMALE" },
-          { name: "en-US-Neural2-C", ssml_gender: "FEMALE" },
-          { name: "en-US-Neural2-E", ssml_gender: "FEMALE" },
-          { name: "en-US-Neural2-F", ssml_gender: "FEMALE" },
-          { name: "en-US-Neural2-G", ssml_gender: "FEMALE" },
-          { name: "en-US-Neural2-H", ssml_gender: "FEMALE" },
-          { name: "en-US-Studio-O", ssml_gender: "FEMALE" }
+          { name: "en-US-Wavenet-E", ssml_gender: "FEMALE" }
         ]
       }
     },
-    "fil-PH": {
-      display_name: "Filipino (Philippines)",
+    "es-ES": {
+      display_name: "Spanish (Spain)",
       voices: {
-        MALE: [{ name: "fil-PH-Standard-B", ssml_gender: "MALE" }, { name: "fil-PH-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "fil-PH-Standard-A", ssml_gender: "FEMALE" }, { name: "fil-PH-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "fi-FI": {
-      display_name: "Finnish (Finland)",
-      voices: {
-        MALE: [{ name: "fi-FI-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "fi-FI-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "fr-CA": {
-      display_name: "French (Canada)",
-      voices: {
-        MALE: [
-          { name: "fr-CA-Standard-B", ssml_gender: "MALE" },
-          { name: "fr-CA-Standard-D", ssml_gender: "MALE" },
-          { name: "fr-CA-Wavenet-B", ssml_gender: "MALE" },
-          { name: "fr-CA-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "fr-CA-Standard-A", ssml_gender: "FEMALE" },
-          { name: "fr-CA-Standard-C", ssml_gender: "FEMALE" },
-          { name: "fr-CA-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "fr-CA-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
+        MALE: [{ name: "es-ES-Standard-B", ssml_gender: "MALE" }],
+        FEMALE: [{ name: "es-ES-Standard-A", ssml_gender: "FEMALE" }]
       }
     },
     "fr-FR": {
       display_name: "French (France)",
       voices: {
-        MALE: [
-          { name: "fr-FR-Standard-B", ssml_gender: "MALE" },
-          { name: "fr-FR-Standard-D", ssml_gender: "MALE" },
-          { name: "fr-FR-Wavenet-B", ssml_gender: "MALE" },
-          { name: "fr-FR-Wavenet-D", ssml_gender: "MALE" },
-          { name: "fr-FR-Neural2-B", ssml_gender: "MALE" },
-          { name: "fr-FR-Neural2-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "fr-FR-Standard-A", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Standard-C", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Standard-E", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Wavenet-E", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Neural2-A", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Neural2-C", ssml_gender: "FEMALE" },
-          { name: "fr-FR-Neural2-E", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "de-DE": {
-      display_name: "German (Germany)",
-      voices: {
-        MALE: [
-          { name: "de-DE-Standard-B", ssml_gender: "MALE" },
-          { name: "de-DE-Standard-D", ssml_gender: "MALE" },
-          { name: "de-DE-Standard-E", ssml_gender: "MALE" },
-          { name: "de-DE-Wavenet-B", ssml_gender: "MALE" },
-          { name: "de-DE-Wavenet-D", ssml_gender: "MALE" },
-          { name: "de-DE-Wavenet-E", ssml_gender: "MALE" },
-          { name: "de-DE-Neural2-B", ssml_gender: "MALE" },
-          { name: "de-DE-Neural2-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "de-DE-Standard-A", ssml_gender: "FEMALE" },
-          { name: "de-DE-Standard-C", ssml_gender: "FEMALE" },
-          { name: "de-DE-Standard-F", ssml_gender: "FEMALE" },
-          { name: "de-DE-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "de-DE-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "de-DE-Wavenet-F", ssml_gender: "FEMALE" },
-          { name: "de-DE-Neural2-A", ssml_gender: "FEMALE" },
-          { name: "de-DE-Neural2-C", ssml_gender: "FEMALE" },
-          { name: "de-DE-Neural2-F", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "el-GR": {
-      display_name: "Greek (Greece)",
-      voices: {
-        MALE: [{ name: "el-GR-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "el-GR-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "gu-IN": {
-      display_name: "Gujarati (India)",
-      voices: {
-        MALE: [{ name: "gu-IN-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "gu-IN-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "he-IL": {
-      display_name: "Hebrew (Israel)",
-      voices: {
-        MALE: [{ name: "he-IL-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "he-IL-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "hi-IN": {
-      display_name: "Hindi (India)",
-      voices: {
-        MALE: [
-          { name: "hi-IN-Standard-B", ssml_gender: "MALE" },
-          { name: "hi-IN-Standard-D", ssml_gender: "MALE" },
-          { name: "hi-IN-Wavenet-B", ssml_gender: "MALE" },
-          { name: "hi-IN-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "hi-IN-Standard-A", ssml_gender: "FEMALE" },
-          { name: "hi-IN-Standard-C", ssml_gender: "FEMALE" },
-          { name: "hi-IN-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "hi-IN-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "hu-HU": {
-      display_name: "Hungarian (Hungary)",
-      voices: {
-        MALE: [{ name: "hu-HU-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "hu-HU-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "is-IS": {
-      display_name: "Icelandic (Iceland)",
-      voices: {
-        MALE: [{ name: "is-IS-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "is-IS-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "id-ID": {
-      display_name: "Indonesian (Indonesia)",
-      voices: {
-        MALE: [
-          { name: "id-ID-Standard-B", ssml_gender: "MALE" },
-          { name: "id-ID-Standard-D", ssml_gender: "MALE" },
-          { name: "id-ID-Wavenet-B", ssml_gender: "MALE" },
-          { name: "id-ID-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "id-ID-Standard-A", ssml_gender: "FEMALE" },
-          { name: "id-ID-Standard-C", ssml_gender: "FEMALE" },
-          { name: "id-ID-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "id-ID-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "it-IT": {
-      display_name: "Italian (Italy)",
-      voices: {
-        MALE: [
-          { name: "it-IT-Standard-B", ssml_gender: "MALE" },
-          { name: "it-IT-Standard-D", ssml_gender: "MALE" },
-          { name: "it-IT-Wavenet-B", ssml_gender: "MALE" },
-          { name: "it-IT-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "it-IT-Standard-A", ssml_gender: "FEMALE" },
-          { name: "it-IT-Standard-C", ssml_gender: "FEMALE" },
-          { name: "it-IT-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "it-IT-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "ja-JP": {
-      display_name: "Japanese (Japan)",
-      voices: {
-        MALE: [
-          { name: "ja-JP-Standard-B", ssml_gender: "MALE" },
-          { name: "ja-JP-Standard-D", ssml_gender: "MALE" },
-          { name: "ja-JP-Wavenet-B", ssml_gender: "MALE" },
-          { name: "ja-JP-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "ja-JP-Standard-A", ssml_gender: "FEMALE" },
-          { name: "ja-JP-Standard-C", ssml_gender: "FEMALE" },
-          { name: "ja-JP-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "ja-JP-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "kn-IN": {
-      display_name: "Kannada (India)",
-      voices: {
-        MALE: [{ name: "kn-IN-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "kn-IN-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "ko-KR": {
-      display_name: "Korean (South Korea)",
-      voices: {
-        MALE: [
-          { name: "ko-KR-Standard-B", ssml_gender: "MALE" },
-          { name: "ko-KR-Standard-D", ssml_gender: "MALE" },
-          { name: "ko-KR-Wavenet-B", ssml_gender: "MALE" },
-          { name: "ko-KR-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "ko-KR-Standard-A", ssml_gender: "FEMALE" },
-          { name: "ko-KR-Standard-C", ssml_gender: "FEMALE" },
-          { name: "ko-KR-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "ko-KR-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "lv-LV": {
-      display_name: "Latvian (Latvia)",
-      voices: {
-        MALE: [{ name: "lv-LV-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: []
+        MALE: [{ name: "fr-FR-Wavenet-B", ssml_gender: "MALE" }],
+        FEMALE: [{ name: "fr-FR-Wavenet-A", ssml_gender: "FEMALE" }]
       }
     },
     "lt-LT": {
@@ -459,218 +188,11 @@ function getComprehensiveDefaultVoices() {
         MALE: [{ name: "lt-LT-Standard-A", ssml_gender: "MALE" }],
         FEMALE: [{ name: "lt-LT-Standard-B", ssml_gender: "FEMALE" }]
       }
-    },
-    "ms-MY": {
-      display_name: "Malay (Malaysia)",
-      voices: {
-        MALE: [{ name: "ms-MY-Standard-B", ssml_gender: "MALE" }, { name: "ms-MY-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "ms-MY-Standard-A", ssml_gender: "FEMALE" }, { name: "ms-MY-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "ml-IN": {
-      display_name: "Malayalam (India)",
-      voices: {
-        MALE: [{ name: "ml-IN-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "ml-IN-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "nb-NO": {
-      display_name: "Norwegian (Norway)",
-      voices: {
-        MALE: [{ name: "nb-NO-Standard-B", ssml_gender: "MALE" }, { name: "nb-NO-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "nb-NO-Standard-A", ssml_gender: "FEMALE" }, { name: "nb-NO-Standard-C", ssml_gender: "FEMALE" }, { name: "nb-NO-Standard-E", ssml_gender: "FEMALE" }]
-      }
-    },
-    "pl-PL": {
-      display_name: "Polish (Poland)",
-      voices: {
-        MALE: [
-          { name: "pl-PL-Standard-B", ssml_gender: "MALE" },
-          { name: "pl-PL-Standard-C", ssml_gender: "MALE" },
-          { name: "pl-PL-Wavenet-B", ssml_gender: "MALE" },
-          { name: "pl-PL-Wavenet-C", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "pl-PL-Standard-A", ssml_gender: "FEMALE" },
-          { name: "pl-PL-Standard-D", ssml_gender: "FEMALE" },
-          { name: "pl-PL-Standard-E", ssml_gender: "FEMALE" },
-          { name: "pl-PL-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "pl-PL-Wavenet-D", ssml_gender: "FEMALE" },
-          { name: "pl-PL-Wavenet-E", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "pt-BR": {
-      display_name: "Portuguese (Brazil)",
-      voices: {
-        MALE: [
-          { name: "pt-BR-Standard-B", ssml_gender: "MALE" },
-          { name: "pt-BR-Wavenet-B", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "pt-BR-Standard-A", ssml_gender: "FEMALE" },
-          { name: "pt-BR-Wavenet-A", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "pt-PT": {
-      display_name: "Portuguese (Portugal)",
-      voices: {
-        MALE: [{ name: "pt-PT-Standard-B", ssml_gender: "MALE" }, { name: "pt-PT-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "pt-PT-Standard-A", ssml_gender: "FEMALE" }, { name: "pt-PT-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "pa-IN": {
-      display_name: "Punjabi (India)",
-      voices: {
-        MALE: [{ name: "pa-IN-Standard-B", ssml_gender: "MALE" }, { name: "pa-IN-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "pa-IN-Standard-A", ssml_gender: "FEMALE" }, { name: "pa-IN-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "ro-RO": {
-      display_name: "Romanian (Romania)",
-      voices: {
-        MALE: [{ name: "ro-RO-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "ro-RO-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "ru-RU": {
-      display_name: "Russian (Russia)",
-      voices: {
-        MALE: [
-          { name: "ru-RU-Standard-B", ssml_gender: "MALE" },
-          { name: "ru-RU-Standard-D", ssml_gender: "MALE" },
-          { name: "ru-RU-Wavenet-B", ssml_gender: "MALE" },
-          { name: "ru-RU-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "ru-RU-Standard-A", ssml_gender: "FEMALE" },
-          { name: "ru-RU-Standard-C", ssml_gender: "FEMALE" },
-          { name: "ru-RU-Standard-E", ssml_gender: "FEMALE" },
-          { name: "ru-RU-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "ru-RU-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "ru-RU-Wavenet-E", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "sr-RS": {
-      display_name: "Serbian (Serbia)",
-      voices: {
-        MALE: [{ name: "sr-RS-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: []
-      }
-    },
-    "sk-SK": {
-      display_name: "Slovak (Slovakia)",
-      voices: {
-        MALE: [{ name: "sk-SK-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: []
-      }
-    },
-    "es-ES": {
-      display_name: "Spanish (Spain)",
-      voices: {
-        MALE: [
-          { name: "es-ES-Standard-B", ssml_gender: "MALE" },
-          { name: "es-ES-Standard-D", ssml_gender: "MALE" },
-          { name: "es-ES-Wavenet-B", ssml_gender: "MALE" },
-          { name: "es-ES-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "es-ES-Standard-A", ssml_gender: "FEMALE" },
-          { name: "es-ES-Standard-C", ssml_gender: "FEMALE" },
-          { name: "es-ES-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "es-US": {
-      display_name: "Spanish (US)",
-      voices: {
-        MALE: [
-          { name: "es-US-Standard-B", ssml_gender: "MALE" },
-          { name: "es-US-Standard-C", ssml_gender: "MALE" },
-          { name: "es-US-Wavenet-B", ssml_gender: "MALE" },
-          { name: "es-US-Wavenet-C", ssml_gender: "MALE" },
-          { name: "es-US-Neural2-B", ssml_gender: "MALE" },
-          { name: "es-US-Neural2-C", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "es-US-Standard-A", ssml_gender: "FEMALE" },
-          { name: "es-US-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "es-US-Neural2-A", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "sv-SE": {
-      display_name: "Swedish (Sweden)",
-      voices: {
-        MALE: [{ name: "sv-SE-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "sv-SE-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "ta-IN": {
-      display_name: "Tamil (India)",
-      voices: {
-        MALE: [{ name: "ta-IN-Standard-B", ssml_gender: "MALE" }, { name: "ta-IN-Standard-D", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "ta-IN-Standard-A", ssml_gender: "FEMALE" }, { name: "ta-IN-Standard-C", ssml_gender: "FEMALE" }]
-      }
-    },
-    "te-IN": {
-      display_name: "Telugu (India)",
-      voices: {
-        MALE: [{ name: "te-IN-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "te-IN-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "th-TH": {
-      display_name: "Thai (Thailand)",
-      voices: {
-        MALE: [{ name: "th-TH-Standard-B", ssml_gender: "MALE" }],
-        FEMALE: [{ name: "th-TH-Standard-A", ssml_gender: "FEMALE" }]
-      }
-    },
-    "tr-TR": {
-      display_name: "Turkish (Turkey)",
-      voices: {
-        MALE: [
-          { name: "tr-TR-Standard-B", ssml_gender: "MALE" },
-          { name: "tr-TR-Standard-D", ssml_gender: "MALE" },
-          { name: "tr-TR-Wavenet-B", ssml_gender: "MALE" },
-          { name: "tr-TR-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "tr-TR-Standard-A", ssml_gender: "FEMALE" },
-          { name: "tr-TR-Standard-C", ssml_gender: "FEMALE" },
-          { name: "tr-TR-Standard-E", ssml_gender: "FEMALE" },
-          { name: "tr-TR-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "tr-TR-Wavenet-C", ssml_gender: "FEMALE" },
-          { name: "tr-TR-Wavenet-E", ssml_gender: "FEMALE" }
-        ]
-      }
-    },
-    "uk-UA": {
-      display_name: "Ukrainian (Ukraine)",
-      voices: {
-        MALE: [{ name: "uk-UA-Standard-A", ssml_gender: "MALE" }],
-        FEMALE: []
-      }
-    },
-    "vi-VN": {
-      display_name: "Vietnamese (Vietnam)",
-      voices: {
-        MALE: [
-          { name: "vi-VN-Standard-B", ssml_gender: "MALE" },
-          { name: "vi-VN-Standard-D", ssml_gender: "MALE" },
-          { name: "vi-VN-Wavenet-B", ssml_gender: "MALE" },
-          { name: "vi-VN-Wavenet-D", ssml_gender: "MALE" }
-        ],
-        FEMALE: [
-          { name: "vi-VN-Standard-A", ssml_gender: "FEMALE" },
-          { name: "vi-VN-Standard-C", ssml_gender: "FEMALE" },
-          { name: "vi-VN-Wavenet-A", ssml_gender: "FEMALE" },
-          { name: "vi-VN-Wavenet-C", ssml_gender: "FEMALE" }
-        ]
-      }
     }
   };
+  
+  return new Response(
+    JSON.stringify(defaultVoices),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
 }

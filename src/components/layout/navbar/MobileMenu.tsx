@@ -1,77 +1,48 @@
 
-import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import NavLinks, { NavLink } from './NavLinks';
 import UserMenu from './UserMenu';
-import Logo from './Logo';
+import { useAuth } from '@/context/AuthContext';
 
 interface MobileMenuProps {
   isOpen: boolean;
-  onClose: () => void;
   links: NavLink[];
+  onLinkClick?: () => void;
 }
 
-const MobileMenu = ({ isOpen, onClose, links }: MobileMenuProps) => {
-  // Close the mobile menu when the window is resized to desktop
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768 && isOpen) {
-        onClose();
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isOpen, onClose]);
-  
-  // Prevent scrolling when mobile menu is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+const MobileMenu = ({ isOpen, links, onLinkClick }: MobileMenuProps) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  if (!isOpen) return null;
+
+  const handleLinkClick = () => {
+    if (onLinkClick) {
+      onLinkClick();
     }
-    
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-  
+  };
+
+  const handleSignIn = () => {
+    if (onLinkClick) {
+      onLinkClick();
+    }
+    navigate('/auth');
+  };
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 bg-background md:hidden"
-        >
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between h-16 px-4 border-b">
-              <Logo />
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4">
-              <NavLinks 
-                links={links} 
-                variant="mobile" 
-                onLinkClick={onClose} 
-              />
-            </div>
-            
-            <div className="border-t p-4">
-              <UserMenu isMobile={true} onActionComplete={onClose} />
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <nav className="md:hidden fixed top-16 left-0 right-0 z-50 py-4 px-4 glassmorphism animate-fade-in">
+      <div className="flex flex-col space-y-4">
+        <NavLinks links={links} variant="mobile" onLinkClick={handleLinkClick} />
+        
+        {user ? (
+          <UserMenu variant="mobile" />
+        ) : (
+          <Button onClick={handleSignIn} className="mt-2">Sign In</Button>
+        )}
+      </div>
+    </nav>
   );
 };
 

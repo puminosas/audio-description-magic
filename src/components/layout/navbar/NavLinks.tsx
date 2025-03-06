@@ -1,46 +1,71 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { Link, useLocation } from 'react-router-dom';
 
 export interface NavLink {
-  title: string;
-  href: string;
-  isActive?: boolean;
+  name: string;
+  path: string;
 }
 
-export interface NavLinksProps {
+interface NavLinksProps {
   links: NavLink[];
-  variant?: 'default' | 'mobile';
+  variant?: 'desktop' | 'mobile';
   onLinkClick?: () => void;
 }
 
-const NavLinks = ({ links, variant = 'default', onLinkClick }: NavLinksProps) => {
+const NavLinks = ({ links, variant = 'desktop', onLinkClick }: NavLinksProps) => {
+  const location = useLocation();
+  
+  const handleClick = () => {
+    if (onLinkClick) {
+      onLinkClick();
+    }
+  };
+
+  if (variant === 'mobile') {
+    return (
+      <>
+        {links.map((link) => {
+          const isActive = location.pathname === link.path || 
+                          (link.path !== '/' && location.pathname.startsWith(link.path));
+          
+          return (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`py-3 px-2 text-sm font-medium transition-colors hover:text-primary block w-full text-left ${
+                isActive ? 'text-primary' : 'text-foreground/70'
+              }`}
+              onClick={handleClick}
+            >
+              {link.name}
+            </Link>
+          );
+        })}
+      </>
+    );
+  }
+
   return (
-    <ul className={cn(
-      "flex gap-1", 
-      variant === 'default' ? "flex-row items-center" : "flex-col w-full"
-    )}>
-      {links.map((link, index) => (
-        <li key={index} className="w-full">
-          <Link 
-            to={link.href} 
-            className={cn(
-              "px-3 py-2 rounded-md text-sm font-medium transition-colors",
-              variant === 'default' 
-                ? "hover:bg-primary/10" 
-                : "block w-full hover:bg-primary/10 py-3",
-              link.isActive 
-                ? "text-primary" 
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={onLinkClick}
+    <>
+      {links.map((link) => {
+        const isActive = location.pathname === link.path || 
+                        (link.path !== '/' && location.pathname.startsWith(link.path));
+        
+        return (
+          <Link
+            key={link.path}
+            to={link.path}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors hover:text-foreground hover:bg-secondary ${
+              isActive ? 'bg-secondary text-foreground' : 'text-foreground/70'
+            }`}
+            onClick={handleClick}
           >
-            {link.title}
+            {link.name}
           </Link>
-        </li>
-      ))}
-    </ul>
+        );
+      })}
+    </>
   );
 };
 

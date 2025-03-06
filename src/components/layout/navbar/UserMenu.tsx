@@ -1,95 +1,138 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
+import { useAuth } from '@/context/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, User, Settings, LayoutDashboard } from "lucide-react";
-import { useAuth } from '@/context/AuthContext';
+import { 
+  User, 
+  LogOut,
+  LayoutDashboard,
+  Shield,
+  ChevronDown
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-export interface UserMenuProps {
-  isMobile?: boolean;
-  onActionComplete?: () => void;
+interface UserMenuProps {
+  variant?: 'desktop' | 'mobile';
 }
 
-const UserMenu = ({ isMobile = false, onActionComplete }: UserMenuProps) => {
-  const { user, profile, signOut } = useAuth();
+const UserMenu = ({ variant = 'desktop' }: UserMenuProps) => {
   const navigate = useNavigate();
+  const { user, profile, isAdmin, signOut } = useAuth();
+
+  // Generate initials for avatar
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+    }
+    
+    return user?.email?.substring(0, 2).toUpperCase() || 'U';
+  };
 
   const handleSignOut = async () => {
     await signOut();
-    if (onActionComplete) onActionComplete();
     navigate('/');
   };
 
-  const navigateTo = (path: string) => {
-    navigate(path);
-    if (onActionComplete) onActionComplete();
-  };
-
-  // Show sign in/sign up buttons if no user
-  if (!user) {
+  if (variant === 'mobile') {
     return (
-      <div className={`flex ${isMobile ? 'flex-col w-full space-y-2' : 'space-x-2'}`}>
-        <Button
-          variant="outline"
-          onClick={() => navigateTo('/auth?mode=signin')}
-          className={isMobile ? 'w-full' : ''}
+      <>
+        <div className="flex items-center py-2">
+          <Avatar className="h-8 w-8 mr-2">
+            <AvatarImage src={profile?.avatar_url || undefined} />
+            <AvatarFallback>{getInitials()}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-medium">{profile?.full_name || user?.email}</p>
+            {profile?.plan && (
+              <p className="text-xs text-muted-foreground">
+                {profile.plan === 'premium' ? 'Premium' : profile.plan === 'basic' ? 'Basic' : 'Free'} Plan
+              </p>
+            )}
+          </div>
+        </div>
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="py-2 flex items-center transition-colors hover:text-primary"
         >
-          Sign In
-        </Button>
-        <Button 
-          onClick={() => navigateTo('/auth?mode=signup')}
-          className={isMobile ? 'w-full' : ''}
+          <LayoutDashboard className="h-4 w-4 mr-2" />
+          Dashboard
+        </button>
+        
+        {isAdmin && (
+          <button 
+            onClick={() => navigate('/admin')}
+            className="py-2 flex items-center transition-colors hover:text-primary"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            Admin Panel
+          </button>
+        )}
+        
+        <button 
+          onClick={handleSignOut}
+          className="py-2 flex items-center transition-colors hover:text-primary"
         >
-          Sign Up
-        </Button>
-      </div>
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </button>
+      </>
     );
   }
 
-  // Get the user's initials for the avatar
-  const getInitials = () => {
-    if (!user?.email) return '?';
-    const parts = user.email.split('@')[0].split('.');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return user.email.substring(0, 2).toUpperCase();
-  };
-
-  // Show user menu if user is logged in
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar>
+        <Button variant="ghost" className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={profile?.avatar_url || undefined} />
             <AvatarFallback>{getInitials()}</AvatarFallback>
           </Avatar>
+          <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuItem className="cursor-default">
+          <User className="h-4 w-4 mr-2" />
+          <span className="font-medium">{profile?.full_name || user?.email}</span>
+        </DropdownMenuItem>
+        {profile?.plan && (
+          <DropdownMenuItem className="cursor-default">
+            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+              {profile.plan === 'premium' ? 'Premium' : profile.plan === 'basic' ? 'Basic' : 'Free'} Plan
+            </span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigateTo('/dashboard')}>
-          <LayoutDashboard className="mr-2 h-4 w-4" />
-          <span>Dashboard</span>
+        
+        <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+          <LayoutDashboard className="h-4 w-4 mr-2" />
+          Dashboard
         </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-        </DropdownMenuItem>
+        
+        {isAdmin && (
+          <DropdownMenuItem onClick={() => navigate('/admin')}>
+            <Shield className="h-4 w-4 mr-2" />
+            Admin Panel
+          </DropdownMenuItem>
+        )}
+        
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
