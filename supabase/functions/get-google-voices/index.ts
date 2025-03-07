@@ -300,8 +300,8 @@ function processVoices(voices: any[]): any {
   const result: Record<string, any> = {};
   
   // Group voices by language code
-  voices.forEach((voice) => {
-    voice.languageCodes.forEach((languageCode: string) => {
+  for (const voice of voices) {
+    for (const languageCode of voice.languageCodes) {
       if (!result[languageCode]) {
         result[languageCode] = {
           display_name: getLanguageDisplayName(languageCode),
@@ -319,8 +319,8 @@ function processVoices(voices: any[]): any {
           ssml_gender: voice.ssmlGender,
         });
       }
-    });
-  });
+    }
+  }
   
   return result;
 }
