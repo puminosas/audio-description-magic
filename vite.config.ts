@@ -7,7 +7,6 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: audiodescriptions.online
     port: 8080,
   },
   preview: {
@@ -16,6 +15,7 @@ export default defineConfig(({ mode }) => ({
     },
     host: true,
     port: 8080,
+    allowedHosts: ["audiodescriptions.online"],
   },
   plugins: [
     react(),
