@@ -1,36 +1,29 @@
 
 import React from 'react';
-import { Textarea } from '@/components/ui/textarea';
 
-export interface DescriptionInputProps {
+interface DescriptionInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
-  disabled?: boolean;
 }
 
-const DescriptionInput: React.FC<DescriptionInputProps> = ({ 
+const DescriptionInput = ({ 
   value, 
-  onChange, 
-  placeholder = "Enter your product description here...",
-  disabled = false
-}) => {
+  onChange,
+  placeholder = "Enter text to convert to audio..."
+}: DescriptionInputProps) => {
   return (
-    <div className="w-full">
-      <label htmlFor="description" className="block text-sm font-medium mb-2">
-        Product Description
+    <div className="md:col-span-2">
+      <label htmlFor="description" className="block text-sm font-medium mb-1">
+        Your Text
       </label>
-      <Textarea
+      <textarea
         id="description"
         value={value}
         onChange={onChange}
+        className="min-h-[100px] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         placeholder={placeholder}
-        disabled={disabled}
-        className="min-h-[120px]"
       />
-      <p className="text-xs text-muted-foreground mt-1">
-        {value.length > 0 ? `${value.length} characters` : 'Enter a product name or description to generate audio'}
-      </p>
     </div>
   );
 };

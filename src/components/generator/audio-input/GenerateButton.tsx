@@ -9,6 +9,7 @@ interface GenerateButtonProps {
   isLoading: boolean;
   hasUser: boolean;
   hasText: boolean;
+  buttonText?: string;
 }
 
 const GenerateButton = ({ 
@@ -16,7 +17,8 @@ const GenerateButton = ({
   isDisabled,
   isLoading,
   hasUser,
-  hasText
+  hasText,
+  buttonText = "Convert to Audio"
 }: GenerateButtonProps) => {
   return (
     <Button 
@@ -35,7 +37,7 @@ const GenerateButton = ({
           ? "Sign in to Generate" 
           : !hasText 
             ? "Enter text first" 
-            : "Convert to Audio"}
+            : buttonText}
     </Button>
   );
 };

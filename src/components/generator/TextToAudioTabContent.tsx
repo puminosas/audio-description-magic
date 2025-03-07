@@ -4,9 +4,10 @@ import DescriptionInput from './DescriptionInput';
 import LanguageVoiceSelector from './LanguageVoiceSelector';
 import { LanguageOption, VoiceOption } from '@/utils/audio';
 import { useAudioInput } from './audio-input/useAudioInput';
+import FileUploadSection from './audio-input/FileUploadSection';
 import GenerateButton from './audio-input/GenerateButton';
 
-interface TextToAudioTabProps {
+interface TextToAudioTabContentProps {
   onGenerate: (formData: {
     text: string;
     language: LanguageOption;
@@ -16,10 +17,12 @@ interface TextToAudioTabProps {
   user: any;
 }
 
-const TextToAudioTab = ({ onGenerate, loading, user }: TextToAudioTabProps) => {
+const TextToAudioTabContent = ({ onGenerate, loading, user }: TextToAudioTabContentProps) => {
   const {
     text,
     setText,
+    uploadedFileName,
+    setUploadedFileName,
     selectedLanguage,
     selectedVoice,
     handleTextChange,
@@ -32,15 +35,20 @@ const TextToAudioTab = ({ onGenerate, loading, user }: TextToAudioTabProps) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold mb-2">AI Audio Description Generator</h2>
-        <p className="text-muted-foreground mb-4">Enter a product name or brief description to generate an AI-powered audio description</p>
+        <h2 className="text-2xl font-semibold mb-2">Text to Audio Converter</h2>
+        <p className="text-muted-foreground mb-4">Upload a text file or enter text to convert to high-quality audio</p>
+        
+        <FileUploadSection 
+          setText={setText}
+          uploadedFileName={uploadedFileName}
+          setUploadedFileName={setUploadedFileName}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <DescriptionInput 
           value={text} 
-          onChange={handleTextChange}
-          placeholder="Enter a product name or brief description (e.g., 'Wireless Noise-Cancelling Headphones')"
+          onChange={handleTextChange} 
         />
         
         <LanguageVoiceSelector 
@@ -58,11 +66,11 @@ const TextToAudioTab = ({ onGenerate, loading, user }: TextToAudioTabProps) => {
           isLoading={loading}
           hasUser={!!user}
           hasText={!!text.trim()}
-          buttonText="Generate Audio Description"
+          buttonText="Convert to Audio"
         />
       </div>
     </div>
   );
 };
 
-export default TextToAudioTab;
+export default TextToAudioTabContent;
