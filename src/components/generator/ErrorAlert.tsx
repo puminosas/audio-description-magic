@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { XCircle, CloudOff } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 
 interface ErrorAlertProps {
   error: string | null;
@@ -13,16 +13,14 @@ const ErrorAlert = ({ error, isGoogleTtsError, hideWhenGoogleTtsWorking = false 
   // If there's no error, don't show anything
   if (!error) return null;
   
-  // If Google TTS is working now but we're asked to hide the error, don't show it
-  if (hideWhenGoogleTtsWorking) {
-    return null;
-  }
-  
-  // Don't show Google TTS errors - always suppress them
-  if (isGoogleTtsError || 
+  // Check if the error is related to Google TTS
+  const isGoogleTtsRelatedError = isGoogleTtsError || 
     error.includes('Google TTS') || 
     error.includes('Failed to load languages') ||
-    error.includes('Failed to initialize Google voices')) {
+    error.includes('Failed to initialize Google voices');
+  
+  // If we should hide Google TTS errors, or if we're asked to hide errors when Google TTS is working
+  if (isGoogleTtsRelatedError || hideWhenGoogleTtsWorking) {
     return null;
   }
   

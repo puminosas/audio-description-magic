@@ -51,6 +51,9 @@ const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3', audioUrl
     seek(values[0]);
   };
 
+  // Get the actual audio source safely
+  const audioSrc = audioRef.current?.src || audioUrl || '';
+
   return (
     <div className="w-full space-y-3 bg-background p-3 rounded-md shadow-sm border">
       <div className="flex flex-col">
@@ -58,7 +61,7 @@ const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3', audioUrl
           currentTime={currentTime}
           duration={duration}
           isGenerating={isGenerating || false}
-          audioUrl={audioRef.current?.src}
+          audioUrl={audioSrc}
           handleTimeChange={handleTimeChange}
         />
         
@@ -76,7 +79,7 @@ const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3', audioUrl
               volume={volume}
               isMuted={isMuted}
               isGenerating={isGenerating || false}
-              audioUrl={audioRef.current?.src}
+              audioUrl={audioSrc}
               toggleMute={toggleMute}
               handleVolumeChange={handleVolumeChange}
             />
@@ -84,10 +87,11 @@ const PlayerControls = ({ isGenerating = false, fileName = 'audio.mp3', audioUrl
         </div>
       </div>
       
-      {!isGenerating && audioRef.current && (
+      {/* Only show action buttons if we have an audio source and not generating */}
+      {!isGenerating && audioSrc && (
         <ActionButtons 
           fileName={fileName} 
-          audioUrl={audioRef.current.src} 
+          audioUrl={audioSrc} 
           isGenerating={isGenerating}
           embedCode="<iframe src='YOUR_EMBED_URL' allow='autoplay'></iframe>"
         />

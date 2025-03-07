@@ -61,7 +61,7 @@ export const useGenerationLogic = () => {
 
   return {
     loading,
-    generatedAudio,
+    generatedAudio, // Expose generatedAudio
     error,
     handleGenerate,
     setError,

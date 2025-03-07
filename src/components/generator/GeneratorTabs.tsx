@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,8 +16,9 @@ interface GeneratorTabsProps {
     voice: VoiceOption;
   }) => Promise<void>;
   loading: boolean;
-  user: any;
+  user: User | null;
   onRefreshStats: () => Promise<void>;
+  generatedAudio?: GeneratedAudio | null;
 }
 
 const GeneratorTabs = ({ 
@@ -27,7 +27,8 @@ const GeneratorTabs = ({
   handleGenerate, 
   loading, 
   user,
-  onRefreshStats
+  onRefreshStats,
+  generatedAudio
 }: GeneratorTabsProps) => {
   return (
     <Card className="overflow-hidden">

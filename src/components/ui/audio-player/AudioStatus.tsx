@@ -38,7 +38,8 @@ const AudioStatus = ({
     );
   }
   
-  if (error) {
+  // Only show error if we have an audioUrl and there's an error
+  if (error && audioUrl) {
     return (
       <Alert variant="destructive" className="mb-4">
         <XCircle className="h-4 w-4" />

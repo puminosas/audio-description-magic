@@ -16,6 +16,13 @@ const AudioPlayer = ({
 }: AudioPlayerProps) => {
   // Use the extracted URL validator
   const validationResult = useAudioUrlValidator({ audioUrl, isGenerating });
+  
+  // Always show if generating or if we have an audio URL
+  const shouldShow = isGenerating || !!audioUrl;
+  
+  if (!shouldShow) {
+    return null;
+  }
 
   return (
     <div className="glassmorphism rounded-xl p-4 sm:p-6 w-full max-w-3xl mx-auto shadow-lg">

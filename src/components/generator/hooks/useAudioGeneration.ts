@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,7 +31,6 @@ export const useAudioGeneration = () => {
       // Start with clean state
       setLoading(true);
       setError(null);
-      setGeneratedAudio(null);
       
       console.log("Starting audio generation with data:", formData);
       
@@ -153,16 +151,14 @@ export const useAudioGeneration = () => {
       // Create the audio object
       const audioData: GeneratedAudio = {
         audioUrl: result.audioUrl,
-        text: result.text || enhancedText,
+        text: result.text || formData.text,
         folderUrl: null, // Removing folderUrl since we only use Supabase Storage
         id: result.id || crypto.randomUUID(),
         timestamp: Date.now()
       };
       
-      // Set generated audio with a small delay to ensure DOM is ready
-      setTimeout(() => {
-        setGeneratedAudio(audioData);
-      }, 100);
+      // Set generated audio immediately instead of with a delay
+      setGeneratedAudio(audioData);
       
       if (user?.id) {
         try {
@@ -188,9 +184,7 @@ export const useAudioGeneration = () => {
       
       toast({
         title: 'Success!',
-        description: formData.text.length < 100 && enhancedText !== formData.text
-          ? 'Enhanced description generated and converted to audio.'
-          : 'Your audio description has been generated successfully.',
+        description: 'Your audio description has been generated successfully.',
       });
       
     } catch (error) {

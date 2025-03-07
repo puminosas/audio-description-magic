@@ -12,7 +12,7 @@ import { useGenerationStats } from './hooks/useGenerationStats';
 
 const GeneratorContainer = () => {
   const { user, loading: authLoading, profile } = useAuth();
-  const { error, googleTtsAvailable, suppressErrors, handleGenerate, loading, isCached } = useGenerationLogic();
+  const { error, googleTtsAvailable, suppressErrors, handleGenerate, loading, isCached, generatedAudio } = useGenerationLogic();
   const [activeTab, setActiveTab] = useState('generate');
   const { stats, refreshStats } = useGenerationStats(user);
 
@@ -28,19 +28,19 @@ const GeneratorContainer = () => {
     error.includes("Failed to initialize Google voices")
   );
 
-  // Always suppress Google TTS errors
+  // Suppress all Google TTS related errors
   const shouldSuppressErrors = suppressErrors || isGoogleTtsError;
 
   return (
     <div className="container mx-auto p-4">
       <GeneratorHeader />
       
-      {/* Only show error if it's not related to Google TTS */}
+      {/* Only show error if it's not Google TTS related and not suppressed */}
       {error && !shouldSuppressErrors && (
         <ErrorAlert 
           error={error} 
           isGoogleTtsError={isGoogleTtsError}
-          hideWhenGoogleTtsWorking={true}
+          hideWhenGoogleTtsWorking={googleTtsAvailable}
         />
       )}
       
@@ -55,6 +55,7 @@ const GeneratorContainer = () => {
             loading={loading}
             user={user}
             onRefreshStats={refreshStats}
+            generatedAudio={generatedAudio}
           />
         </div>
         <div className="lg:col-span-1">
