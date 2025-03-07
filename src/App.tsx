@@ -62,7 +62,7 @@ function App() {
           toast({
             title: "Service Initialization Error",
             description: "Voice services could not be initialized. Using fallback options.",
-            variant: "warning",
+            variant: "destructive", // Changed from "warning" to "destructive" since "warning" is not a valid variant
           });
         }
       }
