@@ -1,6 +1,6 @@
 
 import React from 'react';
-import LanguageSelector from '@/components/ui/LanguageSelector';
+import LanguageSelector from '@/components/ui/language-selector';
 import VoiceSelector from '@/components/ui/VoiceSelector';
 import { LanguageOption, VoiceOption } from '@/utils/audio/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
