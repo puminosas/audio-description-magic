@@ -46,17 +46,23 @@ function App() {
           setVoicesInitialized(true);
           // Clear any previous error since initialization succeeded
           setInitError(null);
+          
+          console.log('Google TTS voices initialized successfully');
         }
       } catch (error) {
         console.error('Error initializing services:', error);
         setInitError(error instanceof Error ? error : new Error(String(error)));
         
-        // Only show the toast on generator page, not on home page
-        if (window.location.pathname.includes('/generator')) {
+        // Only show the toast on specific pages where voice services are required
+        const pathRequiresVoices = ['/generator', '/text-to-audio', '/admin/audio-files'].some(path => 
+          window.location.pathname.includes(path)
+        );
+        
+        if (pathRequiresVoices) {
           toast({
             title: "Service Initialization Error",
-            description: "Some services may not be available. Please refresh the page or try again later.",
-            variant: "destructive",
+            description: "Voice services could not be initialized. Using fallback options.",
+            variant: "warning",
           });
         }
       }

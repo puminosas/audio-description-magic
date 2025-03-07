@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/layout/AdminLayout';
 
 // Admin pages
@@ -16,12 +16,14 @@ import AdminUserActivity from './AdminUserActivity';
 import AdminFeedback from './AdminFeedback';
 import AdminSettings from './AdminSettings';
 import AdminAiChatPage from './AdminAiChat';
+import AdminPurchases from './AdminPurchases';
 
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
   
   // Get current tab from path
   const getCurrentTab = () => {
@@ -34,6 +36,7 @@ const Admin = () => {
       case 'feedback': return 'feedback';
       case 'ai-chat': return 'ai-chat';
       case 'settings': return 'settings';
+      case 'purchases': return 'purchases';
       default: return 'analytics';
     }
   };
@@ -75,7 +78,7 @@ const Admin = () => {
     };
     
     setupCurrentUserAsAdmin();
-  }, [user, isAdmin, loading, navigate]);
+  }, [user, isAdmin, loading, navigate, toast]);
   
   // Redirect if not admin
   if (!loading && (!user || !isAdmin)) {
@@ -104,6 +107,7 @@ const Admin = () => {
       case 'feedback': navigate('/admin/feedback'); break;
       case 'ai-chat': navigate('/admin/ai-chat'); break;
       case 'settings': navigate('/admin/settings'); break;
+      case 'purchases': navigate('/admin/purchases'); break;
       default: navigate('/admin'); break;
     }
   };
@@ -149,11 +153,11 @@ const Admin = () => {
                   User Activity
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="user-update" 
-                  onClick={() => handleTabClick('user-update')} 
+                  value="purchases" 
+                  onClick={() => handleTabClick('purchases')} 
                   className="flex-shrink-0"
                 >
-                  Update User
+                  Purchases
                 </TabsTrigger>
                 <TabsTrigger 
                   value="feedback" 
@@ -185,6 +189,7 @@ const Admin = () => {
               <Route path="/users" element={<AdminUserManagement />} />
               <Route path="/user-activity" element={<AdminUserActivity />} />
               <Route path="/user-update" element={<AdminUserUpdate />} />
+              <Route path="/purchases" element={<AdminPurchases />} />
               <Route path="/feedback" element={<AdminFeedback />} />
               <Route path="/ai-chat" element={<AdminAiChatPage />} />
               <Route path="/settings" element={<AdminSettings />} />

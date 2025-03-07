@@ -1,259 +1,220 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import AdminLayout from '@/components/layout/AdminLayout';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input"; 
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { changeUserPlan, toggleAdminRole } from '@/services/userManagementService';
 
-interface UserData {
-  id?: string;
-  email: string;
-  role: string;
-  plan: string;
-  daily_limit: number;
-  remaining_generations: number;
-}
-
-const AdminUserUpdate: React.FC = () => {
-  const { userId } = useParams<{ userId: string }>();
-  const navigate = useNavigate();
+const AdminUserUpdate = () => {
+  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userFound, setUserFound] = useState(false);
   const { toast } = useToast();
-  const [userData, setUserData] = useState<UserData>({
-    email: '',
-    role: 'user',
-    plan: 'free',
-    daily_limit: 10,
-    remaining_generations: 10
-  });
-  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!userId) return;
+  const searchUser = async () => {
+    if (!userId && !email) {
+      toast({
+        title: 'Error',
+        description: 'Please enter either a user ID or email',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
       
-      setIsLoading(true);
-      try {
-        // First fetch the user's auth data
-        const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
-        
-        if (authError) throw authError;
-        
-        // Then fetch the user's profile data
-        const { data: profileData, error: profileError } = await supabase
+      let userQuery;
+      
+      if (email) {
+        // Search by email in profiles table
+        userQuery = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, plan, email')
+          .ilike('email', email)
+          .maybeSingle();
+      } else {
+        // Search by ID
+        userQuery = await supabase
+          .from('profiles')
+          .select('id, plan, email')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+      }
+      
+      if (userQuery.error) throw userQuery.error;
+      
+      if (userQuery.data) {
+        // Check if admin
+        const { data: adminData, error: adminError } = await supabase
+          .rpc('get_admin_users');
         
-        if (profileError) throw profileError;
+        if (adminError) throw adminError;
         
-        // Then fetch the user's role data
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
+        const adminUsers = adminData || [];
+        const isUserAdmin = adminUsers.some(u => u.user_id === userQuery.data.id);
         
-        if (roleError && roleError.code !== 'PGRST116') throw roleError;
+        // Set user data
+        setUserId(userQuery.data.id);
+        setEmail(userQuery.data.email || '');
+        setSelectedPlan(userQuery.data.plan || 'free');
+        setIsAdmin(isUserAdmin);
+        setUserFound(true);
         
-        setUserData({
-          id: userId,
-          email: authData.user?.email || '',
-          role: roleData?.role || 'user',
-          plan: profileData?.plan || 'free',
-          daily_limit: profileData?.daily_limit || 10,
-          remaining_generations: profileData?.remaining_generations || 0
-        });
-      } catch (error) {
-        console.error('Error fetching user data:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load user data',
+          title: 'User Found',
+          description: `User found with ID: ${userQuery.data.id}`,
+        });
+      } else {
+        setUserFound(false);
+        toast({
+          title: 'User Not Found',
+          description: 'No user found with the provided ID or email',
           variant: 'destructive',
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Error searching user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to search user. Please check console for details.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+  
+  const handleUpdateUser = async () => {
+    if (!userFound || !userId) {
+      toast({
+        title: 'Error',
+        description: 'Please search for a valid user first',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    fetchUserData();
-  }, [userId, toast]);
-
-  const handleSave = async () => {
-    if (!userId) return;
-    
-    setIsLoading(true);
     try {
-      // Update the user's profile data
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          plan: userData.plan,
-          daily_limit: userData.daily_limit,
-          remaining_generations: userData.remaining_generations
-        })
-        .eq('id', userId);
+      setLoading(true);
       
-      if (profileError) throw profileError;
+      // Update user plan
+      await changeUserPlan(userId, selectedPlan);
       
-      // Update the user's role
-      const { data: existingRole } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      // Check current admin status to determine if we need to add or remove admin role
+      const { data: adminData } = await supabase
+        .rpc('get_admin_users');
       
-      if (existingRole) {
-        // Update existing role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .update({ role: userData.role })
-          .eq('user_id', userId);
-        
-        if (roleError) throw roleError;
-      } else {
-        // Insert new role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role: userData.role });
-        
-        if (roleError) throw roleError;
+      const adminUsers = adminData || [];
+      const userIsCurrentlyAdmin = adminUsers.some(u => u.user_id === userId);
+      
+      // Only update admin role if it changed
+      if (userIsCurrentlyAdmin !== isAdmin) {
+        await toggleAdminRole(userId, userIsCurrentlyAdmin);
       }
       
       toast({
         title: 'Success',
-        description: 'User data updated successfully',
+        description: 'User updated successfully',
       });
-      
-      navigate('/admin/users');
     } catch (error) {
-      console.error('Error updating user data:', error);
+      console.error('Error updating user:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update user data',
+        description: 'Failed to update user. Please check console for details.',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUserData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setUserData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUserData(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
-  };
-
   return (
-    <AdminLayout>
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit User: {userData.email}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    value={userData.email}
-                    onChange={handleInputChange}
-                    disabled
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select
-                    value={userData.role}
-                    onValueChange={(value) => handleSelectChange('role', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="moderator">Moderator</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="plan">Subscription Plan</Label>
-                  <Select
-                    value={userData.plan}
-                    onValueChange={(value) => handleSelectChange('plan', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select plan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free">Free</SelectItem>
-                      <SelectItem value="basic">Basic</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="daily_limit">Daily Limit</Label>
-                  <Input
-                    id="daily_limit"
-                    name="daily_limit"
-                    type="number"
-                    value={userData.daily_limit}
-                    onChange={handleNumberChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="remaining_generations">Remaining Generations</Label>
-                  <Input
-                    id="remaining_generations"
-                    name="remaining_generations"
-                    type="number"
-                    value={userData.remaining_generations}
-                    onChange={handleNumberChange}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-4 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/admin/users')}
-                  disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Update User</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Search Form */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="userId" className="text-sm font-medium">User ID</label>
+            <Input
+              id="userId"
+              placeholder="Enter user ID"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">Or Email</label>
+            <Input
+              id="email"
+              placeholder="Enter user email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          
+          <Button onClick={searchUser} disabled={searchLoading}>
+            {searchLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Search User
+          </Button>
+        </div>
+        
+        {/* Update Form - only show if user is found */}
+        {userFound && (
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-lg font-medium">Update User Details</h3>
+            
+            <div className="space-y-2">
+              <label htmlFor="userEmail" className="text-sm font-medium">Email</label>
+              <Input id="userEmail" value={email} disabled />
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </AdminLayout>
+            
+            <div className="space-y-2">
+              <label htmlFor="plan" className="text-sm font-medium">Plan</label>
+              <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="basic">Basic</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isAdmin"
+                checked={isAdmin}
+                onChange={(e) => setIsAdmin(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <label htmlFor="isAdmin" className="text-sm font-medium">Admin User</label>
+            </div>
+            
+            <Button onClick={handleUpdateUser} disabled={loading} className="mt-4">
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Update User
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

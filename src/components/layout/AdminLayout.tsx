@@ -10,7 +10,8 @@ import {
   BarChart, 
   Settings, 
   LogOut,
-  Menu
+  Menu,
+  CreditCard
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -73,6 +74,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 <Button variant="ghost" className="w-full justify-start">
                   <FileText className="mr-2 h-4 w-4" />
                   Audio Files
+                </Button>
+              </Link>
+              <Link to="/admin/purchases" onClick={() => setMobileSidebarOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Purchases
                 </Button>
               </Link>
               <Link to="/admin/ai-chat" onClick={() => setMobileSidebarOpen(false)}>
