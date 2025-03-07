@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import AudioOutput from '@/components/generator/AudioOutput';
 import GeneratorHeader from '@/components/generator/GeneratorHeader';
@@ -15,8 +15,18 @@ const GeneratorContainer = () => {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState('generate');
   const { generationStats, fetchGenerationStats } = useGenerationStats();
-  const { loading, generatedAudio, error, handleGenerate, setError, isCached } = useGenerationLogic();
+  const { loading, generatedAudio, error, handleGenerate, setError, isCached, googleTtsAvailable } = useGenerationLogic();
+  const [googleTtsError, setGoogleTtsError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Check if Google TTS is available and set appropriate error message
+  useEffect(() => {
+    if (!googleTtsAvailable) {
+      setGoogleTtsError('Using fallback voices. Some advanced features may be limited.');
+    } else {
+      setGoogleTtsError(null);
+    }
+  }, [googleTtsAvailable]);
 
   const handleGenerateAudio = async (formData: {
     text: string;
@@ -55,7 +65,8 @@ const GeneratorContainer = () => {
   return (
     <div className="container max-w-6xl mx-auto px-4 py-8 md:py-12">
       <GeneratorHeader />
-      <ErrorAlert error={error} />
+      {error && <ErrorAlert error={error} />}
+      {googleTtsError && !error && <ErrorAlert error={googleTtsError} isGoogleTtsError={true} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">

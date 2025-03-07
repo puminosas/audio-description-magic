@@ -11,6 +11,7 @@ export type { GeneratedAudio } from './useGenerationState';
 export const useGenerationLogic = () => {
   const { toast } = useToast();
   const [googleTtsAvailable, setGoogleTtsAvailable] = useState(true);
+  const [initializationAttempted, setInitializationAttempted] = useState(false);
   const { 
     loading, 
     generatedAudio, 
@@ -23,24 +24,38 @@ export const useGenerationLogic = () => {
   // Initialize Google voices when the component mounts
   useEffect(() => {
     const initializeVoices = async () => {
+      if (initializationAttempted) return;
+      
+      setInitializationAttempted(true);
       try {
         await initializeGoogleVoices();
+        
         // Test if we can get languages to confirm it's working
-        getAvailableLanguages();
-        setGoogleTtsAvailable(true);
+        const languages = getAvailableLanguages();
+        
+        if (languages && languages.length > 0) {
+          setGoogleTtsAvailable(true);
+          console.log("Google TTS integration successful with", languages.length, "languages");
+        } else {
+          throw new Error("No languages available");
+        }
       } catch (error) {
         console.error('Failed to initialize Google voices:', error);
         setGoogleTtsAvailable(false);
-        toast({
-          title: "Google TTS Unavailable",
-          description: "Unable to connect to Google Text-to-Speech service. Please check your network connection and try again later.",
-          variant: "destructive",
-        });
+        
+        // Only show toast on first load, not on retries
+        if (!initializationAttempted) {
+          toast({
+            title: "Using Fallback Voices",
+            description: "Limited voice selection available. Some features may be restricted.",
+            variant: "warning",
+          });
+        }
       }
     };
     
     initializeVoices();
-  }, [toast]);
+  }, [toast, initializationAttempted]);
 
   return {
     loading,

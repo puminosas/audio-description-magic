@@ -4,6 +4,36 @@ import { supabase } from '@/integrations/supabase/client';
 import { VoiceOption } from '@/utils/audio/types';
 import { formatVoiceName } from '../utils';
 
+// Fallback voices for common languages
+const fallbackVoices: Record<string, VoiceOption[]> = {
+  'en-US': [
+    { id: 'en-US-Standard-A', name: 'Standard A (Male)', gender: 'MALE' },
+    { id: 'en-US-Standard-C', name: 'Standard C (Female)', gender: 'FEMALE' }
+  ],
+  'en-GB': [
+    { id: 'en-GB-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
+    { id: 'en-GB-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
+  ],
+  'es-ES': [
+    { id: 'es-ES-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
+    { id: 'es-ES-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
+  ],
+  'fr-FR': [
+    { id: 'fr-FR-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
+    { id: 'fr-FR-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
+  ],
+  'de-DE': [
+    { id: 'de-DE-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
+    { id: 'de-DE-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
+  ]
+};
+
+// Generic fallback for any language not in our predefined list
+const genericFallbackVoices: VoiceOption[] = [
+  { id: 'generic-male', name: 'Male Voice', gender: 'MALE' },
+  { id: 'generic-female', name: 'Female Voice', gender: 'FEMALE' }
+];
+
 export function useVoiceData(
   language: string,
   selectedVoice?: VoiceOption,
@@ -26,8 +56,17 @@ export function useVoiceData(
         
         if (response.error) {
           console.error('Error fetching voices:', response.error);
+          
+          // Use fallback voices instead of showing an error
+          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
+          setVoices(fallbackForLanguage);
+          
+          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
+          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
+            onSelect(fallbackForLanguage[0]);
+          }
+          
           if (isMounted) {
-            setError(`Failed to fetch voices: ${response.error.message}`);
             setLoading(false);
           }
           return;
@@ -36,8 +75,17 @@ export function useVoiceData(
         // Check if we have valid data
         if (!response.data || typeof response.data !== 'object' || Object.keys(response.data).length === 0) {
           console.error('Invalid voice data format received');
+          
+          // Use fallback voices
+          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
+          setVoices(fallbackForLanguage);
+          
+          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
+          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
+            onSelect(fallbackForLanguage[0]);
+          }
+          
           if (isMounted) {
-            setError('No voices available. Google TTS API may be unreachable.');
             setLoading(false);
           }
           return;
@@ -64,7 +112,14 @@ export function useVoiceData(
           formattedVoices.sort((a, b) => a.name.localeCompare(b.name));
           
           if (formattedVoices.length === 0) {
-            setError(`No voices available for language: ${language}`);
+            // Use fallback voices if the API returned an empty array
+            const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
+            setVoices(fallbackForLanguage);
+            
+            // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
+            if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
+              onSelect(fallbackForLanguage[0]);
+            }
           } else {
             setVoices(formattedVoices);
             
@@ -74,12 +129,27 @@ export function useVoiceData(
             }
           }
         } else if (isMounted) {
-          setError(`No voices available for language: ${language}`);
+          // Use fallback voices for this language
+          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
+          setVoices(fallbackForLanguage);
+          
+          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
+          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
+            onSelect(fallbackForLanguage[0]);
+          }
         }
       } catch (error) {
         console.error('Error loading voices:', error);
+        
         if (isMounted) {
-          setError(error instanceof Error ? error.message : 'Failed to load voices');
+          // Use fallback voices instead of showing an error
+          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
+          setVoices(fallbackForLanguage);
+          
+          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
+          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
+            onSelect(fallbackForLanguage[0]);
+          }
         }
       } finally {
         if (isMounted) {

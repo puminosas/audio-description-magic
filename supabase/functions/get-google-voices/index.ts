@@ -7,6 +7,67 @@ let cachedVoices: any = null;
 let cacheTimestamp: number = 0;
 const CACHE_DURATION = 3600000; // 1 hour in milliseconds
 
+// Fallback data in case the Google API is unavailable
+const fallbackVoices = {
+  "en-US": {
+    display_name: "English (US)",
+    voices: {
+      MALE: [
+        { name: "en-US-Standard-A", ssml_gender: "MALE" },
+        { name: "en-US-Standard-B", ssml_gender: "MALE" }
+      ],
+      FEMALE: [
+        { name: "en-US-Standard-C", ssml_gender: "FEMALE" },
+        { name: "en-US-Standard-E", ssml_gender: "FEMALE" }
+      ]
+    }
+  },
+  "en-GB": {
+    display_name: "English (UK)",
+    voices: {
+      MALE: [
+        { name: "en-GB-Standard-B", ssml_gender: "MALE" }
+      ],
+      FEMALE: [
+        { name: "en-GB-Standard-A", ssml_gender: "FEMALE" }
+      ]
+    }
+  },
+  "es-ES": {
+    display_name: "Spanish (Spain)",
+    voices: {
+      MALE: [
+        { name: "es-ES-Standard-B", ssml_gender: "MALE" }
+      ],
+      FEMALE: [
+        { name: "es-ES-Standard-A", ssml_gender: "FEMALE" }
+      ]
+    }
+  },
+  "fr-FR": {
+    display_name: "French (France)",
+    voices: {
+      MALE: [
+        { name: "fr-FR-Standard-B", ssml_gender: "MALE" }
+      ],
+      FEMALE: [
+        { name: "fr-FR-Standard-A", ssml_gender: "FEMALE" }
+      ]
+    }
+  },
+  "de-DE": {
+    display_name: "German (Germany)",
+    voices: {
+      MALE: [
+        { name: "de-DE-Standard-B", ssml_gender: "MALE" }
+      ],
+      FEMALE: [
+        { name: "de-DE-Standard-A", ssml_gender: "FEMALE" }
+      ]
+    }
+  }
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -27,11 +88,12 @@ serve(async (req) => {
     // Get Google credentials from environment variables
     const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
     if (!credentialsJson) {
-      console.error("Google credentials not found in environment variables");
-      return new Response(JSON.stringify({
-        error: "Google TTS API credentials not configured"
-      }), {
-        status: 500,
+      console.log("Google credentials not found - using fallback data");
+      // Return fallback data when credentials aren't available
+      cachedVoices = fallbackVoices;
+      cacheTimestamp = now;
+      
+      return new Response(JSON.stringify(fallbackVoices), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -42,21 +104,23 @@ serve(async (req) => {
       credentials = JSON.parse(credentialsJson);
     } catch (parseError) {
       console.error("Failed to parse Google credentials:", parseError);
-      return new Response(JSON.stringify({
-        error: "Invalid Google TTS API credentials format"
-      }), {
-        status: 500,
+      // Return fallback data when credentials are invalid
+      cachedVoices = fallbackVoices;
+      cacheTimestamp = now;
+      
+      return new Response(JSON.stringify(fallbackVoices), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
     // Validate that we have the necessary credentials
     if (!credentials.private_key || !credentials.client_email) {
-      console.error("Invalid Google credentials format");
-      return new Response(JSON.stringify({
-        error: "Incomplete Google TTS API credentials"
-      }), {
-        status: 500,
+      console.error("Invalid Google credentials format - using fallback data");
+      // Return fallback data when credentials are incomplete
+      cachedVoices = fallbackVoices;
+      cacheTimestamp = now;
+      
+      return new Response(JSON.stringify(fallbackVoices), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -69,10 +133,11 @@ serve(async (req) => {
       console.log("Successfully obtained access token");
     } catch (tokenError) {
       console.error("Failed to get access token:", tokenError);
-      return new Response(JSON.stringify({
-        error: "Failed to authenticate with Google TTS API: " + tokenError.message
-      }), {
-        status: 500,
+      // Return fallback data when token acquisition fails
+      cachedVoices = fallbackVoices;
+      cacheTimestamp = now;
+      
+      return new Response(JSON.stringify(fallbackVoices), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -92,10 +157,11 @@ serve(async (req) => {
       
       if (!voicesResponse.ok) {
         console.error(`API error: ${voicesResponse.status} - ${voicesResponse.statusText}`);
-        return new Response(JSON.stringify({
-          error: `Google TTS API responded with error: ${voicesResponse.status} ${voicesResponse.statusText}`
-        }), {
-          status: voicesResponse.status,
+        // Return fallback data when API call fails
+        cachedVoices = fallbackVoices;
+        cacheTimestamp = now;
+        
+        return new Response(JSON.stringify(fallbackVoices), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
@@ -103,11 +169,12 @@ serve(async (req) => {
       const voicesData = await voicesResponse.json();
       
       if (!voicesData.voices || !Array.isArray(voicesData.voices)) {
-        console.error("Invalid response format from Google TTS API");
-        return new Response(JSON.stringify({
-          error: "Invalid response format from Google TTS API"
-        }), {
-          status: 500,
+        console.error("Invalid response format from Google TTS API - using fallback data");
+        // Return fallback data when API response is invalid
+        cachedVoices = fallbackVoices;
+        cacheTimestamp = now;
+        
+        return new Response(JSON.stringify(fallbackVoices), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
@@ -127,20 +194,18 @@ serve(async (req) => {
       
     } catch (apiError) {
       console.error("Error fetching voices from API:", apiError);
-      return new Response(JSON.stringify({
-        error: `Failed to fetch voices from Google TTS API: ${apiError.message}`
-      }), {
-        status: 500,
+      // Return fallback data when API call throws an exception
+      cachedVoices = fallbackVoices;
+      cacheTimestamp = now;
+      
+      return new Response(JSON.stringify(fallbackVoices), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
   } catch (error) {
     console.error("Unhandled error:", error);
-    return new Response(JSON.stringify({
-      error: `Unhandled error in get-google-voices: ${error.message}`
-    }), {
-      status: 500,
+    return new Response(JSON.stringify(fallbackVoices), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
