@@ -1,14 +1,11 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Save, FileSearch } from 'lucide-react';
+import React, { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { FileInfo } from '../types';
+import MessageList from './MessageList';
+import MessageInput from './MessageInput';
+import FileActionButtons from './FileActionButtons';
+import FileEditDialog from './FileEditDialog';
 
 export interface ChatMessage {
   id: string;
@@ -36,33 +33,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onAnalyzeFile,
   error,
 }) => {
-  const [input, setInput] = useState('');
   const { toast } = useToast();
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [fileContent, setFileContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  const handleSendMessageClick = () => {
-    if (input.trim() !== '') {
-      onSendMessage(input);
-      setInput('');
-    }
-  };
-
-  const handleEnterPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessageClick();
-    }
-  };
 
   const handleSaveClick = () => {
     if (selectedFile) {
@@ -124,120 +98,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-grow pr-4">
-        <div className="flex flex-col space-y-4 p-2">
-          {messages.map((message) => (
-            <div key={message.id} className={`flex items-start ${message.isUserMessage ? 'justify-end' : 'justify-start'}`}>
-              {!message.isUserMessage && (
-                <Avatar className="w-8 h-8 mr-3 mt-1">
-                  <AvatarImage src="/lovable-uploads/24d92d37-4470-4427-a02c-349aa3e574de.png" alt="AI Avatar" />
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-              )}
-              <div className={`rounded-lg p-3 text-sm max-w-[80%] ${
-                message.isUserMessage 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-secondary'
-              }`}>
-                <p className="whitespace-pre-wrap break-words">{message.text}</p>
-                <div className="text-xs text-muted-foreground mt-1">{new Date(message.timestamp).toLocaleTimeString()}</div>
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex items-start justify-start">
-              <Avatar className="w-8 h-8 mr-3 mt-1">
-                <AvatarImage src="/lovable-uploads/24d92d37-4470-4427-a02c-349aa3e574de.png" alt="AI Avatar" />
-                <AvatarFallback>AI</AvatarFallback>
-              </Avatar>
-              <div className="rounded-lg p-3 text-sm bg-secondary animate-pulse">
-                Thinking...
-              </div>
-            </div>
-          )}
-          {error && (
-            <div className="px-4 py-2 bg-destructive/10 text-destructive rounded-md my-2">
-              Error: {error}
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
+      <MessageList 
+        messages={messages} 
+        isLoading={isLoading} 
+        error={error} 
+      />
 
       <div className="border-t pt-3 mt-3">
-        <div className="flex items-center gap-2 mb-3">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleSaveClick} 
-            disabled={!selectedFile}
-            className="gap-1"
-          >
-            <Save className="h-4 w-4" />
-            Save File
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleAnalyzeClick} 
-            disabled={!selectedFile || isAnalyzing}
-            className="gap-1"
-          >
-            <FileSearch className="h-4 w-4" />
-            {isAnalyzing ? 'Analyzing...' : 'Analyze File'}
-          </Button>
-        </div>
+        <FileActionButtons 
+          selectedFile={selectedFile} 
+          isAnalyzing={isAnalyzing}
+          onSaveClick={handleSaveClick}
+          onAnalyzeClick={handleAnalyzeClick}
+        />
 
-        <div className="flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleEnterPress}
-            placeholder="Type your message..."
-            className="resize-none min-h-[80px]"
-          />
-          <Button 
-            onClick={handleSendMessageClick} 
-            disabled={isLoading || !input.trim()} 
-            className="self-end"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Send
-          </Button>
-        </div>
+        <MessageInput 
+          onSendMessage={onSendMessage} 
+          isLoading={isLoading} 
+        />
       </div>
 
-      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit File Content</DialogTitle>
-            <DialogDescription>
-              Make changes to the file content before saving.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="content" className="text-right">
-                Content
-              </Label>
-              <div className="col-span-3">
-                <Textarea
-                  id="content"
-                  value={fileContent}
-                  onChange={(e) => setFileContent(e.target.value)}
-                  className="font-mono h-[300px]"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setIsSaveDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleSaveConfirm}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FileEditDialog 
+        isOpen={isSaveDialogOpen}
+        onOpenChange={setIsSaveDialogOpen}
+        fileContent={fileContent}
+        setFileContent={setFileContent}
+        onSave={handleSaveConfirm}
+      />
     </div>
   );
 };

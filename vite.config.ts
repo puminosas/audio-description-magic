@@ -11,7 +11,10 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   preview: {
-    allowedHosts: ["audiodescriptions.online"]
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    host: 'audiodescriptions.online',
   },
   plugins: [
     react(),
