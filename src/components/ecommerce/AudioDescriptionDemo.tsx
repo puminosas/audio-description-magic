@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsItem, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import DescriptionInput from '@/components/generator/DescriptionInput';
@@ -121,8 +121,8 @@ fetch("https://api.audiodescriptions.online/get-audio", {
             <LanguageVoiceSelector 
               selectedLanguage={language}
               selectedVoice={voice}
-              onLanguageChange={setLanguage}
-              onVoiceChange={setVoice}
+              onSelectLanguage={setLanguage}
+              onSelectVoice={setVoice}
             />
           </CardContent>
           <CardFooter>
