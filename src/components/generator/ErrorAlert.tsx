@@ -18,6 +18,14 @@ const ErrorAlert = ({ error, isGoogleTtsError, hideWhenGoogleTtsWorking = false 
   // If there's no error, don't show anything
   if (!error) return null;
   
+  // Don't show Google TTS errors if they contain these strings (which indicate fallback is working)
+  if (isGoogleTtsError && 
+    (error.includes('Google TTS service may be unavailable') || 
+     error.includes('Failed to load languages') ||
+     error.includes('Failed to initialize Google voices'))) {
+    return null;
+  }
+  
   return (
     <Alert variant="destructive" className="mb-6">
       {isGoogleTtsError ? (

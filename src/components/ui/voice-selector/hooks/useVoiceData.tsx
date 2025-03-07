@@ -25,6 +25,9 @@ const fallbackVoices: Record<string, VoiceOption[]> = {
   'de-DE': [
     { id: 'de-DE-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
     { id: 'de-DE-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
+  ],
+  'af-ZA': [
+    { id: 'af-ZA-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
   ]
 };
 

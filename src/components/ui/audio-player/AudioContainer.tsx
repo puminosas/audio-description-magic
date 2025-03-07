@@ -31,7 +31,7 @@ const AudioContainer: React.FC<AudioContainerProps> = ({
         <AudioStatus 
           audioUrl={audioUrl} 
           isGenerating={isGenerating} 
-          isValidUrl={hasValidUrl}
+          isValidUrl={isValidUrl}
           validationDetails={validationDetails}
         />
         
@@ -43,7 +43,7 @@ const AudioContainer: React.FC<AudioContainerProps> = ({
         <PlayerControls 
           isGenerating={isGenerating}
           fileName={fileName}
-          audioUrl={hasValidUrl ? audioUrl : undefined}
+          audioUrl={audioUrl}
         />
       </div>
     </AudioPlayerProvider>

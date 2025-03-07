@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from 'react';
-import { Mic, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
+import { Mic, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,7 +14,6 @@ import SearchInput from './voice-selector/SearchInput';
 import FilterButtons from './voice-selector/FilterButtons';
 import VoiceList from './voice-selector/VoiceList';
 import { useVoiceData } from './voice-selector/hooks/useVoiceData';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface VoiceSelectorProps {
   onSelect: (voice: VoiceOption) => void;
@@ -70,16 +69,14 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
     <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="w-full justify-between" disabled={loading || !!error}>
+          <Button variant="outline" className="w-full justify-between" disabled={loading}>
             <span className="flex items-center">
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : error ? (
-                <AlertTriangle className="mr-2 h-4 w-4 text-destructive" />
               ) : (
                 <Mic className="mr-2 h-4 w-4" />
               )}
-              <span>{error ? 'No Voices Available' : selectedVoiceDisplay}</span>
+              <span>{selectedVoiceDisplay}</span>
             </span>
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
@@ -98,31 +95,16 @@ const VoiceSelector = ({ onSelect, selectedVoice, language = 'en-US' }: VoiceSel
           </div>
           <DropdownMenuSeparator />
           <div className="max-h-64 overflow-y-auto">
-            {error ? (
-              <div className="p-4">
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">{error}</AlertDescription>
-                </Alert>
-              </div>
-            ) : (
-              <VoiceList 
-                loading={loading}
-                displayVoices={displayVoices}
-                effectiveSelectedVoice={selectedVoice}
-                onSelect={onSelect}
-                searchQuery={searchQuery}
-              />
-            )}
+            <VoiceList 
+              loading={loading}
+              displayVoices={displayVoices}
+              effectiveSelectedVoice={selectedVoice}
+              onSelect={onSelect}
+              searchQuery={searchQuery}
+            />
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-      
-      {error && (
-        <p className="text-destructive text-xs mt-1">
-          Google TTS voices unavailable. {error}
-        </p>
-      )}
     </div>
   );
 };

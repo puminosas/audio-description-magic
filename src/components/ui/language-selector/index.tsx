@@ -43,16 +43,14 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
     <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="w-full justify-between" disabled={loading || !!error}>
+          <Button variant="outline" className="w-full justify-between" disabled={loading}>
             <span className="flex items-center">
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : error ? (
-                <AlertTriangle className="mr-2 h-4 w-4 text-destructive" />
               ) : (
                 <Globe className="mr-2 h-4 w-4" />
               )}
-              <span>{error ? 'No Languages Available' : selectedLanguageDisplay}</span>
+              <span>{selectedLanguageDisplay}</span>
             </span>
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
@@ -75,12 +73,6 @@ const LanguageSelector = ({ onSelect, selectedLanguage }: LanguageSelectorProps)
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-      
-      {error && (
-        <p className="text-destructive text-xs mt-1">
-          Google TTS languages unavailable. {error}
-        </p>
-      )}
     </div>
   );
 };

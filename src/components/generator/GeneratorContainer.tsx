@@ -21,16 +21,23 @@ const GeneratorContainer = () => {
     return <Navigate to="/auth" />;
   }
 
+  // Check if error is a Google TTS error
+  const isGoogleTtsError = error && (
+    error.includes("Google TTS") || 
+    error.includes("Failed to load languages") ||
+    error.includes("Failed to initialize Google voices")
+  );
+
   return (
     <div className="container mx-auto p-4">
       <GeneratorHeader />
       
-      {/* Only show error if it's not being suppressed */}
+      {/* Only show error if it's not a Google TTS error or if it's crucial */}
       {error && !suppressErrors && (
         <ErrorAlert 
           error={error} 
-          isGoogleTtsError={!googleTtsAvailable}
-          hideWhenGoogleTtsWorking={suppressErrors}
+          isGoogleTtsError={isGoogleTtsError}
+          hideWhenGoogleTtsWorking={suppressErrors || isGoogleTtsError}
         />
       )}
       
