@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
@@ -6,33 +7,34 @@
 
 @layer base {
   :root {
-    --background: 210 15% 95%;
-    --foreground: 215 25% 15%;
+    /* Light theme - optimized for better readability */
+    --background: 0 0% 100%;
+    --foreground: 215 25% 27%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 215 25% 27%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 215 25% 27%;
 
-    --primary: 150 60% 40%; /* Adjusted to match dark theme's matrix green */
-    --primary-foreground: 0 0% 98%;
+    --primary: 220 70% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 30% 92%; /* Light green tint */
-    --secondary-foreground: 150 60% 20%;
+    --secondary: 220 30% 96%;
+    --secondary-foreground: 220 70% 40%;
 
-    --muted: 150 20% 92%;
+    --muted: 220 20% 94%;
     --muted-foreground: 215 20% 45%;
 
-    --accent: 150 60% 40%; /* Matching primary */
-    --accent-foreground: 0 0% 98%;
+    --accent: 220 70% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 20% 98%;
 
-    --border: 150 30% 85%; /* Light green border */
-    --input: 150 30% 85%;
-    --ring: 150 60% 40%; /* Match primary */
+    --border: 220 30% 90%;
+    --input: 220 30% 90%;
+    --ring: 220 70% 50%;
 
     --radius: 0.5rem;
   }
@@ -47,24 +49,24 @@
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 150 80% 40%; /* Softer matrix green */
+    --primary: 150 80% 40%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 150 30% 15%; /* Darker Matrix green */
+    --secondary: 150 30% 15%;
     --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 150 80% 40%; /* Softer matrix green */
+    --accent: 150 80% 40%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 150 30% 20%; /* Matrix green border */
+    --border: 150 30% 20%;
     --input: 150 30% 20%;
-    --ring: 150 80% 40%; /* Softer matrix green */
+    --ring: 150 80% 40%;
   }
 }
 
@@ -80,12 +82,12 @@
 }
 
 .glassmorphism {
-  @apply bg-white/30 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10;
+  @apply bg-white/80 dark:bg-black/30 backdrop-blur-xl border border-gray-200/50 dark:border-white/10;
 }
 
 .hero-gradient {
   @apply bg-gradient-to-b from-transparent to-primary/5;
-  background: radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.15), transparent 70%);
+  background: radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.1), transparent 70%);
 }
 
 .sound-wave {
