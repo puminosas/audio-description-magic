@@ -43,15 +43,18 @@ const GeneratorTabs = ({
         
         <TabsContent value="generate" className="space-y-6">
           <TextToAudioTab 
-            onSubmit={handleGenerate}
+            onGenerate={handleGenerate}
             loading={loading}
+            user={user}
           />
           
           {/* Show audio output when audioUrl is available */}
           {generatedAudio && generatedAudio.audioUrl && (
             <AudioOutput
               audioUrl={generatedAudio.audioUrl}
-              text={generatedAudio.text || ''}
+              generatedText={generatedAudio.text || ''}
+              isGenerating={false}
+              error={null}
               fileName={generatedAudio.fileName || 'audio-description.mp3'}
             />
           )}
@@ -69,7 +72,7 @@ const GeneratorTabs = ({
         <TabsContent value="history" className="space-y-6">
           <HistoryTab 
             user={user} 
-            onRefreshStats={onRefreshStats}
+            onRefreshStats={onRefreshStats || (async () => Promise.resolve())}
           />
         </TabsContent>
       </Tabs>

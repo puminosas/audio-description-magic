@@ -12,6 +12,7 @@ interface AudioOutputProps {
   isGenerating: boolean;
   error: string | null;
   isCached?: boolean;
+  fileName?: string;
 }
 
 const AudioOutput: React.FC<AudioOutputProps> = ({
@@ -19,7 +20,8 @@ const AudioOutput: React.FC<AudioOutputProps> = ({
   generatedText,
   isGenerating,
   error,
-  isCached
+  isCached,
+  fileName = 'audio-description.mp3'
 }) => {
   if (!audioUrl && !isGenerating) return null;
 
@@ -44,7 +46,7 @@ const AudioOutput: React.FC<AudioOutputProps> = ({
                   )}
                   <AudioPlayer
                     audioUrl={audioUrl}
-                    fileName="audio-description.mp3"
+                    fileName={fileName}
                   />
                 </div>
               )}
