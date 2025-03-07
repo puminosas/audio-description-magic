@@ -7,13 +7,17 @@ import GeneratorTabs from './GeneratorTabs';
 import GeneratorSidebar from './GeneratorSidebar';
 import ErrorAlert from './ErrorAlert';
 import { useGenerationLogic } from './hooks/useGenerationLogic';
+import { LanguageOption, VoiceOption } from '@/utils/audio';
+import { useGenerationStats } from './hooks/useGenerationStats';
 
 const GeneratorContainer = () => {
-  const { user, loading } = useAuth();
-  const { error, googleTtsAvailable, suppressErrors } = useGenerationLogic();
-  
+  const { user, loading: authLoading, profile } = useAuth();
+  const { error, googleTtsAvailable, suppressErrors, handleGenerate, loading, isCached } = useGenerationLogic();
+  const [activeTab, setActiveTab] = useState('generate');
+  const { stats, refreshStats } = useGenerationStats(user);
+
   // Don't redirect authenticated users
-  if (!loading && !user) {
+  if (!authLoading && !user) {
     return <Navigate to="/auth" />;
   }
 
@@ -32,10 +36,23 @@ const GeneratorContainer = () => {
       
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         <div className="lg:col-span-3">
-          <GeneratorTabs />
+          <GeneratorTabs 
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            handleGenerate={(formData: { text: string; language: LanguageOption; voice: VoiceOption }) => 
+              handleGenerate(formData, activeTab, refreshStats)
+            }
+            loading={loading}
+            user={user}
+            onRefreshStats={refreshStats}
+          />
         </div>
         <div className="lg:col-span-1">
-          <GeneratorSidebar />
+          <GeneratorSidebar 
+            user={user}
+            profile={profile}
+            generationStats={stats || { total: 0, today: 0, remaining: 0 }}
+          />
         </div>
       </div>
     </div>
