@@ -7,6 +7,19 @@ import LanguageVoiceSelector from './LanguageVoiceSelector';
 import { LanguageOption, VoiceOption, getAvailableLanguages, getAvailableVoices } from '@/utils/audio';
 import { useToast } from '@/hooks/use-toast';
 
+// Fallback options when Google TTS API is unavailable
+const FALLBACK_LANGUAGE: LanguageOption = { 
+  code: 'en-US', 
+  name: 'English (US)', 
+  flag: '🇺🇸'
+};
+
+const FALLBACK_VOICE: VoiceOption = {
+  id: 'en-US-Standard-A',
+  name: 'Standard Voice A',
+  gender: 'FEMALE'
+};
+
 interface TextToAudioTabProps {
   onGenerate: (formData: {
     text: string;
@@ -19,11 +32,40 @@ interface TextToAudioTabProps {
 
 const TextToAudioTab = ({ onGenerate, loading, user }: TextToAudioTabProps) => {
   const [text, setText] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(getAvailableLanguages()[0]);
-  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(getAvailableVoices('en')[0]);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Safely get available languages with fallback
+  const getLanguageOptions = (): LanguageOption[] => {
+    try {
+      const languages = getAvailableLanguages();
+      if (languages && languages.length > 0) {
+        return languages;
+      }
+      return [FALLBACK_LANGUAGE];
+    } catch (error) {
+      console.warn('Error loading languages, using fallback:', error);
+      return [FALLBACK_LANGUAGE];
+    }
+  };
+
+  // Safely get available voices with fallback
+  const getVoiceOptions = (languageCode: string): VoiceOption[] => {
+    try {
+      const voices = getAvailableVoices(languageCode);
+      if (voices && voices.length > 0) {
+        return voices;
+      }
+      return [FALLBACK_VOICE];
+    } catch (error) {
+      console.warn('Error loading voices, using fallback:', error);
+      return [FALLBACK_VOICE];
+    }
+  };
+
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(getLanguageOptions()[0]);
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(getVoiceOptions(selectedLanguage.code)[0]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -32,7 +74,7 @@ const TextToAudioTab = ({ onGenerate, loading, user }: TextToAudioTabProps) => {
   const handleSelectLanguage = (language: LanguageOption) => {
     setSelectedLanguage(language);
     // Update voices based on the language
-    setSelectedVoice(getAvailableVoices(language.code)[0]);
+    setSelectedVoice(getVoiceOptions(language.code)[0]);
   };
 
   const handleSelectVoice = (voice: VoiceOption) => {

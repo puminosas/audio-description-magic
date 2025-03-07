@@ -32,14 +32,21 @@ export const useGenerationLogic = () => {
         await initializeGoogleVoices();
         
         // Test if we can get languages to confirm it's working
-        const languages = getAvailableLanguages();
-        
-        if (languages && languages.length > 0) {
-          setGoogleTtsAvailable(true);
-          setSuppressErrors(true); // Suppress any Google TTS errors since it's working
-          console.log("Google TTS integration successful with", languages.length, "languages");
-        } else {
-          throw new Error("No languages available");
+        try {
+          const languages = getAvailableLanguages();
+          
+          if (languages && languages.length > 0) {
+            setGoogleTtsAvailable(true);
+            setSuppressErrors(true); // Suppress any Google TTS errors since it's working
+            console.log("Google TTS integration successful with", languages.length, "languages");
+          } else {
+            // No languages available but no error was thrown
+            console.warn("No languages were returned from Google TTS");
+            setGoogleTtsAvailable(false);
+          }
+        } catch (languageError) {
+          console.error("Failed to get languages:", languageError);
+          setGoogleTtsAvailable(false);
         }
       } catch (error) {
         console.error('Failed to initialize Google voices:', error);
