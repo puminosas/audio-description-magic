@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  preview: {
+    allowedHosts: ["audiodescriptions.online"]
+  },
   plugins: [
     react(),
     mode === 'development' &&

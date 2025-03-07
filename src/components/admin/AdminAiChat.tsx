@@ -29,26 +29,32 @@ const AdminAiChat: React.FC<AdminAiChatProps> = () => {
   } = useCombinedChatLogic();
 
   return (
-    <div className="container mx-auto h-screen flex flex-col">
-      <h1 className="text-2xl font-bold mb-4">AI Chat Interface</h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">AI Chat Assistant</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[calc(100vh-12rem)]">
+        {/* File sidebar */}
+        <Card className="p-4 md:col-span-1 overflow-hidden flex flex-col bg-background">
+          <h3 className="text-lg font-semibold mb-3">File Management</h3>
+          <div className="mb-3">
+            <FileFiltersComponent
+              filters={filters}
+              setSearchQuery={setSearchQuery}
+              toggleTypeFilter={toggleTypeFilter}
+              resetFilters={resetFilters}
+            />
+          </div>
+          <div className="flex-grow overflow-auto">
+            <FileList
+              files={files}
+              selectedFile={selectedFile}
+              onFileSelect={handleFileSelect}
+            />
+          </div>
+        </Card>
 
-      <div className="flex flex-grow">
-        <div className="w-1/4 p-4 border-r">
-          <h3 className="text-lg font-semibold mb-2">File Management</h3>
-          <FileFiltersComponent
-            filters={filters}
-            setSearchQuery={setSearchQuery}
-            toggleTypeFilter={toggleTypeFilter}
-            resetFilters={resetFilters}
-          />
-          <FileList
-            files={files}
-            selectedFile={selectedFile}
-            onFileSelect={handleFileSelect}
-          />
-        </div>
-
-        <div className="flex-grow flex flex-col">
+        {/* Chat interface */}
+        <Card className="p-4 md:col-span-3 h-full flex flex-col overflow-hidden bg-background">
           <ChatInterface 
             messages={messages}
             isLoading={isLoading}
@@ -58,7 +64,7 @@ const AdminAiChat: React.FC<AdminAiChatProps> = () => {
             onAnalyzeFile={handleAnalyzeFile}
             error={error}
           />
-        </div>
+        </Card>
       </div>
     </div>
   );

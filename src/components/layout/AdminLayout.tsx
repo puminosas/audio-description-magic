@@ -11,9 +11,10 @@ import {
   Settings, 
   LogOut,
   Menu,
-  CreditCard
+  CreditCard,
+  X
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
@@ -23,12 +24,17 @@ interface AdminLayoutProps {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signOut } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const isCurrentPath = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
   
   return (
@@ -41,15 +47,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             size="icon" 
             onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           >
-            <Menu className="h-5 w-5" />
+            {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
         
         {/* Sidebar - hidden on mobile unless toggled */}
-        <Sidebar className={`
-          ${mobileSidebarOpen ? 'block' : 'hidden'} 
-          md:flex w-64 border-r pt-5 px-3 flex-col justify-between
-          z-40 bg-background h-full fixed md:static
+        <div className={`
+          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+          md:translate-x-0 transition-transform duration-200 ease-in-out
+          fixed inset-y-0 left-0 z-40 w-64 bg-background border-r pt-5 px-3 flex-col justify-between
+          flex md:static h-full
         `}>
           <div>
             <div className="px-3 py-2">
@@ -57,51 +64,75 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <p className="text-sm text-muted-foreground">Administration</p>
             </div>
             
-            <div className="mt-8 space-y-1.5">
+            <div className="mt-8 space-y-1">
               <Link to="/admin" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin") && !isCurrentPath("/admin/ai-chat") && !isCurrentPath("/admin/users") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
                 </Button>
               </Link>
               <Link to="/admin/users" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin/users") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <Users className="mr-2 h-4 w-4" />
                   User Management
                 </Button>
               </Link>
               <Link to="/admin/audio-files" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin/audio-files") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <FileText className="mr-2 h-4 w-4" />
                   Audio Files
                 </Button>
               </Link>
               <Link to="/admin/purchases" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin/purchases") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <CreditCard className="mr-2 h-4 w-4" />
                   Purchases
                 </Button>
               </Link>
               <Link to="/admin/ai-chat" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin/ai-chat") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <MessageSquare className="mr-2 h-4 w-4" />
                   AI Chat
                 </Button>
               </Link>
               <Link to="/admin/analytics" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin/analytics") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <BarChart className="mr-2 h-4 w-4" />
                   Analytics
                 </Button>
               </Link>
               <Link to="/admin/feedback" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin/feedback") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Feedback
                 </Button>
               </Link>
               <Link to="/admin/settings" onClick={() => setMobileSidebarOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant={isCurrentPath("/admin/settings") ? "secondary" : "ghost"} 
+                  className="w-full justify-start"
+                >
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </Button>
@@ -119,19 +150,19 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               Sign Out
             </Button>
           </div>
-        </Sidebar>
+        </div>
         
         {/* Overlay to close sidebar on mobile */}
         {mobileSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/30 z-30 md:hidden" 
+            className="fixed inset-0 bg-black/30 z-30 md:hidden backdrop-blur-sm" 
             onClick={() => setMobileSidebarOpen(false)}
           />
         )}
         
         {/* Main content */}
-        <div className="flex-1 overflow-auto md:ml-0 pt-16 md:pt-0">
-          <main className="py-6">
+        <div className="flex-1 overflow-auto w-full h-full md:ml-0 pt-16 md:pt-0">
+          <main className="py-6 h-full">
             {children}
           </main>
         </div>
