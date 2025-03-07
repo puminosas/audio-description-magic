@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseTyped } from '@/utils/supabase/typedClient';
 
 export type GenerationStats = {
   total: number;
@@ -22,30 +23,50 @@ export const useGenerationStats = (user: User | null) => {
 
     try {
       setLoading(true);
-      // Call Supabase to get user generation stats
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select('total_generations, today_generations, remaining_generations')
+      
+      // Get the user profile for remaining generations and daily limit
+      const profileResponse = await supabase
+        .from('profiles')
+        .select('remaining_generations, daily_limit, plan')
+        .eq('id', user.id)
+        .maybeSingle();
+        
+      // Get total generations from generation_counts
+      const totalCountResponse = await supabase
+        .from('generation_counts')
+        .select('count')
+        .eq('user_id', user.id);
+        
+      // Get today's generations
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const todayCountResponse = await supabase
+        .from('generation_counts')
+        .select('count')
         .eq('user_id', user.id)
-        .single();
+        .eq('date', today)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching generation stats:', error);
-        return;
-      }
-
-      if (data) {
-        setStats({
-          total: data.total_generations || 0,
-          today: data.today_generations || 0,
-          remaining: data.remaining_generations || 10 // Default to 10 if not set
-        });
-      } else {
-        // If no stats exist yet, provide default values
-        setStats({ total: 0, today: 0, remaining: 10 });
-      }
+      // Calculate total generations
+      const totalGenerations = totalCountResponse.data?.reduce(
+        (sum, record) => sum + (record.count || 0), 
+        0
+      ) || 0;
+      
+      // Get today's generation count
+      const todayGenerations = todayCountResponse.data?.count || 0;
+      
+      // Get remaining generations from profile
+      const remaining = profileResponse.data?.remaining_generations || 10; // Default to 10
+      
+      setStats({
+        total: totalGenerations,
+        today: todayGenerations,
+        remaining: remaining
+      });
     } catch (error) {
       console.error('Failed to fetch generation stats:', error);
+      // Provide default values if error occurs
+      setStats({ total: 0, today: 0, remaining: 10 });
     } finally {
       setLoading(false);
     }
