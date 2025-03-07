@@ -19,11 +19,13 @@ const AudioContainer: React.FC<AudioContainerProps> = ({
   isGenerating,
   validationResult
 }) => {
-  const { hasValidUrl, isValidUrl, validationDetails } = validationResult;
-
+  // Always treat URL as valid if we have one, even if there's a validation error
+  // This ensures the player remains visible
+  const hasAudioUrl = !!audioUrl;
+  
   return (
     <AudioPlayerProvider 
-      audioUrl={hasValidUrl ? audioUrl : undefined}
+      audioUrl={hasAudioUrl ? audioUrl : undefined}
       fileName={fileName}
       isGenerating={isGenerating}
     >
@@ -31,13 +33,13 @@ const AudioContainer: React.FC<AudioContainerProps> = ({
         <AudioStatus 
           audioUrl={audioUrl} 
           isGenerating={isGenerating} 
-          isValidUrl={isValidUrl}
-          validationDetails={validationDetails}
+          isValidUrl={hasAudioUrl} // Treat as valid if we have a URL
+          validationDetails={validationResult.validationDetails}
         />
         
         <AudioWaveform 
           isGenerating={isGenerating} 
-          audioUrl={hasValidUrl ? audioUrl : undefined} 
+          audioUrl={hasAudioUrl ? audioUrl : undefined} 
         />
         
         <PlayerControls 

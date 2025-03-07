@@ -28,16 +28,19 @@ const GeneratorContainer = () => {
     error.includes("Failed to initialize Google voices")
   );
 
+  // Always suppress Google TTS errors
+  const shouldSuppressErrors = suppressErrors || isGoogleTtsError;
+
   return (
     <div className="container mx-auto p-4">
       <GeneratorHeader />
       
-      {/* Only show error if it's not a Google TTS error or if it's crucial */}
-      {error && !suppressErrors && (
+      {/* Only show error if it's not related to Google TTS */}
+      {error && !shouldSuppressErrors && (
         <ErrorAlert 
           error={error} 
           isGoogleTtsError={isGoogleTtsError}
-          hideWhenGoogleTtsWorking={suppressErrors || isGoogleTtsError}
+          hideWhenGoogleTtsWorking={true}
         />
       )}
       

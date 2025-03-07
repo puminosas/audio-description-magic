@@ -28,6 +28,26 @@ const fallbackVoices: Record<string, VoiceOption[]> = {
   ],
   'af-ZA': [
     { id: 'af-ZA-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
+  ],
+  'ar-AE': [
+    { id: 'ar-AE-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
+    { id: 'ar-AE-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
+  ],
+  'zh-CN': [
+    { id: 'zh-CN-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
+    { id: 'zh-CN-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
+  ],
+  'nl-NL': [
+    { id: 'nl-NL-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
+    { id: 'nl-NL-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
+  ],
+  'ja-JP': [
+    { id: 'ja-JP-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
+    { id: 'ja-JP-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
+  ],
+  'ru-RU': [
+    { id: 'ru-RU-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
+    { id: 'ru-RU-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
   ]
 };
 
@@ -58,7 +78,7 @@ export function useVoiceData(
         const response = await supabase.functions.invoke('get-google-voices');
         
         if (response.error) {
-          console.error('Error fetching voices:', response.error);
+          console.warn('Using fallback voices due to error:', response.error);
           
           // Use fallback voices instead of showing an error
           const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
@@ -77,7 +97,7 @@ export function useVoiceData(
         
         // Check if we have valid data
         if (!response.data || typeof response.data !== 'object' || Object.keys(response.data).length === 0) {
-          console.error('Invalid voice data format received');
+          console.warn('Invalid voice data format received, using fallbacks');
           
           // Use fallback voices
           const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
@@ -142,7 +162,7 @@ export function useVoiceData(
           }
         }
       } catch (error) {
-        console.error('Error loading voices:', error);
+        console.warn('Error loading voices, using fallbacks:', error);
         
         if (isMounted) {
           // Use fallback voices instead of showing an error
