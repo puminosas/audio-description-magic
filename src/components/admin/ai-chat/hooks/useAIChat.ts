@@ -13,19 +13,22 @@ export const useAIChat = () => {
     try {
       console.log(`Sending message to AI chat: "${message}"${filePath ? ` with file: ${filePath}` : ''}`);
       
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
+      // Call the Edge Function with proper error handling
+      const { data, error: functionError } = await supabase.functions.invoke('ai-chat', {
         body: { message, filePath }
       });
       
-      if (error) {
-        console.error('AI chat API error:', error);
-        throw new Error(error.message);
+      if (functionError) {
+        console.error('AI chat API error:', functionError);
+        throw new Error(functionError.message || 'Error calling AI service');
       }
       
       if (!data || !data.response) {
+        console.error('Invalid response from AI service:', data);
         throw new Error('No response received from AI service');
       }
       
+      console.log('AI chat response received successfully');
       return data.response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -44,7 +47,8 @@ export const useAIChat = () => {
     try {
       console.log(`Sending file analysis request for: ${filePath}`);
       
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
+      // Call the Edge Function with proper error handling
+      const { data, error: functionError } = await supabase.functions.invoke('ai-chat', {
         body: { 
           message: "Please analyze this file and suggest improvements:",
           filePath,
@@ -52,15 +56,17 @@ export const useAIChat = () => {
         }
       });
       
-      if (error) {
-        console.error('File analysis API error:', error);
-        throw new Error(error.message);
+      if (functionError) {
+        console.error('File analysis API error:', functionError);
+        throw new Error(functionError.message || 'Error analyzing file');
       }
       
       if (!data || !data.response) {
+        console.error('Invalid response from AI service:', data);
         throw new Error('No analysis received from AI service');
       }
       
+      console.log('File analysis response received successfully');
       return data.response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';

@@ -32,12 +32,14 @@ serve(async (req: Request) => {
     // Build the messages array for OpenAI
     const messages = [];
     
-    // Add system message
+    // Add system message with more comprehensive instructions
     messages.push({
       role: 'system',
-      content: 'You are an AI assistant for audiodescriptions.online admin dashboard. ' +
-        'You can help with analyzing user data, managing content, and providing insights about audio description generation. ' +
-        'You have access to project files and configuration details. Be helpful, accurate, and concise.'
+      content: `You are an AI assistant for audiodescriptions.online admin dashboard. 
+You help with analyzing user data, managing content, and providing insights about audio description generation.
+You can assist with code analysis, project files, and technical questions.
+Provide clear, accurate, and helpful responses.
+The site helps users create AI-generated audio descriptions for their products, with features for text-to-speech and analytics.`
     });
     
     // Add file context if provided
@@ -64,10 +66,10 @@ serve(async (req: Request) => {
           'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4o-mini',
           messages: messages,
           temperature: 0.7,
-          max_tokens: 1000
+          max_tokens: 1500
         })
       });
 

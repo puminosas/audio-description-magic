@@ -46,6 +46,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       toast({
         title: "No File Selected",
         description: "Please select a file to save.",
+        variant: "default"
       });
     }
   };
@@ -57,6 +58,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         toast({
           title: "File Saved",
           description: "The file has been successfully saved.",
+          variant: "default"
         });
       } else {
         toast({
@@ -77,6 +79,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         toast({
           title: "Analysis Complete",
           description: "The file has been analyzed.",
+          variant: "default"
         });
       } catch (err) {
         console.error("Error during file analysis:", err);
@@ -92,6 +95,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       toast({
         title: "No File Selected",
         description: "Please select a file to analyze.",
+        variant: "default"
       });
     }
   };
