@@ -10,11 +10,7 @@ import FileList from './ai-chat/components/FileList';
 import type { FileInfo } from './ai-chat/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-interface AdminAiChatProps {
-  // Define any props here
-}
-
-const AdminAiChat: React.FC<AdminAiChatProps> = () => {
+const AdminAiChat: React.FC = () => {
   const {
     messages,
     isLoading,
@@ -39,7 +35,7 @@ const AdminAiChat: React.FC<AdminAiChatProps> = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="h-full w-full flex flex-col">
       <h1 className="text-2xl font-bold mb-4 flex items-center justify-between">
         <span>AI Chat Assistant</span>
         {isMobile && (
@@ -55,7 +51,7 @@ const AdminAiChat: React.FC<AdminAiChatProps> = () => {
         )}
       </h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[calc(100vh-12rem)]">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1 min-h-0">
         {/* File sidebar - conditionally visible on mobile */}
         {(sidebarVisible || !isMobile) && (
           <Card className={`p-4 ${isMobile ? 'fixed inset-0 z-50 w-full h-full overflow-auto bg-background' : 'md:col-span-1 overflow-hidden flex flex-col'}`}>

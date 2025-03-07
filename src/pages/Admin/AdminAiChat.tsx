@@ -6,7 +6,9 @@ import AdminAiChat from '@/components/admin/AdminAiChat';
 const AdminAiChatPage: React.FC = () => {
   return (
     <AdminLayout>
-      <AdminAiChat />
+      <div className="h-full w-full p-4 flex flex-col">
+        <AdminAiChat />
+      </div>
     </AdminLayout>
   );
 };
