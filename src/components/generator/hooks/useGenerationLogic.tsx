@@ -48,7 +48,7 @@ export const useGenerationLogic = () => {
           toast({
             title: "Using Fallback Voices",
             description: "Limited voice selection available. Some features may be restricted.",
-            variant: "warning",
+            variant: "default", // Changed from "warning" to "default" to fix the type error
           });
         }
       }
