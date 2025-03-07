@@ -1,95 +1,79 @@
+
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import GeneratorForm from '@/components/generator/GeneratorForm';
-import HistoryTab from '@/components/generator/HistoryTab';
-import TextToAudioTab from '@/components/generator/TextToAudioTab';
-import { LanguageOption, VoiceOption } from '@/utils/audio';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DescriptionInput from './DescriptionInput';
+import TextToAudioTab from './TextToAudioTab';
+import HistoryTab from './HistoryTab';
+import { Button } from '@/components/ui/button';
+import AudioOutput from './AudioOutput';
 import { Loader2 } from 'lucide-react';
+import { LanguageOption, VoiceOption } from '@/utils/audio';
+import { User } from '@supabase/supabase-js';
 
 interface GeneratorTabsProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  handleGenerate: (formData: {
-    text: string;
-    language: LanguageOption;
-    voice: VoiceOption;
-  }) => Promise<void>;
+  handleGenerate: (formData: { text: string; language: LanguageOption; voice: VoiceOption }) => void;
   loading: boolean;
   user: User | null;
-  onRefreshStats: () => Promise<void>;
-  generatedAudio?: GeneratedAudio | null;
+  onRefreshStats: () => void;
+  generatedAudio: {
+    audioUrl?: string;
+    text?: string;
+    fileName?: string;
+  } | null;
 }
 
-const GeneratorTabs = ({ 
-  activeTab, 
-  setActiveTab, 
-  handleGenerate, 
-  loading, 
+const GeneratorTabs = ({
+  activeTab,
+  setActiveTab,
+  handleGenerate,
+  loading,
   user,
   onRefreshStats,
   generatedAudio
 }: GeneratorTabsProps) => {
   return (
-    <Card className="overflow-hidden">
-      <Tabs 
-        value={activeTab} 
-        onValueChange={setActiveTab}
-        defaultValue="generate"
-      >
-        <TabsList className="w-full rounded-none bg-muted/50 flex-wrap justify-center md:justify-start">
-          <TabsTrigger 
-            value="generate" 
-            className="flex-1 max-w-[150px] text-xs sm:text-sm"
-            disabled={loading}
-          >
-            Generate
-          </TabsTrigger>
-          <TabsTrigger 
-            value="text-to-audio" 
-            className="flex-1 max-w-[150px] text-xs sm:text-sm"
-            disabled={loading}
-          >
-            Text to Audio
-          </TabsTrigger>
-          <TabsTrigger 
-            value="history" 
-            className="flex-1 max-w-[150px] text-xs sm:text-sm"
-            disabled={loading}
-          >
-            History
-          </TabsTrigger>
+    <div className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="generate">Generate</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="generate" className="p-4 md:p-6">
-          <GeneratorForm 
-            onGenerate={handleGenerate} 
-            loading={loading} 
-          />
-        </TabsContent>
-        
-        <TabsContent value="text-to-audio" className="p-4 md:p-6">
+        <TabsContent value="generate" className="space-y-6">
           <TextToAudioTab 
-            onGenerate={handleGenerate} 
+            onSubmit={handleGenerate}
             loading={loading}
-            user={user}
           />
-        </TabsContent>
-        
-        <TabsContent value="history" className="p-4 md:p-6">
-          {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <HistoryTab 
-              user={user} 
-              onRefreshStats={onRefreshStats}
+          
+          {/* Show audio output when audioUrl is available */}
+          {generatedAudio && generatedAudio.audioUrl && (
+            <AudioOutput
+              audioUrl={generatedAudio.audioUrl}
+              text={generatedAudio.text || ''}
+              fileName={generatedAudio.fileName || 'audio-description.mp3'}
             />
           )}
+          
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+              <p className="text-center text-muted-foreground">
+                Generating your audio description...
+              </p>
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="history" className="space-y-6">
+          <HistoryTab 
+            user={user} 
+            onRefreshStats={onRefreshStats}
+          />
         </TabsContent>
       </Tabs>
-    </Card>
+    </div>
   );
 };
 

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Loader2, Mail, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Auth = () => {
-  const { user, signIn, signUp, signInWithGoogle, loading, resetPassword } = useAuth();
+  const { user, isAdmin, signIn, signUp, signInWithGoogle, loading, resetPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -36,12 +36,28 @@ const Auth = () => {
   // For password reset
   const [resetEmail, setResetEmail] = useState('');
 
-  // Get the return URL from location state or default to '/'
-  const from = location.state?.from?.pathname || '/dashboard';
+  // Get the return URL from location state or default to appropriate dashboard
+  const getRedirectPath = () => {
+    if (isAdmin) {
+      return '/admin';
+    }
+    return location.state?.from?.pathname || '/dashboard';
+  };
 
-  // If user is already logged in, redirect to dashboard
+  // If user is already logged in, redirect to appropriate dashboard
+  useEffect(() => {
+    if (user && !loading) {
+      navigate(getRedirectPath(), { replace: true });
+    }
+  }, [user, isAdmin, loading, navigate, location.state]);
+
+  // If user is already logged in, show loading until redirect happens
   if (user && !loading) {
-    return <Navigate to={from} replace />;
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -64,7 +80,8 @@ const Auth = () => {
         title: 'Success',
         description: 'You are now logged in.',
       });
-      navigate(from, { replace: true });
+      
+      // The redirect will happen automatically in the useEffect
     } catch (error: any) {
       toast({
         title: 'Error',

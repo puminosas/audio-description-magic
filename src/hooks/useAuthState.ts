@@ -24,6 +24,7 @@ export const useAuthState = () => {
             setSession(session);
             setUser(session.user);
             fetchUserProfile(session.user.id).then(({ profile, isAdmin }) => {
+              console.log("Profile loaded after hash change:", profile, "isAdmin:", isAdmin);
               setProfile(profile);
               setIsAdmin(isAdmin);
               setLoading(false);
@@ -54,6 +55,7 @@ export const useAuthState = () => {
       
       if (session?.user) {
         fetchUserProfile(session.user.id).then(({ profile, isAdmin }) => {
+          console.log("Initial profile load:", profile, "isAdmin:", isAdmin);
           setProfile(profile);
           setIsAdmin(isAdmin);
           setLoading(false);
@@ -89,6 +91,7 @@ export const useAuthState = () => {
       
       if (session?.user) {
         fetchUserProfile(session.user.id).then(({ profile, isAdmin }) => {
+          console.log("Profile updated after auth change:", profile, "isAdmin:", isAdmin);
           setProfile(profile);
           setIsAdmin(isAdmin);
           setLoading(false);

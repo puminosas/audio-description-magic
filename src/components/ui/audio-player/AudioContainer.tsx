@@ -19,16 +19,19 @@ const AudioContainer: React.FC<AudioContainerProps> = ({
   isGenerating,
   validationResult
 }) => {
-  // Always show the player if we have a URL or are generating
-  const shouldShowPlayer = !!audioUrl || isGenerating;
+  // Always show the player if we're generating or have an audioUrl (even if empty)
+  const shouldShowPlayer = isGenerating || audioUrl !== undefined;
   
   if (!shouldShowPlayer) {
     return null;
   }
   
+  // Check if we have a valid audio URL to play
+  const hasValidAudioUrl = !!audioUrl && audioUrl.trim() !== '';
+  
   return (
     <AudioPlayerProvider 
-      audioUrl={audioUrl}
+      audioUrl={hasValidAudioUrl ? audioUrl : undefined}
       fileName={fileName}
       isGenerating={isGenerating}
     >
@@ -36,20 +39,24 @@ const AudioContainer: React.FC<AudioContainerProps> = ({
         <AudioStatus 
           audioUrl={audioUrl} 
           isGenerating={isGenerating} 
-          isValidUrl={!!audioUrl} // Treat as valid if we have a URL
+          isValidUrl={hasValidAudioUrl} 
           validationDetails={validationResult.validationDetails}
         />
         
-        <AudioWaveform 
-          isGenerating={isGenerating} 
-          audioUrl={audioUrl} 
-        />
-        
-        <PlayerControls 
-          isGenerating={isGenerating}
-          fileName={fileName}
-          audioUrl={audioUrl}
-        />
+        {(hasValidAudioUrl || isGenerating) && (
+          <>
+            <AudioWaveform 
+              isGenerating={isGenerating} 
+              audioUrl={hasValidAudioUrl ? audioUrl : undefined} 
+            />
+            
+            <PlayerControls 
+              isGenerating={isGenerating}
+              fileName={fileName}
+              audioUrl={hasValidAudioUrl ? audioUrl : undefined}
+            />
+          </>
+        )}
       </div>
     </AudioPlayerProvider>
   );

@@ -17,8 +17,8 @@ const AudioPlayer = ({
   // Use the extracted URL validator
   const validationResult = useAudioUrlValidator({ audioUrl, isGenerating });
   
-  // Always show if generating or if we have an audio URL
-  const shouldShow = isGenerating || !!audioUrl;
+  // Always show if generating or if we have an audio URL (even if empty string)
+  const shouldShow = isGenerating || audioUrl !== undefined;
   
   if (!shouldShow) {
     return null;

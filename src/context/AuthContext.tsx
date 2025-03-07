@@ -37,9 +37,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    await signOut();
-    setProfile(null);
-    setIsAdmin(false);
+    try {
+      await signOut();
+      setProfile(null);
+      setIsAdmin(false);
+      
+      // Show success toast
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out.",
+      });
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem signing out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const value = {

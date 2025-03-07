@@ -11,16 +11,22 @@ interface ErrorAlertProps {
 
 const ErrorAlert = ({ error, isGoogleTtsError, hideWhenGoogleTtsWorking = false }: ErrorAlertProps) => {
   // If there's no error, don't show anything
-  if (!error) return null;
+  if (!error || error.trim() === '') return null;
   
   // Check if the error is related to Google TTS
-  const isGoogleTtsRelatedError = isGoogleTtsError || 
+  const isGoogleTtsRelatedError = 
+    isGoogleTtsError || 
     error.includes('Google TTS') || 
     error.includes('Failed to load languages') ||
     error.includes('Failed to initialize Google voices');
   
-  // If we should hide Google TTS errors, or if we're asked to hide errors when Google TTS is working
-  if (isGoogleTtsRelatedError || hideWhenGoogleTtsWorking) {
+  // Don't show Google TTS related errors
+  if (isGoogleTtsRelatedError) {
+    return null;
+  }
+  
+  // If we should hide errors when Google TTS is working
+  if (hideWhenGoogleTtsWorking) {
     return null;
   }
   
