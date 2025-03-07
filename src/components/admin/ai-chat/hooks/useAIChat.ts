@@ -11,16 +11,25 @@ export const useAIChat = () => {
     setError(null);
     
     try {
-      // Here you'd implement the actual API call to send messages to your AI service
+      console.log(`Sending message to AI chat: "${message}"${filePath ? ` with file: ${filePath}` : ''}`);
+      
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: { message, filePath }
       });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('AI chat API error:', error);
+        throw new Error(error.message);
+      }
       
-      return data?.response || 'No response from AI service';
+      if (!data || !data.response) {
+        throw new Error('No response received from AI service');
+      }
+      
+      return data.response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Error in sendMessage:', errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -33,7 +42,8 @@ export const useAIChat = () => {
     setError(null);
     
     try {
-      // Call AI service to analyze the file
+      console.log(`Sending file analysis request for: ${filePath}`);
+      
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: { 
           message: "Please analyze this file and suggest improvements:",
@@ -42,11 +52,19 @@ export const useAIChat = () => {
         }
       });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('File analysis API error:', error);
+        throw new Error(error.message);
+      }
       
-      return data?.response || 'No analysis received from AI service';
+      if (!data || !data.response) {
+        throw new Error('No analysis received from AI service');
+      }
+      
+      return data.response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Error in sendFileAnalysisRequest:', errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

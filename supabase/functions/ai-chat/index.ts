@@ -13,72 +13,50 @@ serve(async (req: Request) => {
   }
 
   try {
+    console.log("Processing AI chat request");
+    
     if (!OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is not set');
     }
 
     // Get request body
-    const { messages, userId } = await req.json();
+    const requestBody = await req.json();
+    const { message, filePath, fileContent } = requestBody;
 
-    if (!messages || !Array.isArray(messages)) {
-      throw new Error('Invalid or missing messages array');
+    if (!message) {
+      throw new Error('Message is required');
     }
 
-    console.log(`Processing AI chat request for user ${userId} with ${messages.length} messages`);
+    console.log(`Processing message: "${message.substring(0, 50)}..."${filePath ? ` with file: ${filePath}` : ''}`);
 
-    // Verify admin role if userId is provided
-    if (userId) {
-      try {
-        // Get the JWT from the Authorization header
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
-          throw new Error('Missing Authorization header');
-        }
-
-        // Check if user has admin role
-        const adminCheckResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_role`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authHeader,
-            'apikey': SUPABASE_ANON_KEY || '',
-          },
-          body: JSON.stringify({ role: 'admin' }),
-        });
-
-        if (!adminCheckResponse.ok) {
-          const errorData = await adminCheckResponse.json();
-          console.error('Admin check error:', errorData);
-          throw new Error(`Unauthorized: Admin role required. Error: ${JSON.stringify(errorData)}`);
-        }
-
-        const isAdmin = await adminCheckResponse.json();
-        if (!isAdmin) {
-          throw new Error('Unauthorized: Admin access required');
-        }
-      } catch (error) {
-        console.error('Error verifying admin role:', error);
-        return new Response(JSON.stringify({ error: error.message }), { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    }
-
-    // Add a system message if not present
-    const systemMessage = {
+    // Build the messages array for OpenAI
+    const messages = [];
+    
+    // Add system message
+    messages.push({
       role: 'system',
       content: 'You are an AI assistant for audiodescriptions.online admin dashboard. ' +
         'You can help with analyzing user data, managing content, and providing insights about audio description generation. ' +
         'You have access to project files and configuration details. Be helpful, accurate, and concise.'
-    };
-
-    const chatMessages = messages.find(m => m.role === 'system') 
-      ? messages 
-      : [systemMessage, ...messages];
+    });
+    
+    // Add file context if provided
+    if (filePath && fileContent) {
+      messages.push({
+        role: 'user',
+        content: `Here is the content of file "${filePath}":\n\n${fileContent}\n\nPlease analyze this file.`
+      });
+    }
+    
+    // Add user message
+    messages.push({
+      role: 'user',
+      content: message
+    });
 
     // Call OpenAI API
     try {
+      console.log("Calling OpenAI API...");
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -86,8 +64,8 @@ serve(async (req: Request) => {
           'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: chatMessages.map(m => ({ role: m.role, content: m.content })),
+          model: 'gpt-3.5-turbo',
+          messages: messages,
           temperature: 0.7,
           max_tokens: 1000
         })
@@ -100,11 +78,11 @@ serve(async (req: Request) => {
       }
 
       const data = await openAIResponse.json();
-      const aiMessage = data.choices[0].message;
+      const responseText = data.choices[0].message.content;
 
-      console.log(`AI response generated successfully, length: ${aiMessage.content.length}`);
+      console.log(`AI response generated successfully, length: ${responseText.length}`);
 
-      return new Response(JSON.stringify(aiMessage), { 
+      return new Response(JSON.stringify({ response: responseText }), { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } catch (error) {

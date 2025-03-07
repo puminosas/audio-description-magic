@@ -16,13 +16,26 @@ export const useFileOperations = (
     setError(null);
     
     try {
+      console.log("Fetching project files...");
+      
       const { data, error } = await supabase.functions.invoke('project-files', {
         body: {}
       });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('Error fetching files:', error);
+        throw new Error(error.message);
+      }
       
-      const fileInfos: FileInfo[] = (data?.files || []).map((file: any) => ({
+      if (!data || !data.files) {
+        console.warn('No files returned from API');
+        setFiles([]);
+        return;
+      }
+      
+      console.log(`Received ${data.files.length} files from API`);
+      
+      const fileInfos: FileInfo[] = (data.files || []).map((file: any) => ({
         path: file.path,
         content: '',
         type: detectFileType(file.path)
@@ -30,7 +43,9 @@ export const useFileOperations = (
       
       setFiles(fileInfos);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch files.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch files.';
+      console.error('Error in getFiles:', errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoadingFiles(false);
     }
@@ -42,13 +57,24 @@ export const useFileOperations = (
     setError(null);
     
     try {
+      console.log(`Fetching content for file: ${filePath}`);
+      
       const { data, error } = await supabase.functions.invoke('get-file-content', {
         body: { filePath }
       });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('Error fetching file content:', error);
+        throw new Error(error.message);
+      }
       
-      const content = data?.content || '';
+      if (!data || !data.content) {
+        console.warn('No content returned for file');
+        return '';
+      }
+      
+      const content = data.content || '';
+      console.log(`Received content for ${filePath}, length: ${content.length} characters`);
       
       // Update files array with content
       setFiles(prevFiles => 
@@ -66,7 +92,9 @@ export const useFileOperations = (
       
       return content;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch file content.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch file content.';
+      console.error('Error in getFileContent:', errorMessage);
+      setError(errorMessage);
       throw err;
     } finally {
       setIsLoadingFile(false);
@@ -79,11 +107,18 @@ export const useFileOperations = (
     setError(null);
     
     try {
+      console.log(`Saving content for file: ${filePath}`);
+      
       const { data, error } = await supabase.functions.invoke('edit-file', {
         body: { filePath, content }
       });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('Error saving file content:', error);
+        throw new Error(error.message);
+      }
+      
+      console.log(`Successfully saved file: ${filePath}`);
       
       // Update files array with new content
       setFiles(prevFiles => 
@@ -101,7 +136,9 @@ export const useFileOperations = (
       
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save file content.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save file content.';
+      console.error('Error in saveFileContent:', errorMessage);
+      setError(errorMessage);
       return false;
     } finally {
       setIsLoadingFile(false);
