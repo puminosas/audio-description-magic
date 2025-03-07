@@ -32,6 +32,7 @@ function ScrollToTop() {
 
 function App() {
   const [voicesInitialized, setVoicesInitialized] = useState(false);
+  const [initError, setInitError] = useState<Error | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,14 +43,21 @@ function App() {
           // Pre-fetch Google TTS voices data
           await initializeGoogleVoices();
           setVoicesInitialized(true);
+          // Clear any previous error since initialization succeeded
+          setInitError(null);
         }
       } catch (error) {
         console.error('Error initializing services:', error);
-        toast({
-          title: "Service Initialization Error",
-          description: "Some services may not be available. Please refresh the page or try again later.",
-          variant: "destructive",
-        });
+        setInitError(error instanceof Error ? error : new Error(String(error)));
+        
+        // Only show the toast on generator page, not on home page
+        if (window.location.pathname.includes('/generator')) {
+          toast({
+            title: "Service Initialization Error",
+            description: "Some services may not be available. Please refresh the page or try again later.",
+            variant: "destructive",
+          });
+        }
       }
     };
     

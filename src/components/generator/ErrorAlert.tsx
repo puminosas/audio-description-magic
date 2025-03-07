@@ -6,9 +6,16 @@ import { XCircle, CloudOff } from 'lucide-react';
 interface ErrorAlertProps {
   error: string | null;
   isGoogleTtsError?: boolean;
+  hideWhenGoogleTtsWorking?: boolean;
 }
 
-const ErrorAlert = ({ error, isGoogleTtsError }: ErrorAlertProps) => {
+const ErrorAlert = ({ error, isGoogleTtsError, hideWhenGoogleTtsWorking = false }: ErrorAlertProps) => {
+  // If Google TTS is working now but we're asked to hide the error, don't show it
+  if (hideWhenGoogleTtsWorking) {
+    return null;
+  }
+  
+  // If there's no error, don't show anything
   if (!error) return null;
   
   return (

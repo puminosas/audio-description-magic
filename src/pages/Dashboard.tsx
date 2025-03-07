@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -15,6 +15,27 @@ import ApiKeySection from '@/components/dashboard/ApiKeySection';
 const Dashboard = () => {
   const { user, loading, profile } = useAuth();
   const [showCreateApiKeyModal, setShowCreateApiKeyModal] = useState(false);
+  const [localLoading, setLocalLoading] = useState(true);
+
+  // Set a timeout to handle cases where profile loading gets stuck
+  useEffect(() => {
+    if (!loading && user) {
+      // If we have a user but no profile after 3 seconds, stop showing loading state
+      const timer = setTimeout(() => {
+        setLocalLoading(false);
+      }, 3000);
+      
+      // If profile loads normally, clear the timeout
+      if (profile) {
+        setLocalLoading(false);
+      }
+      
+      return () => clearTimeout(timer);
+    } else if (!loading && !user) {
+      // If not logged in and not loading, we don't need a loading state
+      setLocalLoading(false);
+    }
+  }, [loading, user, profile]);
 
   // Redirect if not logged in
   if (!loading && !user) {
@@ -30,8 +51,18 @@ const Dashboard = () => {
     );
   }
 
-  // User is authenticated but profile is not yet loaded
-  if (!profile) {
+  // If we've timed out waiting for profile but still have a user, render dashboard without profile
+  if (!loading && user && !profile && !localLoading) {
+    return (
+      <div className="container mx-auto p-4">
+        <h2 className="text-xl font-semibold mb-4">Welcome to your dashboard</h2>
+        <p>Your profile data is being loaded or initialized. Some features may be limited.</p>
+      </div>
+    );
+  }
+
+  // If we're still in local loading state, show loading indicator
+  if (localLoading) {
     return (
       <div className="container mx-auto p-4">
         <h2 className="text-xl font-semibold">Loading your dashboard...</h2>

@@ -12,6 +12,7 @@ export const useGenerationLogic = () => {
   const { toast } = useToast();
   const [googleTtsAvailable, setGoogleTtsAvailable] = useState(true);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
+  const [suppressErrors, setSuppressErrors] = useState(false);
   const { 
     loading, 
     generatedAudio, 
@@ -35,6 +36,7 @@ export const useGenerationLogic = () => {
         
         if (languages && languages.length > 0) {
           setGoogleTtsAvailable(true);
+          setSuppressErrors(true); // Suppress any Google TTS errors since it's working
           console.log("Google TTS integration successful with", languages.length, "languages");
         } else {
           throw new Error("No languages available");
@@ -64,6 +66,7 @@ export const useGenerationLogic = () => {
     handleGenerate,
     setError,
     isCached,
-    googleTtsAvailable
+    googleTtsAvailable,
+    suppressErrors
   };
 };
