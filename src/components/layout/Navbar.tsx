@@ -32,6 +32,7 @@ const Navbar = () => {
   const navLinks: NavLink[] = [
     { name: 'Home', path: '/' },
     { name: 'Generate', path: '/generator' },
+    { name: 'Text To Audio', path: '/text-to-audio' },
     { name: 'Pricing', path: '/pricing' },
     { name: 'API', path: '/api-docs' },
     { name: 'Contact', path: '/contact' },

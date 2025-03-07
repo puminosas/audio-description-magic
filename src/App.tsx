@@ -10,6 +10,7 @@ import Index from '@/pages/Index';
 import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
 import Generator from '@/pages/Generator';
+import TextToAudioPage from '@/pages/TextToAudio';
 import ApiDocs from '@/pages/ApiDocs';
 import ApiClient from '@/pages/ApiClient';
 import Pricing from '@/pages/Pricing';
@@ -77,6 +78,7 @@ function App() {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/generator" element={<Generator />} />
+                <Route path="/text-to-audio" element={<TextToAudioPage />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
                 <Route path="/api" element={<Navigate to="/api-docs" replace />} />
                 <Route path="/api-client" element={<ApiClient />} />
