@@ -1,28 +1,22 @@
 
-import { useTheme } from '@/context/ThemeContext';
+import React from 'react';
 import HeroSection from '@/components/home/HeroSection';
-import HowItWorksSection from '@/components/home/HowItWorksSection';
 import FeaturesSection from '@/components/home/FeaturesSection';
+import HowItWorksSection from '@/components/home/HowItWorksSection';
 import CTASection from '@/components/home/CTASection';
-import MatrixEffect from '@/components/home/MatrixEffect';
-import ScrollReveal from '@/components/home/ScrollReveal';
+import AudioDescriptionDemo from '@/components/ecommerce/AudioDescriptionDemo';
 
 const Index = () => {
-  const { theme } = useTheme();
-  
   return (
-    <>
-      {/* Add scroll reveal animation */}
-      <ScrollReveal />
-      
-      {/* Add audio waveform effect for both themes */}
-      <MatrixEffect />
-      
+    <div className="bg-background min-h-screen">
       <HeroSection />
-      <HowItWorksSection />
       <FeaturesSection />
+      <HowItWorksSection />
+      <div className="py-12 bg-muted/50">
+        <AudioDescriptionDemo />
+      </div>
       <CTASection />
-    </>
+    </div>
   );
 };
 
