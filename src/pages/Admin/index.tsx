@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 // Admin pages
 import AdminAnalytics from './AdminAnalytics';
@@ -76,17 +77,19 @@ const Admin = () => {
   }
   
   return (
-    <Routes>
-      <Route path="/" element={<AdminAnalytics />} />
-      <Route path="/audio-files" element={<AdminAudioFiles />} />
-      <Route path="/users" element={<AdminUserManagement />} />
-      <Route path="/user-activity" element={<AdminUserActivity />} />
-      <Route path="/user-update" element={<AdminUserUpdate />} />
-      <Route path="/purchases" element={<AdminPurchases />} />
-      <Route path="/feedback" element={<AdminFeedback />} />
-      <Route path="/ai-chat" element={<AdminAiChatPage />} />
-      <Route path="/settings" element={<AdminSettings />} />
-    </Routes>
+    <AdminLayout>
+      <Routes>
+        <Route path="/" element={<AdminAnalytics />} />
+        <Route path="/audio-files" element={<AdminAudioFiles />} />
+        <Route path="/users" element={<AdminUserManagement />} />
+        <Route path="/user-activity" element={<AdminUserActivity />} />
+        <Route path="/user-update" element={<AdminUserUpdate />} />
+        <Route path="/purchases" element={<AdminPurchases />} />
+        <Route path="/feedback" element={<AdminFeedback />} />
+        <Route path="/ai-chat" element={<AdminAiChatPage />} />
+        <Route path="/settings" element={<AdminSettings />} />
+      </Routes>
+    </AdminLayout>
   );
 };
 
