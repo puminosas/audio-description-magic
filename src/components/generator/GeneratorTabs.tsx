@@ -13,10 +13,10 @@ import { User } from '@supabase/supabase-js';
 interface GeneratorTabsProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  handleGenerate: (formData: { text: string; language: LanguageOption; voice: VoiceOption }) => void;
+  handleGenerate: (formData: { text: string; language: LanguageOption; voice: VoiceOption }) => Promise<void>;
   loading: boolean;
   user: User | null;
-  onRefreshStats: () => void;
+  onRefreshStats: () => Promise<void>;
   generatedAudio: {
     audioUrl?: string;
     text?: string;
@@ -72,7 +72,7 @@ const GeneratorTabs = ({
         <TabsContent value="history" className="space-y-6">
           <HistoryTab 
             user={user} 
-            onRefreshStats={onRefreshStats || (async () => Promise.resolve())}
+            onRefreshStats={onRefreshStats}
           />
         </TabsContent>
       </Tabs>

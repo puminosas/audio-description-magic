@@ -31,6 +31,11 @@ const GeneratorContainer = () => {
   // Suppress all Google TTS related errors
   const shouldSuppressErrors = suppressErrors || isGoogleTtsError;
 
+  // Create a Promise-returning wrapper for handleGenerate
+  const handleGeneratePromise = async (formData: { text: string; language: LanguageOption; voice: VoiceOption }) => {
+    return handleGenerate(formData, activeTab, refreshStats);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <GeneratorHeader />
@@ -49,9 +54,7 @@ const GeneratorContainer = () => {
           <GeneratorTabs 
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            handleGenerate={(formData: { text: string; language: LanguageOption; voice: VoiceOption }) => 
-              handleGenerate(formData, activeTab, refreshStats)
-            }
+            handleGenerate={handleGeneratePromise}
             loading={loading}
             user={user}
             onRefreshStats={refreshStats}
