@@ -2,11 +2,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabaseTyped } from '@/utils/supabaseHelper';
 import { useToast } from './use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface AnalyticsData {
   users: number;
+  registeredUsers: number;
   audioFiles: number;
+  todayAudioFiles: number;
   feedback: number;
+  pendingFeedback: number;
   generationsToday: number;
   generationsTotal: number;
 }
@@ -21,8 +25,11 @@ export function useAnalytics() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AnalyticsData>({
     users: 0,
+    registeredUsers: 0,
     audioFiles: 0,
+    todayAudioFiles: 0,
     feedback: 0,
+    pendingFeedback: 0,
     generationsToday: 0,
     generationsTotal: 0
   });
@@ -34,30 +41,44 @@ export function useAnalytics() {
     try {
       setLoading(true);
       
-      // Get user count
+      // Get registered user count
       const { data: profileData, error: profileError } = await supabaseTyped.profiles.select();
       if (profileError) throw profileError;
-      const userCount = profileData?.length || 0;
+      const registeredUserCount = profileData?.length || 0;
       
       // Get audio files count
       const { data: audioData, error: audioError } = await supabaseTyped.audio_files.select();
       if (audioError) throw audioError;
       const audioCount = audioData?.length || 0;
       
-      // Get feedback count
+      // Get today's audio files count
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayAudioData, error: todayAudioError } = await supabase
+        .from('audio_files')
+        .select('id')
+        .gte('created_at', today);
+      
+      if (todayAudioError) throw todayAudioError;
+      const todayAudioCount = todayAudioData?.length || 0;
+      
+      // Get feedback count and pending feedback
       const { data: feedbackData, error: feedbackError } = await supabaseTyped.feedback.select();
       if (feedbackError) throw feedbackError;
       const feedbackCount = feedbackData?.length || 0;
       
+      // Get pending feedback (status = 'new' or status = 'in_progress')
+      const pendingFeedbackCount = feedbackData?.filter(
+        item => item.status === 'new' || item.status === 'in_progress'
+      ).length || 0;
+      
       // Get today's generations
-      const today = new Date().toISOString().split('T')[0];
       const { data: todayGenerations, error: todayError } = await supabaseTyped.generation_counts
         .eq('date', today)
         .select();
       
       if (todayError) throw todayError;
       
-      const generationsToday = todayGenerations?.reduce((sum, item) => sum + item.count, 0) || 0;
+      const generationsToday = todayGenerations?.reduce((sum, item) => sum + (item.count || 0), 0) || 0;
       
       // Get total generations
       const { data: allGenerations, error: allError } = await supabaseTyped.generation_counts
@@ -65,12 +86,34 @@ export function useAnalytics() {
       
       if (allError) throw allError;
       
-      const generationsTotal = allGenerations?.reduce((sum, item) => sum + item.count, 0) || 0;
+      const generationsTotal = allGenerations?.reduce((sum, item) => sum + (item.count || 0), 0) || 0;
+      
+      // Get anonymous users from audio files with unique session_ids but no user_id
+      const { data: anonymousData, error: anonymousError } = await supabase
+        .from('audio_files')
+        .select('session_id')
+        .is('user_id', null)
+        .not('session_id', 'is', null);
+      
+      if (anonymousError) throw anonymousError;
+      
+      // Count unique session_ids
+      const uniqueSessionIds = new Set();
+      anonymousData?.forEach(item => {
+        if (item.session_id) uniqueSessionIds.add(item.session_id);
+      });
+      const anonymousUserCount = uniqueSessionIds.size;
+      
+      // Total users (registered + anonymous)
+      const totalUsers = registeredUserCount + anonymousUserCount;
       
       setStats({
-        users: userCount,
+        users: totalUsers,
+        registeredUsers: registeredUserCount,
         audioFiles: audioCount,
+        todayAudioFiles: todayAudioCount,
         feedback: feedbackCount,
+        pendingFeedback: pendingFeedbackCount,
         generationsToday,
         generationsTotal
       });

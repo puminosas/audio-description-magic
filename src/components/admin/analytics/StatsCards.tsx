@@ -20,6 +20,9 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
             <Users className="h-5 w-5 text-muted-foreground mr-2" />
             <div className="text-2xl font-bold">{stats.users}</div>
           </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Registered: {stats.registeredUsers || 0}
+          </div>
         </CardContent>
       </Card>
       
@@ -32,6 +35,9 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
             <ListMusic className="h-5 w-5 text-muted-foreground mr-2" />
             <div className="text-2xl font-bold">{stats.audioFiles}</div>
           </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Today: {stats.todayAudioFiles || 0}
+          </div>
         </CardContent>
       </Card>
       
@@ -43,6 +49,9 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
           <div className="flex items-center">
             <MessageSquare className="h-5 w-5 text-muted-foreground mr-2" />
             <div className="text-2xl font-bold">{stats.feedback}</div>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Pending: {stats.pendingFeedback || 0}
           </div>
         </CardContent>
       </Card>
