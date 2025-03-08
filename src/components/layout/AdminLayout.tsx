@@ -31,8 +31,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     navigate('/');
   };
 
-  const isCurrentPath = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isActiveRoute = (path: string) => {
+    if (path === '/admin' && location.pathname === '/admin') {
+      return true;
+    }
+    return path !== '/admin' && location.pathname.startsWith(path);
   };
   
   return (
@@ -64,7 +67,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="mt-8 space-y-1 flex-1 overflow-auto pb-4">
             <Link to="/admin" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin") && !isCurrentPath("/admin/ai-chat") && !isCurrentPath("/admin/users") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -73,7 +76,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <Link to="/admin/users" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin/users") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/users") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <Users className="mr-2 h-4 w-4" />
@@ -82,7 +85,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <Link to="/admin/audio-files" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin/audio-files") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/audio-files") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <FileText className="mr-2 h-4 w-4" />
@@ -91,7 +94,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <Link to="/admin/purchases" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin/purchases") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/purchases") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <CreditCard className="mr-2 h-4 w-4" />
@@ -100,7 +103,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <Link to="/admin/ai-chat" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin/ai-chat") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/ai-chat") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
@@ -109,7 +112,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <Link to="/admin/analytics" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin/analytics") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/analytics") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <BarChart className="mr-2 h-4 w-4" />
@@ -118,7 +121,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <Link to="/admin/feedback" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin/feedback") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/feedback") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
@@ -127,7 +130,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <Link to="/admin/settings" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isCurrentPath("/admin/settings") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/settings") ? "secondary" : "ghost"} 
                 className="w-full justify-start"
               >
                 <Settings className="mr-2 h-4 w-4" />
