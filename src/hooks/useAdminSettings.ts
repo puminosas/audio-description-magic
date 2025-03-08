@@ -49,9 +49,19 @@ export function useAdminSettings() {
       }
       
       if (data) {
+        // Map database column names (lowercase) to our camelCase interface properties
         setSettings({
           ...settings,
-          ...data
+          freeGenerationsLimit: data.freegenerationslimit,
+          basicGenerationsLimit: data.basicgenerationslimit,
+          premiumGenerationsLimit: data.premiumgenerationslimit,
+          allowGuestGeneration: data.allowguestgeneration,
+          enableNewUserRegistration: data.enablenewuserregistration,
+          requireEmailVerification: data.requireemailverification,
+          storageRetentionDays: data.storageretentiondays,
+          enableFeedback: data.enablefeedback,
+          hidePricingFeatures: data.hidepricingfeatures,
+          unlimitedGenerationsForAll: data.unlimitedgenerationsforall
         });
       }
     } catch (error) {
@@ -67,7 +77,17 @@ export function useAdminSettings() {
         .from('app_settings')
         .upsert({ 
           id: 1,
-          ...settings 
+          // Map our camelCase interface properties to database column names (lowercase)
+          freegenerationslimit: settings.freeGenerationsLimit,
+          basicgenerationslimit: settings.basicGenerationsLimit,
+          premiumgenerationslimit: settings.premiumGenerationsLimit,
+          allowguestgeneration: settings.allowGuestGeneration,
+          enablenewuserregistration: settings.enableNewUserRegistration,
+          requireemailverification: settings.requireEmailVerification,
+          storageretentiondays: settings.storageRetentionDays,
+          enablefeedback: settings.enableFeedback,
+          hidepricingfeatures: settings.hidePricingFeatures,
+          unlimitedgenerationsforall: settings.unlimitedGenerationsForAll
         });
       
       if (error) {

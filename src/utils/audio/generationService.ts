@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AudioGenerationResult, AudioSuccessResult, AudioErrorResult, LanguageOption, VoiceOption } from './types';
 
@@ -26,7 +27,7 @@ async function isUnlimitedGenerationsEnabled(): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from('app_settings')
-      .select('unlimitedGenerationsForAll')
+      .select('unlimitedgenerationsforall')
       .single();
     
     if (error) {
@@ -34,7 +35,7 @@ async function isUnlimitedGenerationsEnabled(): Promise<boolean> {
       return false;
     }
     
-    return data?.unlimitedGenerationsForAll || false;
+    return data?.unlimitedgenerationsforall || false;
   } catch (error) {
     console.error('Failed to fetch unlimited generations setting:', error);
     return false;
