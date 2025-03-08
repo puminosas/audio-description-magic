@@ -56,58 +56,25 @@ export const useAudioGenerationService = () => {
         }), 45000) // Reduced from 60s to 45s
       );
       
-      // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
+      // Now use the refactored generateAudioDescription function imported from utils
+      const { generateAudioDescription } = await import('@/utils/audio/generationService');
       
-      if (!session?.user) {
-        return { success: false, error: 'Authentication required to generate audio descriptions' };
-      }
-      
-      // First try the generate-audio function
-      const generatePromise = supabase.functions.invoke('generate-audio', {
-        body: {
-          text: text,
-          language: language.code,
-          voice: voice.name
-        }
-      }).then(response => {
-        console.log("Response from generate-audio:", response);
-        
-        if (response.error) {
-          console.error("Error from generate-audio:", response.error);
-          return { 
-            success: false, 
-            error: response.error.message || 'Failed to generate audio'
-          };
-        }
-        
-        if (!response.data || !response.data.success) {
-          console.error("Invalid response from generate-audio:", response.data);
-          return { 
-            success: false, 
-            error: response.data?.error || 'Failed to generate audio, invalid response from server'
-          };
-        }
-        
-        const result = {
-          success: true,
-          audioUrl: response.data.audioUrl,
-          text: response.data.text || text,
-          id: response.data.id || crypto.randomUUID()
-        };
-        
-        // Update API call timestamps
-        apiCallTimestamps.push(Date.now());
-        apiCallTimestamps = apiCallTimestamps.filter(ts => (Date.now() - ts) < 60000);
-        
-        // Cache the result
-        audioCache.set(cacheKey, {
-          result,
-          timestamp: Date.now()
+      const generatePromise = generateAudioDescription(text, language, voice)
+        .then(response => {
+          // Update API call timestamps
+          apiCallTimestamps.push(Date.now());
+          apiCallTimestamps = apiCallTimestamps.filter(ts => (Date.now() - ts) < 60000);
+          
+          // Cache the result if successful
+          if (response.success) {
+            audioCache.set(cacheKey, {
+              result: response,
+              timestamp: Date.now()
+            });
+          }
+          
+          return response;
         });
-        
-        return result;
-      });
       
       // Race the generation with a timeout
       return await Promise.race([generatePromise, timeoutPromise]) as AudioGenerationResult;
