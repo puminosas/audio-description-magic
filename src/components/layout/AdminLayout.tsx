@@ -56,94 +56,94 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <div className={`
         ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
         md:translate-x-0 transition-transform duration-200 ease-in-out
-        fixed inset-y-0 left-0 z-40 w-64 bg-background border-r pt-5 px-3 flex-col justify-between
+        fixed inset-y-0 left-0 z-40 w-64 bg-card/90 backdrop-blur-md border-r pt-5 px-3 flex-col justify-between
         flex md:relative h-full shadow-lg
       `}>
         <div className="flex flex-col h-full overflow-hidden">
-          <div className="px-3 py-2">
-            <h2 className="mb-2 text-lg font-semibold">Audio Descriptions</h2>
-            <p className="text-sm text-muted-foreground">Administration</p>
+          <div className="px-3 py-4 border-b mb-4">
+            <h2 className="text-xl font-bold gradient-text">Audio Descriptions</h2>
+            <p className="text-sm text-muted-foreground">Administration Portal</p>
           </div>
           
-          <div className="mt-8 space-y-1 flex-1 overflow-auto pb-4">
+          <div className="space-y-1 flex-1 overflow-auto pb-4 px-1">
             <Link to="/admin" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <LayoutDashboard className="mr-2 h-4 w-4" />
-                Dashboard
+                <span>Dashboard</span>
               </Button>
             </Link>
             <Link to="/admin/users" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/users") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <Users className="mr-2 h-4 w-4" />
-                User Management
+                <span>User Management</span>
               </Button>
             </Link>
             <Link to="/admin/audio-files" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/audio-files") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <FileText className="mr-2 h-4 w-4" />
-                Audio Files
+                <span>Audio Files</span>
               </Button>
             </Link>
             <Link to="/admin/purchases" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/purchases") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <CreditCard className="mr-2 h-4 w-4" />
-                Purchases
+                <span>Purchases</span>
               </Button>
             </Link>
             <Link to="/admin/ai-chat" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/ai-chat") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
-                AI Chat
+                <span>AI Chat</span>
               </Button>
             </Link>
             <Link to="/admin/analytics" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/analytics") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <BarChart className="mr-2 h-4 w-4" />
-                Analytics
+                <span>Analytics</span>
               </Button>
             </Link>
             <Link to="/admin/feedback" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/feedback") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
-                Feedback
+                <span>Feedback</span>
               </Button>
             </Link>
             <Link to="/admin/settings" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/settings") ? "secondary" : "ghost"} 
-                className="w-full justify-start shadow-sm hover:shadow"
+                className="w-full justify-start mb-1"
               >
                 <Settings className="mr-2 h-4 w-4" />
-                Settings
+                <span>Settings</span>
               </Button>
             </Link>
           </div>
           
-          <div className="mt-auto mb-8 px-3">
+          <div className="mt-auto mb-6 px-3 pt-4 border-t">
             <Button
               variant="outline"
-              className="w-full justify-start shadow-md hover:shadow-lg"
+              className="w-full justify-start bg-destructive/10 hover:bg-destructive/20 text-destructive hover:text-destructive"
               onClick={handleSignOut}
             >
               <LogOut className="mr-2 h-4 w-4" />
@@ -162,9 +162,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       )}
       
       {/* Main content */}
-      <div className="flex-1 overflow-hidden w-full h-full md:ml-0">
-        <main className="h-full overflow-auto p-4">
-          {children}
+      <div className="flex-1 overflow-hidden w-full h-full">
+        <main className="h-full overflow-auto p-4 md:p-6 bg-background/50">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

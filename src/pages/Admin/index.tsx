@@ -3,7 +3,6 @@ import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import AdminLayout from '@/components/layout/AdminLayout';
 
 // Admin pages
 import AdminAnalytics from './AdminAnalytics';
@@ -15,6 +14,7 @@ import AdminFeedback from './AdminFeedback';
 import AdminSettings from './AdminSettings';
 import AdminAiChatPage from './AdminAiChat';
 import AdminPurchases from './AdminPurchases';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
