@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useGenerationState } from './useGenerationState';
@@ -61,7 +60,7 @@ export const useAudioGeneration = () => {
       
       const result = await generateAudioFromText(enhancedText, formData.language, formData.voice);
       
-      if ('error' in result) {
+      if ('error' in result && !result.success) {
         const errorMessage = result.error;
         
         if (typeof errorMessage === 'string' && (errorMessage.includes('Authentication required') || errorMessage.includes('authentication'))) {
