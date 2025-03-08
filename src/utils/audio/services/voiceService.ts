@@ -14,11 +14,17 @@ export async function fetchGoogleVoices() {
     }
     
     console.log('Fetching Google TTS voices...');
-    const { data, error } = await supabase.functions.invoke('get-google-voices');
+    
+    // Add anon key to headers to fix authorization issue
+    const { data, error } = await supabase.functions.invoke('get-google-voices', {
+      headers: {
+        apikey: process.env.SUPABASE_ANON_KEY || supabase.supabaseKey
+      }
+    });
     
     if (error) {
       console.error('Error fetching Google voices:', error);
-      throw new Error(error.message);
+      throw error;
     }
     
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {

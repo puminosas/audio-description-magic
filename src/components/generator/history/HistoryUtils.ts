@@ -11,6 +11,11 @@ export const useHistoryUtils = () => {
       // Convert string dates to Date objects
       const dateObj = typeof date === 'string' ? new Date(date) : date;
       
+      // Check if dateObj is valid before formatting
+      if (Number.isNaN(dateObj.getTime())) {
+        return 'Invalid date';
+      }
+      
       return dateObj.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',

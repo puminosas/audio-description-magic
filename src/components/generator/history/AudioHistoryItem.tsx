@@ -23,7 +23,7 @@ export interface FileItem {
   fileName?: string;
   filePath?: string;
   fileType?: string;
-  createdAt: string | Date;
+  createdAt: string | Date | null;
   audioUrl?: string;
   voice_name?: string;
   language?: string;

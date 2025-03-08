@@ -1,181 +1,155 @@
 
-import { useState } from 'react';
-import { Play, Pause, Download, Trash2, Clock, Code } from 'lucide-react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
+import { Copy, Trash, PlayCircle, PauseCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
 interface AudioHistoryItemProps {
-  id?: string;
+  id: string;
   audioUrl: string;
   title: string;
   description?: string;
-  createdAt: string | Date;
+  createdAt: string | Date | null;
   language?: string;
-  voiceName: string;
-  duration?: number;
+  voiceName?: string;
   showControls?: boolean;
   onDelete?: (id: string) => void;
+  onCopy?: (id: string, url: string) => void;
+  isPlaying?: boolean;
+  onPlayPause?: (id: string) => void;
 }
 
-const AudioHistoryItem = ({
+const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
   id,
-  title,
-  description = '',
-  createdAt,
   audioUrl,
-  language = '',
+  title,
+  description,
+  createdAt,
+  language,
   voiceName,
-  duration = 0,
   showControls = true,
-  onDelete
-}: AudioHistoryItemProps) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audio] = useState(new Audio());
+  onDelete,
+  onCopy,
+  isPlaying = false,
+  onPlayPause
+}) => {
   const { toast } = useToast();
-  const createdDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
 
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      // Set CORS mode to anonymous for better error handling
-      audio.crossOrigin = "anonymous";
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return 'Unknown date';
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
       
-      // Reset src before setting it again to avoid stale state
-      audio.src = '';
-      audio.src = audioUrl;
+      // Check if dateObj is valid before formatting
+      if (Number.isNaN(dateObj.getTime())) {
+        return 'Unknown date';
+      }
       
-      audio.play().catch(error => {
-        console.error('Error playing audio:', error);
-        toast({
-          title: 'Error',
-          description: 'Could not play audio file. Try downloading instead.',
-          variant: 'destructive',
-        });
-      });
+      return formatDistanceToNow(dateObj, { addSuffix: true });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Unknown date';
     }
-    setIsPlaying(!isPlaying);
   };
 
-  // Listen for audio end
-  audio.onended = () => {
-    setIsPlaying(false);
-  };
-
-  // Listen for audio error
-  audio.onerror = () => {
-    setIsPlaying(false);
-    toast({
-      title: 'Error',
-      description: 'Failed to play audio. Try downloading the file instead.',
-      variant: 'destructive',
-    });
-  };
-
-  const embedCode = `<iframe 
-  src="${window.location.origin}/embed?audio=${encodeURIComponent(audioUrl)}" 
-  width="300" 
-  height="80" 
-  frameborder="0" 
-  allow="autoplay"
-></iframe>`;
-
-  const copyEmbedCode = () => {
-    navigator.clipboard.writeText(embedCode);
-    toast({
-      title: 'Success',
-      description: 'Embed code copied to clipboard',
-    });
+  const handleCopy = () => {
+    if (onCopy) {
+      onCopy(id, audioUrl);
+    } else {
+      // Default copy behavior if no handler provided
+      const embedCode = `<audio id="audiodesc-${id}" controls><source src="${audioUrl}" type="audio/mpeg">Your browser does not support the audio element.</audio>`;
+      
+      navigator.clipboard.writeText(embedCode)
+        .then(() => {
+          toast({
+            title: 'Copied!',
+            description: 'Embed code copied to clipboard',
+          });
+        })
+        .catch(err => {
+          console.error('Error copying text:', err);
+          toast({
+            title: 'Error',
+            description: 'Failed to copy embed code',
+            variant: 'destructive',
+          });
+        });
+    }
   };
 
   return (
-    <div className="glassmorphism rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-300">
-      <div className="flex items-start justify-between">
+    <div className="w-full rounded-lg p-4 space-y-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <div className="flex-1">
-          <h3 className="font-medium truncate">{title}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{description}</p>
-          <div className="flex items-center mt-2 text-xs text-muted-foreground">
-            <Clock size={12} className="mr-1" />
-            <span>{formatDistanceToNow(createdDate, { addSuffix: true })}</span>
-            {language && (
-              <>
-                <span className="mx-2">•</span>
-                <span>{language}</span>
-              </>
-            )}
-            <span className="mx-2">•</span>
-            <span>Voice: {voiceName}</span>
-          </div>
+          <h3 className="text-base font-medium">{title}</h3>
+          {description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{description}</p>}
         </div>
         
         {showControls && (
-          <div className="flex items-center space-x-2 ml-4">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={togglePlayPause}
-            >
-              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              asChild
-            >
-              <a href={audioUrl} download={`${title}.mp3`}>
-                <Download size={16} />
-              </a>
-            </Button>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                >
-                  <Code size={16} />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80">
-                <div className="space-y-2">
-                  <h3 className="font-medium">Embed Code</h3>
-                  <div className="bg-secondary p-2 rounded-md text-xs overflow-x-auto">
-                    <code>{embedCode}</code>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    className="w-full mt-2"
-                    onClick={copyEmbedCode}
-                  >
-                    Copy Code
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            {onDelete && id && (
+          <div className="flex items-center gap-2">
+            {audioUrl && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => onDelete(id)}
+                onClick={() => onPlayPause && onPlayPause(id)}
+                title={isPlaying ? "Pause audio" : "Play audio"}
               >
-                <Trash2 size={16} />
+                {isPlaying ? (
+                  <PauseCircle className="h-5 w-5" />
+                ) : (
+                  <PlayCircle className="h-5 w-5" />
+                )}
+              </Button>
+            )}
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCopy}
+              title="Copy embed code"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDelete(id)}
+                title="Delete audio file"
+              >
+                <Trash className="h-4 w-4 text-destructive" />
               </Button>
             )}
           </div>
         )}
       </div>
+      
+      <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground">
+        <span>{formatDate(createdAt)}</span>
+        {language && (
+          <>
+            <span>•</span>
+            <Badge variant="outline" className="text-xs">{language}</Badge>
+          </>
+        )}
+        {voiceName && (
+          <>
+            <span>•</span>
+            <Badge variant="outline" className="text-xs">{voiceName}</Badge>
+          </>
+        )}
+      </div>
+      
+      {audioUrl && (
+        <audio controls className="w-full mt-2">
+          <source src={audioUrl} type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
+      )}
     </div>
   );
 };
