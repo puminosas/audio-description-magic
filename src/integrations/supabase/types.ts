@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          allowguestgeneration: boolean
+          basicgenerationslimit: number
+          created_at: string | null
+          enablefeedback: boolean
+          enablenewuserregistration: boolean
+          freegenerationslimit: number
+          hidepricingfeatures: boolean
+          id: number
+          premiumgenerationslimit: number
+          requireemailverification: boolean
+          storageretentiondays: number
+          unlimitedgenerationsforall: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          allowguestgeneration?: boolean
+          basicgenerationslimit?: number
+          created_at?: string | null
+          enablefeedback?: boolean
+          enablenewuserregistration?: boolean
+          freegenerationslimit?: number
+          hidepricingfeatures?: boolean
+          id: number
+          premiumgenerationslimit?: number
+          requireemailverification?: boolean
+          storageretentiondays?: number
+          unlimitedgenerationsforall?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          allowguestgeneration?: boolean
+          basicgenerationslimit?: number
+          created_at?: string | null
+          enablefeedback?: boolean
+          enablenewuserregistration?: boolean
+          freegenerationslimit?: number
+          hidepricingfeatures?: boolean
+          id?: number
+          premiumgenerationslimit?: number
+          requireemailverification?: boolean
+          storageretentiondays?: number
+          unlimitedgenerationsforall?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       audio_files: {
         Row: {
           audio_url: string
