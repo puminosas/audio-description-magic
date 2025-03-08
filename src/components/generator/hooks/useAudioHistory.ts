@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { getAudioHistory, deleteAudioFile } from '@/utils/audio/historyService';
@@ -81,14 +80,30 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     }
   }, [user, fetchHistory, isInitialLoad]);
 
-  const handlePlayPause = (fileId: string) => {
-    setAudioPlaying(prevId => prevId === fileId ? null : fileId);
-  };
+  // Handle play/pause toggle
+  const handlePlayPause = useCallback((fileId: string) => {
+    setAudioPlaying(prevId => {
+      // If the same file is clicked, pause it
+      if (prevId === fileId) {
+        return null;
+      }
+      // Otherwise play the new file
+      return fileId;
+    });
+  }, []);
 
-  const handleDeleteFile = async (fileId: string) => {
+  // Handle file deletion
+  const handleDeleteFile = useCallback(async (fileId: string) => {
     try {
+      // Set loading state for this file
       setDeleteFileId(fileId);
-      await deleteAudioFile(fileId);
+      
+      // Call API to delete the file
+      const success = await deleteAudioFile(fileId);
+      
+      if (!success) {
+        throw new Error('Failed to delete file');
+      }
       
       // Update the local state to remove the deleted file
       setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
@@ -112,7 +127,7 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     } finally {
       setDeleteFileId(null);
     }
-  };
+  }, [toast, onRefreshStats]);
 
   return {
     files,
@@ -129,4 +144,4 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     loadMore,
     hasMore: currentPage < totalPages
   };
-};
+}, []);

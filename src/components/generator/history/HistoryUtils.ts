@@ -28,6 +28,15 @@ export const useHistoryUtils = () => {
   };
 
   const copyEmbedCode = (id: string, audioUrl: string) => {
+    if (!audioUrl) {
+      toast({
+        title: 'Error',
+        description: 'No audio URL available to copy',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     const embedCode = `<audio id="audiodesc-${id}" controls><source src="${audioUrl}" type="audio/mpeg">Your browser does not support the audio element.</audio>`;
     
     navigator.clipboard.writeText(embedCode)

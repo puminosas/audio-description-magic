@@ -82,6 +82,12 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
     }
   };
 
+  const handlePlayPauseClick = () => {
+    if (onPlayPause) {
+      onPlayPause(id);
+    }
+  };
+
   return (
     <div className="w-full rounded-lg p-4 space-y-3">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
@@ -96,7 +102,7 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onPlayPause && onPlayPause(id)}
+                onClick={handlePlayPauseClick}
                 title={isPlaying ? "Pause audio" : "Play audio"}
               >
                 {isPlaying ? (

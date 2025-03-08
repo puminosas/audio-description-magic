@@ -59,9 +59,10 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
         language={file.language || ''}
         voiceName={file.voice_name || 'Default'}
         showControls={true}
-        onDelete={(id) => {
-          setDeleteFileId(id);
-        }}
+        onDelete={(id) => setDeleteFileId(id)}
+        onCopy={(id, url) => copyEmbedCode(id, url)}
+        isPlaying={audioPlaying === file.id}
+        onPlayPause={(id) => handlePlayPause(id)}
       />
       
       <AlertDialog>

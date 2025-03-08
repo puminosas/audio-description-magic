@@ -43,18 +43,22 @@ const AudioHistoryList: React.FC<AudioHistoryListProps> = ({
       </div>
 
       <div className="space-y-4">
-        {files.map((file) => (
-          <AudioHistoryItem
-            key={file.id}
-            file={file}
-            audioPlaying={audioPlaying}
-            handlePlayPause={handlePlayPause}
-            handleDeleteFile={handleDeleteFile}
-            setDeleteFileId={setDeleteFileId}
-            copyEmbedCode={copyEmbedCode}
-            formatDate={formatDate}
-          />
-        ))}
+        {files.length > 0 ? (
+          files.map((file) => (
+            <AudioHistoryItem
+              key={file.id}
+              file={file}
+              audioPlaying={audioPlaying}
+              handlePlayPause={handlePlayPause}
+              handleDeleteFile={handleDeleteFile}
+              setDeleteFileId={setDeleteFileId}
+              copyEmbedCode={copyEmbedCode}
+              formatDate={formatDate}
+            />
+          ))
+        ) : (
+          <p className="text-center text-muted-foreground py-8">No audio files found</p>
+        )}
       </div>
 
       {!user && files.length > 0 && (
