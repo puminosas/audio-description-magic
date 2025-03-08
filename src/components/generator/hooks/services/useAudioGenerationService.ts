@@ -10,9 +10,14 @@ export const useAudioGenerationService = () => {
     voice: any
   ): Promise<AudioGenerationResult> => {
     try {
+      console.log(`Attempting to generate audio for: "${text.substring(0, 30)}..."`);
+      
       // Add a timeout to prevent long-running requests
-      const timeoutPromise = new Promise<{success: false, error: string}>((_, reject) => 
-        setTimeout(() => ({ success: false, error: 'The request took too long to complete. Try with a shorter text.' }), 60000)
+      const timeoutPromise = new Promise<AudioGenerationResult>((_, reject) => 
+        setTimeout(() => ({ 
+          success: false, 
+          error: 'The request took too long to complete. Try with a shorter text.' 
+        }), 60000)
       );
       
       // Check if user is authenticated
@@ -22,16 +27,18 @@ export const useAudioGenerationService = () => {
         return { success: false, error: 'Authentication required to generate audio descriptions' };
       }
       
-      // Generate the audio with our text via Supabase Edge Function
-      const generatePromise = supabase.functions.invoke('generate-google-tts', {
+      // First try the generate-audio function
+      const generatePromise = supabase.functions.invoke('generate-audio', {
         body: {
           text: text,
           language: language.code,
-          voice: voice.id,
-          user_id: session.user.id
+          voice: voice.name
         }
       }).then(response => {
+        console.log("Response from generate-audio:", response);
+        
         if (response.error) {
+          console.error("Error from generate-audio:", response.error);
           return { 
             success: false, 
             error: response.error.message || 'Failed to generate audio'
@@ -39,6 +46,7 @@ export const useAudioGenerationService = () => {
         }
         
         if (!response.data || !response.data.success) {
+          console.error("Invalid response from generate-audio:", response.data);
           return { 
             success: false, 
             error: response.data?.error || 'Failed to generate audio, invalid response from server'
@@ -47,9 +55,9 @@ export const useAudioGenerationService = () => {
         
         return {
           success: true,
-          audioUrl: response.data.audio_url,
-          text: text,
-          id: response.data.fileName || crypto.randomUUID()
+          audioUrl: response.data.audioUrl,
+          text: response.data.text || text,
+          id: response.data.id || crypto.randomUUID()
         };
       });
       

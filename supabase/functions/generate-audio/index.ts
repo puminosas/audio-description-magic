@@ -7,6 +7,7 @@ const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
 };
 
 // Process base64 in chunks to prevent memory issues (stack overflow)
@@ -26,20 +27,43 @@ function binaryToBase64(buffer: ArrayBuffer) {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { text, language = 'en', voice = 'alloy' } = await req.json();
+    console.log("Processing audio generation request");
+    
+    if (!req.body) {
+      console.error("Request body is empty");
+      return new Response(
+        JSON.stringify({ success: false, error: 'Request body is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Error parsing request JSON:", parseError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { text, language = 'en', voice = 'alloy' } = requestData;
     
     if (!text) {
+      console.error("Text parameter is missing");
       return new Response(
         JSON.stringify({ success: false, error: 'Text is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Processing request for text: "${text}", language: ${language}, voice: ${voice}`);
+    console.log(`Processing request for text: "${text.substring(0, 30)}...", language: ${language}, voice: ${voice}`);
     
     if (!openaiApiKey) {
       console.error('No OpenAI API key found in environment variables');
