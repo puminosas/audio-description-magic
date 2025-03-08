@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -77,7 +78,7 @@ const Admin = () => {
   return (
     <AdminLayout>
       <Routes>
-        <Route path="/" element={<AdminAudioFiles />} />
+        <Route path="/" element={<Navigate to="/admin/ai-chat" replace />} />
         <Route path="/audio-files" element={<AdminAudioFiles />} />
         <Route path="/users" element={<AdminUserManagement />} />
         <Route path="/user-activity" element={<AdminUserActivity />} />

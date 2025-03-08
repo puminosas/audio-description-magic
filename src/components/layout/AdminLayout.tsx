@@ -2,7 +2,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { 
-  LayoutDashboard, 
   Users, 
   FileText, 
   MessageSquare, 
@@ -65,13 +64,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </div>
           
           <div className="space-y-1 flex-1 overflow-auto pb-4 px-1">
-            <Link to="/admin" onClick={() => setMobileSidebarOpen(false)}>
+            <Link to="/admin/ai-chat" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
-                variant={isActiveRoute("/admin") ? "secondary" : "ghost"} 
+                variant={isActiveRoute("/admin/ai-chat") ? "secondary" : "ghost"} 
                 className="w-full justify-start mb-1"
               >
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                <span>Dashboard</span>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                <span>AI Chat</span>
               </Button>
             </Link>
             <Link to="/admin/users" onClick={() => setMobileSidebarOpen(false)}>
@@ -99,15 +98,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 <span>Purchases</span>
-              </Button>
-            </Link>
-            <Link to="/admin/ai-chat" onClick={() => setMobileSidebarOpen(false)}>
-              <Button 
-                variant={isActiveRoute("/admin/ai-chat") ? "secondary" : "ghost"} 
-                className="w-full justify-start mb-1"
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                <span>AI Chat</span>
               </Button>
             </Link>
             <Link to="/admin/feedback" onClick={() => setMobileSidebarOpen(false)}>
