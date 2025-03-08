@@ -36,9 +36,12 @@ const LanguageVoiceSelector = ({
     gender: 'MALE'
   };
 
+  // Skip fallback/voice-related errors
+  const showError = error && !error.includes('fallback') && !error.includes('voice') && !error.includes('Voice');
+
   return (
     <div className="space-y-6">
-      {error && (
+      {showError && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>

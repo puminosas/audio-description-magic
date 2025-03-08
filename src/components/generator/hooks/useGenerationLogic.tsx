@@ -3,13 +3,11 @@ import { useEffect, useState } from 'react';
 import { useAudioGeneration } from './useAudioGeneration';
 import { LanguageOption, VoiceOption } from '@/utils/audio/types';
 import { initializeGoogleVoices, getAvailableLanguages } from '@/utils/audio';
-import { useToast } from '@/hooks/use-toast';
 
 // Use 'export type' when re-exporting a type with isolatedModules enabled
 export type { GeneratedAudio } from './useGenerationState';
 
 export const useGenerationLogic = () => {
-  const { toast } = useToast();
   const [googleTtsAvailable, setGoogleTtsAvailable] = useState(true);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
   const [suppressErrors, setSuppressErrors] = useState(false);
@@ -52,19 +50,13 @@ export const useGenerationLogic = () => {
         console.error('Failed to initialize Google voices:', error);
         setGoogleTtsAvailable(false);
         
-        // Only show toast on first load, not on retries
-        if (!initializationAttempted) {
-          toast({
-            title: "Using Fallback Voices",
-            description: "Limited voice selection available. Some features may be restricted.",
-            variant: "default", // Changed from "warning" to "default" to fix the type error
-          });
-        }
+        // We're removing the toast notification here
+        // No toast will be shown when fallback voices are used
       }
     };
     
     initializeVoices();
-  }, [toast, initializationAttempted]);
+  }, [initializationAttempted]);
 
   return {
     loading,
