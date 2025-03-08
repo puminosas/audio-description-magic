@@ -13,12 +13,12 @@ export async function fetchGoogleVoices() {
       throw new Error('Rate limit reached for voice fetching. Try again later.');
     }
     
-    console.log('Fetching Google TTS voices...');
+    console.log('Fetching Google TTS voices from Edge Function...');
     
     // Add anon key to headers to fix authorization issue
     const { data, error } = await supabase.functions.invoke('get-google-voices', {
       headers: {
-        apikey: process.env.SUPABASE_ANON_KEY || supabase.supabaseKey
+        apikey: process.env.SUPABASE_ANON_KEY || ''
       }
     });
     

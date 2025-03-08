@@ -14,6 +14,7 @@ interface AudioHistoryItemProps {
   createdAt: string | Date | null;
   language?: string;
   voiceName?: string;
+  duration?: number;
   showControls?: boolean;
   onDelete?: (id: string) => void;
   onCopy?: (id: string, url: string) => void;
@@ -29,6 +30,7 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
   createdAt,
   language,
   voiceName,
+  duration,
   showControls = true,
   onDelete,
   onCopy,
