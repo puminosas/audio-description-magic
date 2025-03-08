@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 export interface AppSettings {
   freeGenerationsLimit: number;
@@ -31,6 +32,7 @@ export function useAdminSettings() {
     unlimitedGenerationsForAll: false
   });
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   
   useEffect(() => {
     fetchSettings();
@@ -69,10 +71,19 @@ export function useAdminSettings() {
   }
   
   const handleSaveSettings = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission Denied",
+        description: "You need administrator privileges to modify settings.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      console.log('Saving settings:', {
+      console.log('Saving settings as admin:', {
         freegenerationslimit: settings.freeGenerationsLimit,
         basicgenerationslimit: settings.basicGenerationsLimit,
         premiumgenerationslimit: settings.premiumGenerationsLimit,
