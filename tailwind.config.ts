@@ -124,7 +124,12 @@ export default {
 						transform: 'translateY(100%)',
 						opacity: '0'
 					}
-				}
+				},
+				'shimmer': {
+					'100%': {
+						transform: 'translateX(100%)',
+					},
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -136,11 +141,18 @@ export default {
 				'pulse-sound-3': 'pulse-sound 1.3s ease-in-out infinite 0.2s',
 				'pulse-sound-4': 'pulse-sound 1.6s ease-in-out infinite 0.3s',
 				'float': 'float 4s ease-in-out infinite',
-				'matrix-drip': 'matrix-drip 2.5s ease-in-out infinite'
+				'matrix-drip': 'matrix-drip 2.5s ease-in-out infinite',
+				'shimmer': 'shimmer 1.5s infinite',
 			},
 			backdropFilter: {
 				'none': 'none',
 				'blur': 'blur(20px)'
+			},
+			boxShadow: {
+				'soft': '0 4px 12px rgba(0, 0, 0, 0.05)',
+				'card': '0 4px 15px rgba(0, 0, 0, 0.08)',
+				'button': '0 2px 5px rgba(0, 0, 0, 0.1)',
+				'elevation': '0 8px 30px rgba(0, 0, 0, 0.12)',
 			}
 		}
 	},

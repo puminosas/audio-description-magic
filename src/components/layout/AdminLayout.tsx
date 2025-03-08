@@ -46,6 +46,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           variant="outline" 
           size="icon" 
           onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          className="shadow-md hover:shadow-lg"
         >
           {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
@@ -56,7 +57,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
         md:translate-x-0 transition-transform duration-200 ease-in-out
         fixed inset-y-0 left-0 z-40 w-64 bg-background border-r pt-5 px-3 flex-col justify-between
-        flex md:relative h-full
+        flex md:relative h-full shadow-lg
       `}>
         <div className="flex flex-col h-full overflow-hidden">
           <div className="px-3 py-2">
@@ -68,7 +69,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 Dashboard
@@ -77,7 +78,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin/users" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/users") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <Users className="mr-2 h-4 w-4" />
                 User Management
@@ -86,7 +87,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin/audio-files" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/audio-files") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Audio Files
@@ -95,7 +96,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin/purchases" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/purchases") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 Purchases
@@ -104,7 +105,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin/ai-chat" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/ai-chat") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
                 AI Chat
@@ -113,7 +114,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin/analytics" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/analytics") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <BarChart className="mr-2 h-4 w-4" />
                 Analytics
@@ -122,7 +123,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin/feedback" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/feedback") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Feedback
@@ -131,7 +132,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Link to="/admin/settings" onClick={() => setMobileSidebarOpen(false)}>
               <Button 
                 variant={isActiveRoute("/admin/settings") ? "secondary" : "ghost"} 
-                className="w-full justify-start"
+                className="w-full justify-start shadow-sm hover:shadow"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
@@ -142,7 +143,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="mt-auto mb-8 px-3">
             <Button
               variant="outline"
-              className="w-full justify-start"
+              className="w-full justify-start shadow-md hover:shadow-lg"
               onClick={handleSignOut}
             >
               <LogOut className="mr-2 h-4 w-4" />
@@ -162,7 +163,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       
       {/* Main content */}
       <div className="flex-1 overflow-hidden w-full h-full md:ml-0">
-        <main className="h-full overflow-auto">
+        <main className="h-full overflow-auto p-4">
           {children}
         </main>
       </div>

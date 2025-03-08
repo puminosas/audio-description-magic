@@ -7,7 +7,7 @@
 
 @layer base {
   :root {
-    /* Light theme - with green color palette */
+    /* Light theme - with sky blue color palette */
     --background: 0 0% 100%;
     --foreground: 215 25% 27%;
 
@@ -17,30 +17,30 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 27%;
 
-    --primary: 150 60% 40%;
+    --primary: 198 93% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 30% 92%;
-    --secondary-foreground: 150 60% 20%;
+    --secondary: 198 60% 92%;
+    --secondary-foreground: 198 93% 25%;
 
-    --muted: 150 20% 94%;
+    --muted: 198 20% 94%;
     --muted-foreground: 215 20% 45%;
 
-    --accent: 150 60% 40%;
+    --accent: 198 93% 40%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 20% 98%;
 
-    --border: 150 30% 90%;
-    --input: 150 30% 90%;
-    --ring: 150 60% 40%;
+    --border: 198 30% 90%;
+    --input: 198 30% 90%;
+    --ring: 198 93% 40%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    /* Keep existing dark mode color scheme */
+    /* Dark theme with sky blue accents */
     --background: 0 0% 10%;
     --foreground: 0 0% 98%;
 
@@ -50,24 +50,24 @@
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 150 80% 40%;
+    --primary: 198 93% 40%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 150 30% 15%;
+    --secondary: 198 30% 18%;
     --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 150 80% 40%;
+    --accent: 198 93% 40%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 150 30% 20%;
-    --input: 150 30% 20%;
-    --ring: 150 80% 40%;
+    --border: 198 30% 20%;
+    --input: 198 30% 20%;
+    --ring: 198 93% 40%;
   }
 }
 
@@ -83,7 +83,7 @@
 }
 
 .glassmorphism {
-  @apply bg-white/80 dark:bg-black/30 backdrop-blur-xl border border-gray-200/50 dark:border-white/10;
+  @apply bg-white/80 dark:bg-black/30 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 shadow-lg;
 }
 
 .hero-gradient {
@@ -168,4 +168,24 @@
 /* Ensure animated elements stay visible */
 .animate-fade-in-up.opacity-0 {
   opacity: 1 !important;
+}
+
+/* Enhanced card styles */
+.enhanced-card {
+  @apply border border-border bg-card text-card-foreground shadow-card rounded-lg transition-all duration-200 hover:shadow-elevation;
+}
+
+/* Shimmer effect for loading states */
+.shimmer {
+  @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-shimmer before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent;
+}
+
+/* Button hover effects */
+.btn-hover-effect {
+  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
 }
