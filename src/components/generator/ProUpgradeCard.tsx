@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,11 +19,11 @@ const ProUpgradeCard = ({ user, profile }: ProUpgradeCardProps) => {
       try {
         const { data, error } = await supabase
           .from('app_settings')
-          .select('hidePricingFeatures')
+          .select('hidepricingfeatures')
           .single();
         
         if (!error && data) {
-          setHidePricingFeatures(data.hidePricingFeatures);
+          setHidePricingFeatures(data.hidepricingfeatures);
         }
       } catch (error) {
         console.error('Failed to fetch app settings:', error);
