@@ -1,20 +1,10 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { 
-  generateAudioDescription, 
-  saveAudioToHistory, 
-  updateGenerationCount, 
-  LanguageOption,
-  VoiceOption,
-  AudioGenerationResult,
-  AudioSuccessResult,
-  AudioErrorResult,
-} from '@/utils/audio';
-import { useGenerationState, GeneratedAudio } from './useGenerationState';
+import { useGenerationState } from './useGenerationState';
 import { useGenerationErrors } from './useGenerationErrors';
 import { useAudioValidator } from './useAudioValidator';
+import { useAudioServices } from './services/useAudioServices';
 
 export const useAudioGeneration = () => {
   const { user } = useAuth();
@@ -22,11 +12,12 @@ export const useAudioGeneration = () => {
   const { loading, setLoading, generatedAudio, setGeneratedAudio, findInCache, isCached } = useGenerationState();
   const { error, setError, handleError } = useGenerationErrors();
   const { validateAudioUrl } = useAudioValidator();
+  const { generateEnhancedDescription, generateAudioFromText, saveToUserHistory } = useAudioServices();
 
   const handleGenerate = async (formData: {
     text: string;
-    language: LanguageOption;
-    voice: VoiceOption;
+    language: any;
+    voice: any;
   }, activeTab: string, onSuccess?: () => Promise<void>) => {
     try {
       // Start with clean state
@@ -53,31 +44,10 @@ export const useAudioGeneration = () => {
       
       if (formData.text.length < 100 && activeTab === 'generate') {
         console.log("Input is short, generating enhanced description...");
-        
         try {
-          // Add a timeout for description generation
-          const descTimeoutPromise = new Promise<{success: false, error: string}>((_, reject) => 
-            setTimeout(() => reject(new Error('Description generation timed out')), 15000)
-          );
-          
-          // Call our Supabase Edge Function to generate a better description
-          const descResponse = await supabase.functions.invoke('generate-description', {
-            body: {
-              product_name: formData.text,
-              language: formData.language.code,
-              voice_name: formData.voice.name
-            }
-          });
-          
-          const descPromise = descResponse;
-          
-          // Check for error first
-          if (descResponse.error) {
-            console.error("Error generating description:", descResponse.error);
-          } 
-          // Then check if we have data and it contains success property
-          else if (descResponse.data && descResponse.data.success && descResponse.data.generated_text) {
-            enhancedText = descResponse.data.generated_text;
+          const generatedText = await generateEnhancedDescription(formData.text, formData.language.code, formData.voice.name);
+          if (generatedText) {
+            enhancedText = generatedText;
             console.log("Generated enhanced description:", enhancedText.substring(0, 100) + "...");
           }
         } catch (descErr) {
@@ -89,20 +59,7 @@ export const useAudioGeneration = () => {
       // Step 2: Generate the audio with our enhanced text
       console.log(`Generating audio with ${enhancedText !== formData.text ? 'enhanced' : 'original'} text...`);
       
-      // Add a timeout to prevent long-running requests
-      const timeoutPromise = new Promise<AudioErrorResult>((_, reject) => 
-        setTimeout(() => ({ error: 'The request took too long to complete. Try with a shorter text.' }), 60000)
-      );
-      
-      // Race the generation with a timeout
-      const result = await Promise.race([
-        generateAudioDescription(
-          enhancedText,
-          formData.language,
-          formData.voice
-        ),
-        timeoutPromise
-      ]) as AudioGenerationResult;
+      const result = await generateAudioFromText(enhancedText, formData.language, formData.voice);
       
       if ('error' in result) {
         const errorMessage = result.error;
@@ -144,33 +101,27 @@ export const useAudioGeneration = () => {
       }
       
       // Create the audio object
-      const audioData: GeneratedAudio = {
+      const audioData = {
         audioUrl: result.audioUrl,
         text: result.text || formData.text,
-        folderUrl: null, // Removing folderUrl since we only use Supabase Storage
+        folderUrl: null,
         id: result.id || crypto.randomUUID(),
         timestamp: Date.now()
       };
       
-      // Set generated audio immediately instead of with a delay
+      // Set generated audio
       setGeneratedAudio(audioData);
       
       if (user?.id) {
         try {
-          await Promise.all([
-            saveAudioToHistory(
-              audioData.audioUrl,
-              audioData.text,
-              formData.language.name,
-              formData.voice.name,
-              user.id
-            ),
-            updateGenerationCount(user.id)
-          ]);
-          
-          if (onSuccess) {
-            await onSuccess();
-          }
+          await saveToUserHistory(
+            audioData.audioUrl,
+            audioData.text,
+            formData.language.name,
+            formData.voice.name,
+            user.id,
+            onSuccess
+          );
         } catch (historyErr) {
           console.error("Error saving to history:", historyErr);
           // Don't show error to user since audio was generated successfully
