@@ -24,6 +24,41 @@ function binaryToBase64(buffer: ArrayBuffer) {
   return base64;
 }
 
+// Track API calls for rate limiting
+const API_CALLS = {
+  openai: new Map<string, number[]>(),  // Maps IP to timestamps
+  tts: new Map<string, number[]>()      // Maps IP to timestamps
+};
+
+// Rate limiting function
+function checkRateLimit(type: 'openai' | 'tts', ip: string, maxPerMinute: number): boolean {
+  const now = Date.now();
+  const map = API_CALLS[type];
+  
+  // Get timestamps for this IP or initialize empty array
+  const timestamps = map.get(ip) || [];
+  
+  // Filter out timestamps older than 1 minute
+  const recentCalls = timestamps.filter(time => (now - time) < 60000);
+  
+  // Check if we've exceeded our limit
+  if (recentCalls.length >= maxPerMinute) {
+    return false; // Rate limit exceeded
+  }
+  
+  // Add current timestamp and update map
+  recentCalls.push(now);
+  map.set(ip, recentCalls);
+  
+  return true; // Rate limit ok
+}
+
+// Token counter for OpenAI (approximate)
+function estimateTokens(text: string): number {
+  // Rough estimate: 1 token ~= 4 chars in English
+  return Math.ceil(text.length / 4);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -33,6 +68,20 @@ serve(async (req) => {
 
   try {
     console.log("Processing audio generation request");
+    
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for') || 'unknown-ip';
+    
+    // Apply rate limits (5 OpenAI calls per minute, 3 TTS calls per minute)
+    if (!checkRateLimit('openai', clientIP, 5)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Rate limit exceeded for description generation. Please try again in a minute.' 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (!req.body) {
       console.error("Request body is empty");
@@ -63,6 +112,17 @@ serve(async (req) => {
       );
     }
 
+    // Enforce input length limits to control costs
+    if (text.length > 1000) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Text exceeds maximum length of 1000 characters'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Processing request for text: "${text.substring(0, 30)}...", language: ${language}, voice: ${voice}`);
     
     if (!openaiApiKey) {
@@ -73,8 +133,12 @@ serve(async (req) => {
       );
     }
 
-    // Step 1: Generate a product description with more detailed prompt
-    console.log("Generating enhanced description with OpenAI...");
+    // Determine if we need a full description (for short inputs) or just basic enhancement
+    const needsFullDescription = text.length < 100;
+    const maxTokens = needsFullDescription ? 500 : 300; // Limit tokens based on input type
+    
+    // Step 1: Generate a product description with cost-aware prompt
+    console.log(`Generating ${needsFullDescription ? 'detailed' : 'enhanced'} description with OpenAI...`);
     const descriptionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -82,31 +146,28 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o", // Using more powerful model for better descriptions
+        model: "gpt-4o-mini", // Use smaller model to reduce costs
         messages: [
           { 
             role: "system", 
-            content: "You are a professional copywriter specializing in creating engaging, detailed e-commerce product descriptions. Your descriptions are informative, highlight key features and benefits, and help customers understand why they should purchase the product. You craft descriptions that work perfectly when read aloud as audio descriptions."
+            content: "You are a professional copywriter specializing in creating concise, engaging e-commerce product descriptions for audio playback."
           },
           { 
             role: "user", 
-            content: `Create a detailed, informative audio description for this product: "${text}". 
+            content: `Create a ${needsFullDescription ? 'detailed' : 'brief enhanced'} audio description for: "${text}". 
             
 The description should:
-1. Begin with a compelling introduction
-2. Highlight 3-5 key features and benefits
-3. Include relevant technical specifications when appropriate
-4. Explain ideal use cases or scenarios
-5. Use vivid, descriptive language that works well when spoken aloud
-6. Be between 150-250 words
-7. Be in ${language} language
-8. End with a subtle call-to-action
+1. Be clear and concise
+2. Highlight key features and benefits
+3. Use natural language optimized for speech
+4. Be in ${language} language
+5. ${needsFullDescription ? 'Be between 100-200 words' : 'Be no more than 100 words'}
 
-Make it sound professional and engaging - as if it's being read by a product spokesperson.`
+Make it sound professional and engaging.`
           }
         ],
-        temperature: 0.8,
-        max_tokens: 700
+        temperature: 0.7,
+        max_tokens: maxTokens
       })
     });
 
@@ -135,7 +196,18 @@ Make it sound professional and engaging - as if it's being read by a product spo
     console.log("Generated Description:", generatedDescription.substring(0, 100) + "...");
     console.log("Description length:", generatedDescription.length, "characters");
 
-    // Step 2: Convert description into speech using OpenAI TTS
+    // Apply TTS rate limiting
+    if (!checkRateLimit('tts', clientIP, 3)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Rate limit exceeded for text-to-speech. Please try again in a minute.' 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Step 2: Convert description into speech using OpenAI TTS (with cost optimization)
     console.log("Converting text to speech with OpenAI...");
     const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
@@ -144,11 +216,11 @@ Make it sound professional and engaging - as if it's being read by a product spo
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "tts-1-hd", // Using high-definition TTS model for better quality
+        model: "tts-1", // Use standard model instead of HD to reduce costs
         voice: voice,
         input: generatedDescription,
         response_format: "mp3",
-        speed: 0.9 // Slightly slower for better clarity
+        speed: 0.95 // Slightly slower for better clarity
       })
     });
 
