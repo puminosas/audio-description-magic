@@ -49,8 +49,8 @@ serve(async (req) => {
       );
     }
 
-    // Step 1: Generate a product description
-    console.log("Generating description with OpenAI...");
+    // Step 1: Generate a product description with more detailed prompt
+    console.log("Generating enhanced description with OpenAI...");
     const descriptionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -58,19 +58,31 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Using available model
+        model: "gpt-4o", // Using more powerful model for better descriptions
         messages: [
           { 
             role: "system", 
-            content: "You are a professional e-commerce product description writer. Your task is to create detailed, engaging, and informative product descriptions that highlight key features, benefits, and use cases. Focus on what makes the product special and why customers would want it."
+            content: "You are a professional copywriter specializing in creating engaging, detailed e-commerce product descriptions. Your descriptions are informative, highlight key features and benefits, and help customers understand why they should purchase the product. You craft descriptions that work perfectly when read aloud as audio descriptions."
           },
           { 
             role: "user", 
-            content: `Write a comprehensive, detailed, and informative audio description for "${text}" in ${language}. Include key features, benefits, technical specifications if relevant, and potential use cases. Make it engaging and informative. Keep it under 200 words but make sure it's detailed enough to give listeners a complete understanding of the product.` 
+            content: `Create a detailed, informative audio description for this product: "${text}". 
+            
+The description should:
+1. Begin with a compelling introduction
+2. Highlight 3-5 key features and benefits
+3. Include relevant technical specifications when appropriate
+4. Explain ideal use cases or scenarios
+5. Use vivid, descriptive language that works well when spoken aloud
+6. Be between 150-250 words
+7. Be in ${language} language
+8. End with a subtle call-to-action
+
+Make it sound professional and engaging - as if it's being read by a product spokesperson.`
           }
         ],
-        temperature: 0.7,
-        max_tokens: 500
+        temperature: 0.8,
+        max_tokens: 700
       })
     });
 
@@ -97,6 +109,7 @@ serve(async (req) => {
     }
 
     console.log("Generated Description:", generatedDescription.substring(0, 100) + "...");
+    console.log("Description length:", generatedDescription.length, "characters");
 
     // Step 2: Convert description into speech using OpenAI TTS
     console.log("Converting text to speech with OpenAI...");
@@ -107,10 +120,11 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "tts-1",
+        model: "tts-1-hd", // Using high-definition TTS model for better quality
         voice: voice,
         input: generatedDescription,
-        response_format: "mp3"
+        response_format: "mp3",
+        speed: 0.9 // Slightly slower for better clarity
       })
     });
 
