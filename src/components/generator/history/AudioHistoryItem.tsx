@@ -15,14 +15,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 
-interface FileItem {
+// Define a more consistent FileItem interface
+export interface FileItem {
   id: string;
   title?: string; 
   description?: string;
   fileName?: string;
   filePath?: string;
   fileType?: string;
-  createdAt: Date;
+  createdAt: string | Date;
   audioUrl?: string;
   voice_name?: string;
   language?: string;

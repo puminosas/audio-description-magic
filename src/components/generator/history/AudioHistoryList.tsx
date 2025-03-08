@@ -3,20 +3,7 @@ import React from 'react';
 import { User } from '@supabase/supabase-js';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import AudioHistoryItem from './AudioHistoryItem';
-
-interface FileItem {
-  id: string;
-  title?: string;
-  fileName?: string;
-  filePath?: string;
-  fileType?: string;
-  description?: string;
-  createdAt: string | Date;
-  audioUrl?: string;
-  voice_name?: string;
-  language?: string;
-}
+import AudioHistoryItem, { FileItem } from './AudioHistoryItem';
 
 interface AudioHistoryListProps {
   files: FileItem[];
