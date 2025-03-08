@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import AudioHistoryItem from '@/components/ui/AudioHistoryItem';
 import { fetchUserAudios } from '@/utils/audio/historyService';
+import { Loader2 } from 'lucide-react';
 
 interface RecentGenerationsProps {
   user: User | null;
@@ -14,6 +15,7 @@ interface RecentGenerationsProps {
 const RecentGenerations: React.FC<RecentGenerationsProps> = ({ user }) => {
   const [recentAudios, setRecentAudios] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAudios = async () => {
@@ -23,10 +25,13 @@ const RecentGenerations: React.FC<RecentGenerationsProps> = ({ user }) => {
       }
 
       try {
+        setLoading(true);
         const { data } = await fetchUserAudios(user.id, 3);
         setRecentAudios(data || []);
+        setError(null);
       } catch (error) {
         console.error('Error fetching audio history:', error);
+        setError('Failed to load recent generations');
       } finally {
         setLoading(false);
       }
@@ -46,7 +51,14 @@ const RecentGenerations: React.FC<RecentGenerationsProps> = ({ user }) => {
       <CardContent>
         {loading ? (
           <div className="flex justify-center p-4">
-            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-primary"></div>
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="p-4 text-center text-destructive-foreground">
+            <p>{error}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
           </div>
         ) : recentAudios.length > 0 ? (
           <div className="space-y-4">
