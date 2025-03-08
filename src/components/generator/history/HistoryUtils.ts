@@ -4,12 +4,22 @@ import { useToast } from '@/hooks/use-toast';
 export const useHistoryUtils = () => {
   const { toast } = useToast();
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return 'Unknown date';
+    
+    try {
+      // Convert string dates to Date objects
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   const copyEmbedCode = (id: string, audioUrl: string) => {

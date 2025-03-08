@@ -7,11 +7,15 @@ import AudioHistoryItem from './AudioHistoryItem';
 
 interface FileItem {
   id: string;
-  fileName: string;
-  filePath: string;
-  fileType: string;
-  createdAt: Date;
+  title?: string;
+  fileName?: string;
+  filePath?: string;
+  fileType?: string;
+  description?: string;
+  createdAt: string | Date;
   audioUrl?: string;
+  voice_name?: string;
+  language?: string;
 }
 
 interface AudioHistoryListProps {
@@ -22,7 +26,7 @@ interface AudioHistoryListProps {
   handleDeleteFile: (fileId: string) => Promise<void>;
   setDeleteFileId: (id: string) => void;
   copyEmbedCode: (id: string, audioUrl: string) => void;
-  formatDate: (date: Date) => string;
+  formatDate: (date: Date | string | null | undefined) => string;
 }
 
 const AudioHistoryList: React.FC<AudioHistoryListProps> = ({

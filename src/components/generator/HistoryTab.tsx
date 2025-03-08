@@ -8,6 +8,7 @@ import AudioHistoryList from './history/AudioHistoryList';
 import EmptyHistoryState from './history/EmptyHistoryState';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface HistoryTabProps {
   user: User | null;
@@ -40,8 +41,21 @@ const HistoryTab = ({ user, onRefreshStats }: HistoryTabProps) => {
 
   if (loading && files.length === 0) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-4 rounded-md border">
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2 mb-4" />
+            <div className="flex justify-between">
+              <Skeleton className="h-8 w-24" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-8 w-8 rounded-full" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
