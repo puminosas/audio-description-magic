@@ -1,11 +1,9 @@
-
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 // Admin pages
-import AdminAnalytics from './AdminAnalytics';
 import AdminAudioFiles from './AdminAudioFiles';
 import AdminUserManagement from './AdminUserManagement';
 import AdminUserUpdate from './AdminUserUpdate';
@@ -79,7 +77,7 @@ const Admin = () => {
   return (
     <AdminLayout>
       <Routes>
-        <Route path="/" element={<AdminAnalytics />} />
+        <Route path="/" element={<AdminAudioFiles />} />
         <Route path="/audio-files" element={<AdminAudioFiles />} />
         <Route path="/users" element={<AdminUserManagement />} />
         <Route path="/user-activity" element={<AdminUserActivity />} />

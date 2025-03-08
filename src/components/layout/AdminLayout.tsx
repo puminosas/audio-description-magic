@@ -6,7 +6,6 @@ import {
   Users, 
   FileText, 
   MessageSquare, 
-  BarChart, 
   Settings, 
   LogOut,
   Menu,
@@ -109,15 +108,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
                 <span>AI Chat</span>
-              </Button>
-            </Link>
-            <Link to="/admin/analytics" onClick={() => setMobileSidebarOpen(false)}>
-              <Button 
-                variant={isActiveRoute("/admin/analytics") ? "secondary" : "ghost"} 
-                className="w-full justify-start mb-1"
-              >
-                <BarChart className="mr-2 h-4 w-4" />
-                <span>Analytics</span>
               </Button>
             </Link>
             <Link to="/admin/feedback" onClick={() => setMobileSidebarOpen(false)}>
