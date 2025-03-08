@@ -60,9 +60,17 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "gpt-4o-mini", // Using available model
         messages: [
-          { role: "system", content: "You are a professional e-commerce product description writer." },
-          { role: "user", content: `Write a high-quality, engaging product description for "${text}" in ${language}. Highlight its main features and benefits. Keep it under 150 words.` }
-        ]
+          { 
+            role: "system", 
+            content: "You are a professional e-commerce product description writer. Your task is to create detailed, engaging, and informative product descriptions that highlight key features, benefits, and use cases. Focus on what makes the product special and why customers would want it."
+          },
+          { 
+            role: "user", 
+            content: `Write a comprehensive, detailed, and informative audio description for "${text}" in ${language}. Include key features, benefits, technical specifications if relevant, and potential use cases. Make it engaging and informative. Keep it under 200 words but make sure it's detailed enough to give listeners a complete understanding of the product.` 
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
       })
     });
 
@@ -88,7 +96,7 @@ serve(async (req) => {
       throw new Error("Failed to generate a description");
     }
 
-    console.log("Generated Description:", generatedDescription);
+    console.log("Generated Description:", generatedDescription.substring(0, 100) + "...");
 
     // Step 2: Convert description into speech using OpenAI TTS
     console.log("Converting text to speech with OpenAI...");
