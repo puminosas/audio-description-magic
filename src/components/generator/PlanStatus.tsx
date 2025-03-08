@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Crown, BarChart, Clock } from 'lucide-react';
+import { Crown, BarChart, Clock, Infinity } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PlanStatusProps {
   user: any;
@@ -19,12 +20,44 @@ const PlanStatus = ({
   totalGenerations = 0, 
   todayGenerations = 0 
 }: PlanStatusProps) => {
+  const [unlimitedGenerations, setUnlimitedGenerations] = useState(false);
+  
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('unlimitedGenerationsForAll')
+          .single();
+        
+        if (!error && data) {
+          setUnlimitedGenerations(data.unlimitedGenerationsForAll);
+        }
+      } catch (error) {
+        console.error('Failed to fetch app settings:', error);
+      }
+    }
+    
+    fetchSettings();
+  }, []);
+  
   const planName = profile?.plan || 'free';
   const dailyLimit = profile?.daily_limit || 10;
-  const percentage = Math.round((remainingGenerations / dailyLimit) * 100);
+  const percentage = unlimitedGenerations ? 100 : Math.round((remainingGenerations / dailyLimit) * 100);
   
   // Get plan details
   const getPlanDetails = () => {
+    // If unlimited generations are enabled, show a special status
+    if (unlimitedGenerations) {
+      return {
+        name: 'Unlimited Access',
+        color: 'text-violet-500',
+        bgColor: 'bg-violet-500',
+        icon: <Infinity className="h-5 w-5 text-violet-500" />,
+        description: 'Unlimited generations enabled for all users'
+      };
+    }
+    
     switch (planName) {
       case 'premium':
         return {
@@ -78,9 +111,13 @@ const PlanStatus = ({
           <div>
             <div className="flex justify-between mb-1">
               <span className="text-sm font-medium">Daily Limit</span>
-              <span className="text-sm">
-                {remainingGenerations} / {dailyLimit} remaining
-              </span>
+              {unlimitedGenerations ? (
+                <span className="text-sm">Unlimited</span>
+              ) : (
+                <span className="text-sm">
+                  {remainingGenerations} / {dailyLimit} remaining
+                </span>
+              )}
             </div>
             <Progress value={percentage} className={`h-2 ${plan.bgColor}`} />
           </div>

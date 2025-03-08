@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProUpgradeCardProps {
   user: any;
@@ -12,8 +13,29 @@ interface ProUpgradeCardProps {
 
 const ProUpgradeCard = ({ user, profile }: ProUpgradeCardProps) => {
   const { toast } = useToast();
+  const [hidePricingFeatures, setHidePricingFeatures] = useState(false);
   
-  if (profile?.plan && profile.plan !== 'free') {
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('hidePricingFeatures')
+          .single();
+        
+        if (!error && data) {
+          setHidePricingFeatures(data.hidePricingFeatures);
+        }
+      } catch (error) {
+        console.error('Failed to fetch app settings:', error);
+      }
+    }
+    
+    fetchSettings();
+  }, []);
+  
+  // If hiding pricing features or user is not on free plan, don't show upgrade card
+  if (hidePricingFeatures || (profile?.plan && profile.plan !== 'free')) {
     return null;
   }
   

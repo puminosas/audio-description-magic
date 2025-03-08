@@ -1,16 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface AppSettings {
+  freeGenerationsLimit: number;
+  basicGenerationsLimit: number;
+  premiumGenerationsLimit: number;
+  allowGuestGeneration: boolean;
+  enableNewUserRegistration: boolean;
+  requireEmailVerification: boolean;
+  storageRetentionDays: number;
+  enableFeedback: boolean;
+  hidePricingFeatures: boolean;
+  unlimitedGenerationsForAll: boolean;
+}
 
 const AdminSettings = () => {
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<AppSettings>({
     freeGenerationsLimit: 5,
     basicGenerationsLimit: 50,
     premiumGenerationsLimit: 500,
@@ -18,20 +32,101 @@ const AdminSettings = () => {
     enableNewUserRegistration: true,
     requireEmailVerification: false,
     storageRetentionDays: 30,
-    enableFeedback: true
+    enableFeedback: true,
+    hidePricingFeatures: false,
+    unlimitedGenerationsForAll: false
   });
+  const { toast } = useToast();
   
-  const handleSaveSettings = () => {
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('*')
+          .single();
+        
+        if (error) {
+          console.error('Error fetching settings:', error);
+          return;
+        }
+        
+        if (data) {
+          setSettings({
+            ...settings,
+            ...data
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      }
+    }
+    
+    fetchSettings();
+  }, []);
+  
+  const handleSaveSettings = async () => {
     setLoading(true);
     
-    // For now, this is a mock save since we haven't implemented a settings table yet
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ 
+          id: 1,
+          ...settings 
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (settings.unlimitedGenerationsForAll) {
+        const { error: profileUpdateError } = await supabase
+          .from('profiles')
+          .update({ 
+            daily_limit: 999999,
+            remaining_generations: 999999 
+          })
+          .eq('plan', 'free');
+        
+        if (profileUpdateError) {
+          console.error('Error updating user profiles:', profileUpdateError);
+          toast({
+            title: 'Partial Update',
+            description: 'Settings saved but user profiles could not be updated.',
+            variant: 'destructive'
+          });
+          setLoading(false);
+          return;
+        }
+      } else {
+        const { error: resetError } = await supabase
+          .from('profiles')
+          .update({ 
+            daily_limit: settings.freeGenerationsLimit,
+            remaining_generations: settings.freeGenerationsLimit
+          })
+          .eq('plan', 'free');
+          
+        if (resetError) {
+          console.error('Error resetting user profiles:', resetError);
+        }
+      }
+      
       toast({
         title: 'Settings Saved',
         description: 'Your system settings have been updated successfully.',
       });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save settings. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -83,6 +178,46 @@ const AdminSettings = () => {
                 Generations per day
               </span>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-primary/10 bg-primary/5">
+        <CardHeader>
+          <CardTitle>Pricing & Monetization</CardTitle>
+          <CardDescription>
+            Control pricing-related features and payment functionality
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="hidePricing">Hide Pricing Page & Features</Label>
+              <p className="text-sm text-muted-foreground">
+                Hides the pricing tab and all payment-related features
+              </p>
+            </div>
+            <Switch
+              id="hidePricing"
+              checked={settings.hidePricingFeatures}
+              onCheckedChange={(checked) => setSettings({ ...settings, hidePricingFeatures: checked })}
+            />
+          </div>
+          
+          <Separator />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="unlimitedGenerations">Unlimited Generations for All Users</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable unlimited generation for all registered users regardless of plan
+              </p>
+            </div>
+            <Switch
+              id="unlimitedGenerations"
+              checked={settings.unlimitedGenerationsForAll}
+              onCheckedChange={(checked) => setSettings({ ...settings, unlimitedGenerationsForAll: checked })}
+            />
           </div>
         </CardContent>
       </Card>

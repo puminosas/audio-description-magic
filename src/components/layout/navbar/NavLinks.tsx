@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface NavLink {
   name: string;
@@ -15,6 +16,27 @@ interface NavLinksProps {
 
 const NavLinks = ({ links, variant = 'desktop', onLinkClick }: NavLinksProps) => {
   const location = useLocation();
+  const [hidePricing, setHidePricing] = useState(false);
+  
+  // Fetch the app settings to check if pricing should be hidden
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('hidePricingFeatures')
+          .single();
+        
+        if (!error && data) {
+          setHidePricing(data.hidePricingFeatures);
+        }
+      } catch (error) {
+        console.error('Failed to fetch app settings:', error);
+      }
+    }
+    
+    fetchSettings();
+  }, []);
   
   const handleClick = () => {
     if (onLinkClick) {
@@ -22,10 +44,18 @@ const NavLinks = ({ links, variant = 'desktop', onLinkClick }: NavLinksProps) =>
     }
   };
 
+  // Filter out the Pricing link if hidePricing is true
+  const filteredLinks = links.filter(link => {
+    if (hidePricing && link.path === '/pricing') {
+      return false;
+    }
+    return true;
+  });
+
   if (variant === 'mobile') {
     return (
       <>
-        {links.map((link) => {
+        {filteredLinks.map((link) => {
           const isActive = location.pathname === link.path || 
                           (link.path !== '/' && location.pathname.startsWith(link.path));
           
@@ -48,7 +78,7 @@ const NavLinks = ({ links, variant = 'desktop', onLinkClick }: NavLinksProps) =>
 
   return (
     <>
-      {links.map((link) => {
+      {filteredLinks.map((link) => {
         const isActive = location.pathname === link.path || 
                         (link.path !== '/' && location.pathname.startsWith(link.path));
         

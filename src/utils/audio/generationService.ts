@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AudioGenerationResult, AudioSuccessResult, AudioErrorResult, LanguageOption, VoiceOption } from './types';
 
@@ -21,6 +20,28 @@ const checkRateLimiting = (apiName: string, maxCalls: number, timeWindowMs: numb
 };
 
 /**
+ * Check if unlimited generations for all users is enabled
+ */
+async function isUnlimitedGenerationsEnabled(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('unlimitedGenerationsForAll')
+      .single();
+    
+    if (error) {
+      console.error('Error checking unlimited generations setting:', error);
+      return false;
+    }
+    
+    return data?.unlimitedGenerationsForAll || false;
+  } catch (error) {
+    console.error('Failed to fetch unlimited generations setting:', error);
+    return false;
+  }
+}
+
+/**
  * Generate an audio description using Google Text-to-Speech via our Supabase Edge Function
  */
 export async function generateAudioDescription(
@@ -39,6 +60,28 @@ export async function generateAudioDescription(
     // Apply rate limiting - 10 calls per minute
     if (!checkRateLimiting('generateDescription', 10, 60000)) {
       return { success: false, error: 'Rate limit exceeded. Please wait a moment before generating more audio.' };
+    }
+
+    // Check if unlimited generations are enabled
+    const unlimitedGenerations = await isUnlimitedGenerationsEnabled();
+    
+    // If unlimited generations are not enabled, check remaining generations
+    if (!unlimitedGenerations) {
+      // Check user's remaining generations before proceeding
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('remaining_generations')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        return { success: false, error: 'Could not verify your remaining generations. Please try again.' };
+      }
+      
+      if (profileData && profileData.remaining_generations <= 0) {
+        return { success: false, error: 'You have used all your daily generations. Please try again tomorrow or upgrade your plan.' };
+      }
     }
 
     // First determine if we need to generate a description
@@ -83,7 +126,8 @@ export async function generateAudioDescription(
           text: finalText,
           language: language.code,
           voice: voice.id,
-          user_id: session.user.id
+          user_id: session.user.id,
+          unlimited_generations: unlimitedGenerations
         }
       });
 
