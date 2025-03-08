@@ -74,9 +74,9 @@ The site helps users create AI-generated audio descriptions for their products, 
       });
 
       if (!openAIResponse.ok) {
-        const errorData = await openAIResponse.json();
+        const errorData = await openAIResponse.text();
         console.error('OpenAI API error:', errorData);
-        throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+        throw new Error(`OpenAI API error: ${errorData}`);
       }
 
       const data = await openAIResponse.json();

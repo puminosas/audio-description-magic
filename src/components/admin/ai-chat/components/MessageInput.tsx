@@ -7,9 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
+  placeholder?: string;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isLoading }) => {
+const MessageInput: React.FC<MessageInputProps> = ({ 
+  onSendMessage, 
+  isLoading, 
+  placeholder = "Type your message..." 
+}) => {
   const [input, setInput] = useState('');
 
   const handleSendMessageClick = () => {
@@ -32,7 +37,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isLoading })
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleEnterPress}
-        placeholder="Type your message..."
+        placeholder={placeholder}
         className="resize-none min-h-[80px]"
       />
       <Button 

@@ -11,6 +11,7 @@ interface FileEditDialogProps {
   fileContent: string;
   setFileContent: (content: string) => void;
   onSave: () => void;
+  fileName?: string;
 }
 
 const FileEditDialog: React.FC<FileEditDialogProps> = ({
@@ -18,28 +19,26 @@ const FileEditDialog: React.FC<FileEditDialogProps> = ({
   onOpenChange,
   fileContent,
   setFileContent,
-  onSave
+  onSave,
+  fileName = "File"
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Edit File Content</DialogTitle>
+          <DialogTitle>Edit {fileName}</DialogTitle>
           <DialogDescription>
-            Make changes to the file content before saving.
+            Make changes to the file content before saving. AI has suggested edits that you can review.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="content" className="text-right">
-              Content
-            </Label>
-            <div className="col-span-3">
+        <div className="grid gap-4 py-4 overflow-hidden">
+          <div className="grid grid-cols-1 items-center gap-4">
+            <div className="col-span-1 h-[50vh] overflow-auto">
               <Textarea
                 id="content"
                 value={fileContent}
                 onChange={(e) => setFileContent(e.target.value)}
-                className="font-mono h-[300px]"
+                className="font-mono h-full min-h-[300px] w-full resize-none"
               />
             </div>
           </div>
@@ -48,7 +47,7 @@ const FileEditDialog: React.FC<FileEditDialogProps> = ({
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={onSave}>Save</Button>
+          <Button type="button" onClick={onSave}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

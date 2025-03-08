@@ -109,6 +109,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       />
 
       <div className="border-t pt-3 mt-3">
+        {selectedFile && (
+          <div className="mb-2 p-2 bg-muted/50 rounded-md text-sm">
+            <div className="font-medium">Selected file:</div>
+            <div className="text-muted-foreground truncate">{selectedFile.path}</div>
+          </div>
+        )}
+        
         <FileActionButtons 
           selectedFile={selectedFile} 
           isAnalyzing={isAnalyzing}
@@ -119,6 +126,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <MessageInput 
           onSendMessage={onSendMessage} 
           isLoading={isLoading} 
+          placeholder={selectedFile ? `Ask about ${selectedFile.path.split('/').pop()}...` : "Type your message..."}
         />
       </div>
 
@@ -128,6 +136,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         fileContent={fileContent}
         setFileContent={setFileContent}
         onSave={handleSaveConfirm}
+        fileName={selectedFile?.path.split('/').pop() || ""}
       />
     </div>
   );
