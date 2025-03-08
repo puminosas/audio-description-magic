@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,7 @@ import {
   getUserActivityDetails, 
   getUserStats,
   UserActivity 
-} from '@/services/adminService';
+} from '@/services/admin';
 
 const AdminUserActivity = () => {
   const [users, setUsers] = useState<UserActivity[]>([]);
