@@ -57,7 +57,7 @@ const TextToAudioPage = () => {
   } = useAudioInput({ onGenerate: handleGenerate, loading, user });
 
   return (
-    <div className="container max-w-5xl mx-auto px-4 py-8 pt-24">
+    <div className="container max-w-5xl mx-auto px-4 py-8 pt-24 overflow-x-hidden">
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Text to Audio Converter</h1>

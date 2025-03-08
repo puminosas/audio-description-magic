@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,12 +44,6 @@ export const useAudioGeneration = () => {
       if (cachedAudio) {
         console.log("Found in cache, using cached audio");
         setGeneratedAudio(cachedAudio);
-        
-        toast({
-          title: 'Using Cached Audio',
-          description: 'Using a recently generated version of this audio for better performance.',
-        });
-        
         setLoading(false);
         return;
       }

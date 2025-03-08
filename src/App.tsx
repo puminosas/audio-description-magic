@@ -19,7 +19,6 @@ import NotFound from '@/pages/NotFound';
 import Admin from '@/pages/Admin';
 import '@/App.css';
 import { initializeGoogleVoices } from '@/utils/audio';
-import { useToast } from '@/hooks/use-toast';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -34,7 +33,6 @@ function ScrollToTop() {
 function App() {
   const [voicesInitialized, setVoicesInitialized] = useState(false);
   const [initError, setInitError] = useState<Error | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     // Initialize Google TTS voices data when the app starts
@@ -52,24 +50,11 @@ function App() {
       } catch (error) {
         console.error('Error initializing services:', error);
         setInitError(error instanceof Error ? error : new Error(String(error)));
-        
-        // Only show the toast on specific pages where voice services are required
-        const pathRequiresVoices = ['/generator', '/text-to-audio', '/admin/audio-files'].some(path => 
-          window.location.pathname.includes(path)
-        );
-        
-        if (pathRequiresVoices) {
-          toast({
-            title: "Service Initialization Error",
-            description: "Voice services could not be initialized. Using fallback options.",
-            variant: "destructive", // Changed from "warning" to "destructive" since "warning" is not a valid variant
-          });
-        }
       }
     };
     
     preloadServices();
-  }, [voicesInitialized, toast]);
+  }, [voicesInitialized]);
 
   return (
     <ThemeProvider>

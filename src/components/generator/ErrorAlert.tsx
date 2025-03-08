@@ -13,10 +13,15 @@ const ErrorAlert = ({ error, isGoogleTtsError, hideWhenGoogleTtsWorking = false 
   // If there's no error, don't show anything
   if (!error || error.trim() === '') return null;
   
-  // Check if the error is related to Google TTS
+  // Check if the error is related to Google TTS - expanded pattern matching
   const isGoogleTtsRelatedError = 
     isGoogleTtsError || 
     error.includes('Google TTS') || 
+    error.includes('TTS') ||
+    error.includes('voice') ||
+    error.includes('Voice') ||
+    error.includes('fallback') ||
+    error.includes('Fallback') ||
     error.includes('Failed to load languages') ||
     error.includes('Failed to initialize Google voices');
   
