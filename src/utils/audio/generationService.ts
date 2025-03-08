@@ -1,19 +1,21 @@
 
-import { AudioGenerationResult, AudioSuccessResult, AudioErrorResult, LanguageOption, VoiceOption } from './types';
-import { isUnlimitedGenerationsEnabled } from './unlimitedGenerations';
-import { checkUserRemainingGenerations } from './quotaManagement';
-import { generateDescription } from './descriptionGenerator';
-import { generateAudio } from './audioGenerator';
-import { fetchGoogleVoices } from './googleVoices';
+import { AudioGenerationResult } from './types';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  generateAudio, 
+  generateDescription, 
+  fetchGoogleVoices,
+  isUnlimitedGenerationsEnabled,
+  checkUserRemainingGenerations
+} from './services';
 
 /**
  * Generate an audio description using Google Text-to-Speech via our Supabase Edge Function
  */
 export async function generateAudioDescription(
   text: string,
-  language: LanguageOption,
-  voice: VoiceOption
+  language: any,
+  voice: any
 ): Promise<AudioGenerationResult> {
   try {
     // Check if user is authenticated

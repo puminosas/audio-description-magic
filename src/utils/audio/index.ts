@@ -5,6 +5,7 @@ export * from './generationService';
 export * from './languageVoiceData';
 export * from './historyService';
 export * from './sessionUtils';
+export * from './services';
 
 // Google TTS initialization with error handling
 let googleVoicesInitialized = false;
