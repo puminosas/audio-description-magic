@@ -51,7 +51,6 @@ export function useAdminSettings() {
       if (data) {
         // Map database column names (lowercase) to our camelCase interface properties
         setSettings({
-          ...settings,
           freeGenerationsLimit: data.freegenerationslimit,
           basicGenerationsLimit: data.basicgenerationslimit,
           premiumGenerationsLimit: data.premiumgenerationslimit,
@@ -73,6 +72,19 @@ export function useAdminSettings() {
     setLoading(true);
     
     try {
+      console.log('Saving settings:', {
+        freegenerationslimit: settings.freeGenerationsLimit,
+        basicgenerationslimit: settings.basicGenerationsLimit,
+        premiumgenerationslimit: settings.premiumGenerationsLimit,
+        allowguestgeneration: settings.allowGuestGeneration,
+        enablenewuserregistration: settings.enableNewUserRegistration,
+        requireemailverification: settings.requireEmailVerification,
+        storageretentiondays: settings.storageRetentionDays,
+        enablefeedback: settings.enableFeedback,
+        hidepricingfeatures: settings.hidePricingFeatures,
+        unlimitedgenerationsforall: settings.unlimitedGenerationsForAll
+      });
+      
       const { error } = await supabase
         .from('app_settings')
         .upsert({ 
@@ -91,10 +103,13 @@ export function useAdminSettings() {
         });
       
       if (error) {
+        console.error('Error during upsert:', error);
         throw error;
       }
       
+      // If unlimitedGenerationsForAll is enabled, update all free user profiles
       if (settings.unlimitedGenerationsForAll) {
+        console.log('Updating user profiles for unlimited generations');
         const { error: profileUpdateError } = await supabase
           .from('profiles')
           .update({ 
@@ -114,6 +129,8 @@ export function useAdminSettings() {
           return;
         }
       } else {
+        // If disabled, reset free users back to standard limit
+        console.log('Resetting user profiles to standard limits');
         const { error: resetError } = await supabase
           .from('profiles')
           .update({ 
