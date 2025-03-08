@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
@@ -115,7 +116,7 @@
   }
 }
 
-/* Matrix-style text animation for dark mode */
+/* Matrix-style text animation for dark mode only */
 @keyframes matrix-glow {
   0%, 100% {
     text-shadow: 0 0 8px hsl(var(--primary) / 0.8);
@@ -125,22 +126,15 @@
   }
 }
 
+/* Only apply the matrix text animation in dark mode */
 .dark .matrix-text {
   animation: matrix-glow 2s ease-in-out infinite;
 }
 
-/* Audio wave animation for light theme */
-@keyframes audio-pulse {
-  0%, 100% {
-    text-shadow: 0 0 6px hsl(var(--primary) / 0.5);
-  }
-  50% {
-    text-shadow: 0 0 10px hsl(var(--primary) / 0.8);
-  }
-}
-
+/* Remove animation for light theme - no more audio-pulse */
 .light .matrix-text {
-  animation: audio-pulse 2s ease-in-out infinite;
+  animation: none;
+  text-shadow: none;
 }
 
 /* Fix reveal animations to ensure content stays visible */
