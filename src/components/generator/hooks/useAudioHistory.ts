@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { getAudioHistory, deleteAudioFile } from '@/utils/audio/historyService';
@@ -144,4 +145,4 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     loadMore,
     hasMore: currentPage < totalPages
   };
-}, []);
+};
