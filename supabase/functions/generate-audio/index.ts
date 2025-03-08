@@ -1,63 +1,12 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit } from "./utils/rateLimiting.ts";
+import { generateDescription } from "./services/description.ts";
+import { textToSpeech } from "./services/textToSpeech.ts";
 
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
-};
-
-// Process base64 in chunks to prevent memory issues (stack overflow)
-function binaryToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let base64 = '';
-  const chunkSize = 1024; // Process in smaller chunks
-  
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
-    base64 += btoa(String.fromCharCode.apply(null, [...chunk]));
-  }
-  
-  return base64;
-}
-
-// Track API calls for rate limiting
-const API_CALLS = {
-  openai: new Map<string, number[]>(),  // Maps IP to timestamps
-  tts: new Map<string, number[]>()      // Maps IP to timestamps
-};
-
-// Rate limiting function
-function checkRateLimit(type: 'openai' | 'tts', ip: string, maxPerMinute: number): boolean {
-  const now = Date.now();
-  const map = API_CALLS[type];
-  
-  // Get timestamps for this IP or initialize empty array
-  const timestamps = map.get(ip) || [];
-  
-  // Filter out timestamps older than 1 minute
-  const recentCalls = timestamps.filter(time => (now - time) < 60000);
-  
-  // Check if we've exceeded our limit
-  if (recentCalls.length >= maxPerMinute) {
-    return false; // Rate limit exceeded
-  }
-  
-  // Add current timestamp and update map
-  recentCalls.push(now);
-  map.set(ip, recentCalls);
-  
-  return true; // Rate limit ok
-}
-
-// Token counter for OpenAI (approximate)
-function estimateTokens(text: string): number {
-  // Rough estimate: 1 token ~= 4 chars in English
-  return Math.ceil(text.length / 4);
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -135,111 +84,29 @@ serve(async (req) => {
 
     // Determine if we need a full description (for short inputs) or just basic enhancement
     const needsFullDescription = text.length < 100;
-    const maxTokens = needsFullDescription ? 500 : 300; // Limit tokens based on input type
     
-    // Step 1: Generate a product description with cost-aware prompt
-    console.log(`Generating ${needsFullDescription ? 'detailed' : 'enhanced'} description with OpenAI...`);
-    const descriptionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // Use smaller model to reduce costs
-        messages: [
-          { 
-            role: "system", 
-            content: "You are a professional copywriter specializing in creating concise, engaging e-commerce product descriptions for audio playback."
-          },
-          { 
-            role: "user", 
-            content: `Create a ${needsFullDescription ? 'detailed' : 'brief enhanced'} audio description for: "${text}". 
-            
-The description should:
-1. Be clear and concise
-2. Highlight key features and benefits
-3. Use natural language optimized for speech
-4. Be in ${language} language
-5. ${needsFullDescription ? 'Be between 100-200 words' : 'Be no more than 100 words'}
-
-Make it sound professional and engaging.`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: maxTokens
-      })
-    });
-
-    if (!descriptionResponse.ok) {
-      const errorText = await descriptionResponse.text();
-      console.error("OpenAI API error:", errorText);
-      throw new Error(`OpenAI API error: ${errorText}`);
-    }
-
-    // Parse the JSON response
-    let descriptionData;
     try {
-      descriptionData = await descriptionResponse.json();
-    } catch (error) {
-      console.error("Error parsing description response:", error);
-      throw new Error("Failed to parse description response");
-    }
-
-    const generatedDescription = descriptionData.choices[0]?.message?.content?.trim();
-
-    if (!generatedDescription) {
-      console.error("No description generated", descriptionData);
-      throw new Error("Failed to generate a description");
-    }
-
-    console.log("Generated Description:", generatedDescription.substring(0, 100) + "...");
-    console.log("Description length:", generatedDescription.length, "characters");
-
-    // Apply TTS rate limiting
-    if (!checkRateLimit('tts', clientIP, 3)) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Rate limit exceeded for text-to-speech. Please try again in a minute.' 
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      // Step 1: Generate a product description
+      const generatedDescription = await generateDescription(
+        text, 
+        language, 
+        needsFullDescription, 
+        openaiApiKey
       );
-    }
 
-    // Step 2: Convert description into speech using OpenAI TTS (with cost optimization)
-    console.log("Converting text to speech with OpenAI...");
-    const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openaiApiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "tts-1", // Use standard model instead of HD to reduce costs
-        voice: voice,
-        input: generatedDescription,
-        response_format: "mp3",
-        speed: 0.95 // Slightly slower for better clarity
-      })
-    });
+      // Apply TTS rate limiting
+      if (!checkRateLimit('tts', clientIP, 3)) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Rate limit exceeded for text-to-speech. Please try again in a minute.' 
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    if (!ttsResponse.ok) {
-      const errorText = await ttsResponse.text();
-      console.error("TTS API error:", errorText);
-      throw new Error(`TTS API error: ${errorText}`);
-    }
-
-    // Process the audio data with our chunked approach
-    try {
-      const audioBuffer = await ttsResponse.arrayBuffer();
-      console.log(`Received audio buffer of size: ${audioBuffer.byteLength} bytes`);
-      
-      // Process binary data in chunks to avoid stack overflow
-      const audioBase64 = binaryToBase64(audioBuffer);
-      
-      // Create a data URL for the audio file
-      const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
+      // Step 2: Convert description into speech
+      const { audioUrl, id } = await textToSpeech(generatedDescription, voice, openaiApiKey);
 
       console.log("Successfully generated audio and converted to data URL");
       
@@ -248,15 +115,17 @@ Make it sound professional and engaging.`
           success: true, 
           audioUrl: audioUrl, 
           text: generatedDescription,
-          id: crypto.randomUUID()
+          id: id
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (error) {
-      console.error("Error processing audio data:", error);
-      throw new Error(`Failed to process audio data: ${error.message}`);
+      console.error("Error in text-to-speech process:", error);
+      return new Response(
+        JSON.stringify({ success: false, error: error.message || "Failed to generate audio" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
   } catch (error) {
     console.error("Error in generate-audio function:", error);
     return new Response(
