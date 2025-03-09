@@ -75,7 +75,6 @@ const Navbar = () => {
         isOpen={mobileMenuOpen} 
         links={navLinks} 
         onLinkClick={() => setMobileMenuOpen(false)} 
-        onOpenChange={setMobileMenuOpen}
       />
     </header>
   );

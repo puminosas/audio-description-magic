@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table, 
@@ -14,7 +15,16 @@ import {
   CheckCircle2, 
   XCircle 
 } from 'lucide-react';
-import { FeedbackItem } from '@/hooks/useAdminFeedback';
+
+interface FeedbackItem {
+  id: string;
+  type: string;
+  message: string;
+  email?: string;
+  created_at: string;
+  status: string;
+  admin_notes?: string;
+}
 
 interface FeedbackTableProps {
   feedback: FeedbackItem[];
