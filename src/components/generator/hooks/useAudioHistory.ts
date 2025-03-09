@@ -5,55 +5,26 @@ import { getAudioHistory, deleteAudioFile } from '@/utils/audio/historyService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promise<void>) => {
-  // State for storing the audio files
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const { toast } = useToast();
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage] = useState(10);
-  
-  // Boolean state to track initial load
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const fetchHistory = useCallback(async (page = 1) => {
+  const fetchHistory = useCallback(async () => {
     if (!user) {
       setFiles([]);
       setLoading(false);
       return;
     }
 
-    if (page === 1 || isInitialLoad) {
-      setLoading(true);
-    }
-    
+    setLoading(true);
     setError(null);
     
     try {
-      // Use optimized paginated query
-      const { data: history, count } = await getAudioHistory(page, itemsPerPage);
-      
-      if (page === 1) {
-        setFiles(history || []);
-      } else {
-        // Append to existing files if paginating
-        setFiles(prev => [...prev, ...(history || [])]);
-      }
-      
-      // Calculate total pages
-      const total = Math.ceil((count || 0) / itemsPerPage);
-      setTotalPages(total);
-      setCurrentPage(page);
-      
-      // Mark initial load as complete
-      if (isInitialLoad) {
-        setIsInitialLoad(false);
-      }
+      const history = await getAudioHistory();
+      setFiles(history || []);
     } catch (err) {
       console.error('Failed to fetch audio history:', err);
       setError('Failed to load your audio history');
@@ -65,46 +36,20 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     } finally {
       setLoading(false);
     }
-  }, [user, toast, itemsPerPage, isInitialLoad]);
+  }, [user, toast]);
 
-  // Load next page of history
-  const loadMore = useCallback(() => {
-    if (currentPage < totalPages && !loading) {
-      fetchHistory(currentPage + 1);
-    }
-  }, [currentPage, totalPages, loading, fetchHistory]);
-
-  // Initial data load
   useEffect(() => {
-    if (user && isInitialLoad) {
-      fetchHistory(1);
-    }
-  }, [user, fetchHistory, isInitialLoad]);
+    fetchHistory();
+  }, [fetchHistory]);
 
-  // Handle play/pause toggle
-  const handlePlayPause = useCallback((fileId: string) => {
-    setAudioPlaying(prevId => {
-      // If the same file is clicked, pause it
-      if (prevId === fileId) {
-        return null;
-      }
-      // Otherwise play the new file
-      return fileId;
-    });
-  }, []);
+  const handlePlayPause = (fileId: string) => {
+    setAudioPlaying(prevId => prevId === fileId ? null : fileId);
+  };
 
-  // Handle file deletion
-  const handleDeleteFile = useCallback(async (fileId: string) => {
+  const handleDeleteFile = async (fileId: string) => {
     try {
-      // Set loading state for this file
       setDeleteFileId(fileId);
-      
-      // Call API to delete the file
-      const success = await deleteAudioFile(fileId);
-      
-      if (!success) {
-        throw new Error('Failed to delete file');
-      }
+      await deleteAudioFile(fileId);
       
       // Update the local state to remove the deleted file
       setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
@@ -128,7 +73,7 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     } finally {
       setDeleteFileId(null);
     }
-  }, [toast, onRefreshStats]);
+  };
 
   return {
     files,
@@ -136,13 +81,9 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     error,
     audioPlaying,
     deleteFileId,
-    currentPage,
-    totalPages,
     setDeleteFileId,
     handlePlayPause,
     handleDeleteFile,
-    fetchHistory,
-    loadMore,
-    hasMore: currentPage < totalPages
+    fetchHistory
   };
 };

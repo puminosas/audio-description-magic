@@ -1,14 +1,12 @@
 
 import React, { useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { Loader2, AlertCircle, ChevronDown } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { useAudioHistory } from './hooks/useAudioHistory';
 import { useHistoryUtils } from './history/HistoryUtils';
 import AudioHistoryList from './history/AudioHistoryList';
 import EmptyHistoryState from './history/EmptyHistoryState';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface HistoryTabProps {
   user: User | null;
@@ -22,12 +20,10 @@ const HistoryTab = ({ user, onRefreshStats }: HistoryTabProps) => {
     error,
     audioPlaying,
     deleteFileId,
-    hasMore,
     setDeleteFileId,
     handlePlayPause,
     handleDeleteFile,
-    fetchHistory,
-    loadMore
+    fetchHistory
   } = useAudioHistory(user, onRefreshStats);
 
   const { formatDate, copyEmbedCode } = useHistoryUtils();
@@ -35,37 +31,24 @@ const HistoryTab = ({ user, onRefreshStats }: HistoryTabProps) => {
   // Re-fetch on mount or user change
   useEffect(() => {
     if (user) {
-      fetchHistory(1);
+      fetchHistory();
     }
   }, [user, fetchHistory]);
 
-  if (loading && files.length === 0) {
+  if (loading) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="p-4 rounded-md border">
-            <Skeleton className="h-6 w-3/4 mb-2" />
-            <Skeleton className="h-4 w-1/2 mb-4" />
-            <div className="flex justify-between">
-              <Skeleton className="h-8 w-24" />
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-8 w-8 rounded-full" />
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (error && files.length === 0) {
+  if (error) {
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          {error}. <button className="underline" onClick={() => fetchHistory(1)}>Try again</button>
+          {error}. <button className="underline" onClick={fetchHistory}>Try again</button>
         </AlertDescription>
       </Alert>
     );
@@ -74,49 +57,18 @@ const HistoryTab = ({ user, onRefreshStats }: HistoryTabProps) => {
   return (
     <div>
       {files.length > 0 ? (
-        <>
-          <AudioHistoryList
-            files={files}
-            user={user}
-            audioPlaying={audioPlaying}
-            handlePlayPause={handlePlayPause}
-            handleDeleteFile={handleDeleteFile}
-            setDeleteFileId={setDeleteFileId}
-            copyEmbedCode={copyEmbedCode}
-            formatDate={formatDate}
-          />
-          
-          {/* Load more button */}
-          {hasMore && (
-            <div className="flex justify-center mt-6">
-              <Button 
-                variant="outline" 
-                onClick={loadMore} 
-                disabled={loading}
-                className="gap-2"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-                Load More
-              </Button>
-            </div>
-          )}
-        </>
+        <AudioHistoryList
+          files={files}
+          user={user}
+          audioPlaying={audioPlaying}
+          handlePlayPause={handlePlayPause}
+          handleDeleteFile={handleDeleteFile}
+          setDeleteFileId={setDeleteFileId}
+          copyEmbedCode={copyEmbedCode}
+          formatDate={formatDate}
+        />
       ) : (
         <EmptyHistoryState isLoggedIn={!!user} />
-      )}
-      
-      {/* Error while loading more */}
-      {error && files.length > 0 && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}. <button className="underline" onClick={loadMore}>Try again</button>
-          </AlertDescription>
-        </Alert>
       )}
     </div>
   );

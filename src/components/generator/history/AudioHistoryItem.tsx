@@ -1,6 +1,7 @@
 
 import React from 'react';
-import AudioHistoryItemUI from '@/components/ui/AudioHistoryItem';
+import { Button } from '@/components/ui/button';
+import { Loader2, Play, Download, Code, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,21 +13,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
 
-// Define a more consistent FileItem interface
-export interface FileItem {
+interface FileItem {
   id: string;
-  title?: string; 
-  description?: string;
-  fileName?: string;
-  filePath?: string;
-  fileType?: string;
-  createdAt: string | Date | null;
+  fileName: string;
+  filePath: string;
+  fileType: string;
+  createdAt: Date;
   audioUrl?: string;
-  voice_name?: string;
-  language?: string;
 }
 
 interface AudioHistoryItemProps {
@@ -36,7 +30,7 @@ interface AudioHistoryItemProps {
   handleDeleteFile: (fileId: string) => Promise<void>;
   setDeleteFileId: (id: string) => void;
   copyEmbedCode: (id: string, audioUrl: string) => void;
-  formatDate: (date: Date | string | null | undefined) => string;
+  formatDate: (date: Date) => string;
 }
 
 const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
@@ -50,44 +44,57 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-md bg-muted/30">
-      <AudioHistoryItemUI
-        id={file.id}
-        audioUrl={file.audioUrl || ''}
-        title={file.title || file.fileName || 'Untitled Audio'}
-        description={file.description || ''}
-        createdAt={file.createdAt}
-        language={file.language || ''}
-        voiceName={file.voice_name || 'Default'}
-        showControls={true}
-        onDelete={(id) => setDeleteFileId(id)}
-        onCopy={(id, url) => copyEmbedCode(id, url)}
-        isPlaying={audioPlaying === file.id}
-        onPlayPause={(id) => handlePlayPause(id)}
-      />
-      
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="ml-2 hidden">
-            <Trash2 className="h-4 w-4 text-destructive" />
+      <div className="mb-3 sm:mb-0 flex-1 min-w-0">
+        <h4 className="font-medium">{file.fileName}</h4>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10">Audio</span>
+          <span className="text-xs text-muted-foreground">{formatDate(file.createdAt)}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={() => handlePlayPause(file.id)}>
+          {audioPlaying === file.id ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+        </Button>
+        {file.audioUrl && (
+          <Button variant="ghost" size="icon" asChild>
+            <a href={file.audioUrl} download={`${file.fileName}.mp3`}>
+              <Download className="h-4 w-4" />
+            </a>
           </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Audio File</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this audio file? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteFileId('')}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleDeleteFile(file.id)}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        )}
+        {file.audioUrl && (
+          <Button variant="ghost" size="icon" onClick={() => copyEmbedCode(file.id, file.audioUrl || '')}>
+            <Code className="h-4 w-4" />
+          </Button>
+        )}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => setDeleteFileId(file.id)}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Audio File</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this audio file? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeleteFileId('')}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => handleDeleteFile(file.id)}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 };

@@ -3,7 +3,16 @@ import React from 'react';
 import { User } from '@supabase/supabase-js';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import AudioHistoryItem, { FileItem } from './AudioHistoryItem';
+import AudioHistoryItem from './AudioHistoryItem';
+
+interface FileItem {
+  id: string;
+  fileName: string;
+  filePath: string;
+  fileType: string;
+  createdAt: Date;
+  audioUrl?: string;
+}
 
 interface AudioHistoryListProps {
   files: FileItem[];
@@ -13,7 +22,7 @@ interface AudioHistoryListProps {
   handleDeleteFile: (fileId: string) => Promise<void>;
   setDeleteFileId: (id: string) => void;
   copyEmbedCode: (id: string, audioUrl: string) => void;
-  formatDate: (date: Date | string | null | undefined) => string;
+  formatDate: (date: Date) => string;
 }
 
 const AudioHistoryList: React.FC<AudioHistoryListProps> = ({
@@ -43,22 +52,18 @@ const AudioHistoryList: React.FC<AudioHistoryListProps> = ({
       </div>
 
       <div className="space-y-4">
-        {files.length > 0 ? (
-          files.map((file) => (
-            <AudioHistoryItem
-              key={file.id}
-              file={file}
-              audioPlaying={audioPlaying}
-              handlePlayPause={handlePlayPause}
-              handleDeleteFile={handleDeleteFile}
-              setDeleteFileId={setDeleteFileId}
-              copyEmbedCode={copyEmbedCode}
-              formatDate={formatDate}
-            />
-          ))
-        ) : (
-          <p className="text-center text-muted-foreground py-8">No audio files found</p>
-        )}
+        {files.map((file) => (
+          <AudioHistoryItem
+            key={file.id}
+            file={file}
+            audioPlaying={audioPlaying}
+            handlePlayPause={handlePlayPause}
+            handleDeleteFile={handleDeleteFile}
+            setDeleteFileId={setDeleteFileId}
+            copyEmbedCode={copyEmbedCode}
+            formatDate={formatDate}
+          />
+        ))}
       </div>
 
       {!user && files.length > 0 && (

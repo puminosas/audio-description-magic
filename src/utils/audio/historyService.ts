@@ -37,52 +37,32 @@ export const saveAudioToHistory = async (
 };
 
 /**
- * Get user's audio generation history with pagination support
- * @param page Page number starting from 1
- * @param pageSize Number of items per page
- * @returns Paginated audio history data
+ * Get user's audio generation history
  */
-export const getAudioHistory = async (page = 1, pageSize = 10) => {
+export const getAudioHistory = async () => {
   try {
     const { data: session } = await supabase.auth.getSession();
     
     if (!session.session?.user) {
       console.warn('No authenticated user for audio history');
-      return { data: [], count: 0 };
+      return [];
     }
     
-    // Calculate pagination offset
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    
-    // Get count first for pagination info
-    const { count, error: countError } = await supabase
-      .from('audio_files')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.session.user.id);
-      
-    if (countError) {
-      console.error('Error fetching count:', countError);
-      return { data: [], count: 0 };
-    }
-    
-    // Then get paginated data
     const { data, error } = await supabase
       .from('audio_files')
       .select('*')
       .eq('user_id', session.session.user.id)
-      .order('created_at', { ascending: false })
-      .range(from, to);
+      .order('created_at', { ascending: false });
       
     if (error) {
       console.error('Error fetching audio history:', error);
-      return { data: [], count: 0 };
+      return [];
     }
     
-    return { data: data || [], count: count || 0 };
+    return data || [];
   } catch (error) {
     console.error('Error in getAudioHistory:', error);
-    return { data: [], count: 0 };
+    return [];
   }
 };
 
@@ -136,13 +116,13 @@ export const deleteAudioFile = async (fileId: string): Promise<boolean> => {
 };
 
 /**
- * Fetch limited audio files for a user with optimized query
+ * Fetch limited audio files for a user
  */
 export const fetchUserAudios = async (userId: string, limit = 5) => {
   try {
     const { data, error } = await supabase
       .from('audio_files')
-      .select('id, title, description, audio_url, voice_name, language, created_at') // Select only needed fields
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);

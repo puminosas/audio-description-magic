@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,11 +24,11 @@ const NavLinks = ({ links, variant = 'desktop', onLinkClick }: NavLinksProps) =>
       try {
         const { data, error } = await supabase
           .from('app_settings')
-          .select('hidepricingfeatures')
+          .select('hidePricingFeatures')
           .single();
         
         if (!error && data) {
-          setHidePricing(data.hidepricingfeatures);
+          setHidePricing(data.hidePricingFeatures);
         }
       } catch (error) {
         console.error('Failed to fetch app settings:', error);
