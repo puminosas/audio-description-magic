@@ -7,11 +7,12 @@ import AudioHistoryItem from './AudioHistoryItem';
 
 interface FileItem {
   id: string;
-  fileName: string;
-  filePath: string;
-  fileType: string;
-  createdAt: Date;
+  title?: string;
+  fileName?: string;
+  filePath?: string;
   audioUrl?: string;
+  fileType?: string;
+  createdAt: Date;
 }
 
 interface AudioHistoryListProps {

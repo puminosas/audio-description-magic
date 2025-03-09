@@ -16,11 +16,12 @@ import {
 
 interface FileItem {
   id: string;
-  fileName: string;
-  filePath: string;
-  fileType: string;
-  createdAt: Date;
+  title?: string;
+  fileName?: string;
+  filePath?: string;
   audioUrl?: string;
+  fileType?: string;
+  createdAt: Date;
 }
 
 interface AudioHistoryItemProps {
@@ -42,10 +43,15 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
   copyEmbedCode,
   formatDate
 }) => {
+  // Use fileName if available, otherwise fall back to title
+  const displayName = file.fileName || file.title || 'Untitled Audio';
+  // Use audioUrl if available, otherwise construct from filePath if present
+  const audioFileUrl = file.audioUrl || (file.filePath ? `${file.filePath}` : '');
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-md bg-muted/30">
       <div className="mb-3 sm:mb-0 flex-1 min-w-0">
-        <h4 className="font-medium">{file.fileName}</h4>
+        <h4 className="font-medium">{displayName}</h4>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10">Audio</span>
           <span className="text-xs text-muted-foreground">{formatDate(file.createdAt)}</span>
@@ -59,15 +65,15 @@ const AudioHistoryItem: React.FC<AudioHistoryItemProps> = ({
             <Play className="h-4 w-4" />
           )}
         </Button>
-        {file.audioUrl && (
+        {audioFileUrl && (
           <Button variant="ghost" size="icon" asChild>
-            <a href={file.audioUrl} download={`${file.fileName}.mp3`}>
+            <a href={audioFileUrl} download={`${displayName}.mp3`}>
               <Download className="h-4 w-4" />
             </a>
           </Button>
         )}
-        {file.audioUrl && (
-          <Button variant="ghost" size="icon" onClick={() => copyEmbedCode(file.id, file.audioUrl || '')}>
+        {audioFileUrl && (
+          <Button variant="ghost" size="icon" onClick={() => copyEmbedCode(file.id, audioFileUrl)}>
             <Code className="h-4 w-4" />
           </Button>
         )}

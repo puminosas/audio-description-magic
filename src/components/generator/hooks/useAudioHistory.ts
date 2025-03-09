@@ -23,8 +23,18 @@ export const useAudioHistory = (user: User | null, onRefreshStats?: () => Promis
     setError(null);
     
     try {
-      const history = await getAudioHistory();
-      setFiles(history || []);
+      const historyItems = await getAudioHistory();
+      // Normalize the data structure for each file item
+      const normalizedFiles = historyItems.map((item: any) => ({
+        id: item.id,
+        title: item.title || '',
+        fileName: item.title || 'Untitled Audio', // Use title as fileName if available
+        audioUrl: item.audio_url || '',
+        createdAt: new Date(item.created_at),
+        fileType: 'audio'
+      }));
+      
+      setFiles(normalizedFiles);
     } catch (err) {
       console.error('Failed to fetch audio history:', err);
       setError('Failed to load your audio history');
