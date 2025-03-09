@@ -4,14 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LanguageOption } from '@/utils/audio/types';
 import languageMapping from '@/utils/audio/languageMapping.json';
 
-// Create fallback languages from our mapping file
-const fallbackLanguages: LanguageOption[] = Object.entries(languageMapping).map(([code, name]) => ({
-  id: code,
-  code,
-  name: name as string
-})).sort((a, b) => a.name.localeCompare(b.name));
-
-// Default languages if fallback creation fails
+// Create minimal fallback languages
 const defaultLanguages: LanguageOption[] = [
   { id: 'en-US', code: 'en-US', name: 'English (United States)' },
   { id: 'en-GB', code: 'en-GB', name: 'English (United Kingdom)' },
@@ -24,7 +17,7 @@ export function useLanguageData(
   selectedLanguage?: LanguageOption,
   onSelect?: (language: LanguageOption) => void
 ) {
-  const [languages, setLanguages] = useState<LanguageOption[]>(fallbackLanguages.length > 0 ? fallbackLanguages : defaultLanguages);
+  const [languages, setLanguages] = useState<LanguageOption[]>(defaultLanguages);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,14 +30,18 @@ export function useLanguageData(
         setError(null);
         
         // Call our Edge Function to get voices
-        const { data, error } = await supabase.functions.invoke('get-google-voices');
+        const anon_key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+        
+        const { data, error } = await supabase.functions.invoke('get-google-voices', {
+          headers: { apikey: anon_key }
+        });
         
         if (error) {
           console.warn('Using fallback languages due to error:', error);
           
           if (isMounted) {
-            // Use fallback languages instead of showing an error
-            setLanguages(fallbackLanguages.length > 0 ? fallbackLanguages : defaultLanguages);
+            setError(error.message);
+            setLanguages(defaultLanguages);
             setLoading(false);
           }
           return;
@@ -52,8 +49,8 @@ export function useLanguageData(
         
         if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
           if (isMounted) {
-            // Use fallback languages instead of showing an error
-            setLanguages(fallbackLanguages.length > 0 ? fallbackLanguages : defaultLanguages);
+            setError('No languages found');
+            setLanguages(defaultLanguages);
             setLoading(false);
           }
           return;
@@ -61,11 +58,14 @@ export function useLanguageData(
         
         // Format the languages from the response
         if (isMounted) {
-          const formattedLanguages: LanguageOption[] = Object.keys(data).map(code => {
+          // Check if we got fallback data due to an error
+          const actualData = data.fallbackUsed ? data.data : data;
+          
+          const formattedLanguages: LanguageOption[] = Object.keys(actualData).map(code => {
             // Use our language mapping for friendly names when available
             const friendlyName = code in languageMapping ? 
               languageMapping[code as keyof typeof languageMapping] : 
-              data[code].display_name || code;
+              actualData[code].display_name || code;
               
             return {
               id: code,
@@ -79,26 +79,26 @@ export function useLanguageData(
           
           if (formattedLanguages.length === 0) {
             // Use fallback languages if the API returned an empty array
-            setLanguages(fallbackLanguages.length > 0 ? fallbackLanguages : defaultLanguages);
+            setLanguages(defaultLanguages);
           } else {
             setLanguages(formattedLanguages);
           }
           
           // If the selected language is not in the new list, select the first one
           if (onSelect && (!selectedLanguage || !formattedLanguages.find(l => l.code === selectedLanguage?.code))) {
-            onSelect(formattedLanguages[0] || fallbackLanguages[0] || defaultLanguages[0]);
+            onSelect(formattedLanguages[0] || defaultLanguages[0]);
           }
         }
       } catch (error) {
         console.warn('Using fallback languages due to error:', error);
         
         if (isMounted) {
-          // Use fallback languages instead of showing an error
-          setLanguages(fallbackLanguages.length > 0 ? fallbackLanguages : defaultLanguages);
+          setError(error instanceof Error ? error.message : String(error));
+          setLanguages(defaultLanguages);
           
           // If no language is selected, select the first fallback
           if (onSelect && !selectedLanguage) {
-            onSelect(fallbackLanguages[0] || defaultLanguages[0]);
+            onSelect(defaultLanguages[0]);
           }
         }
       } finally {

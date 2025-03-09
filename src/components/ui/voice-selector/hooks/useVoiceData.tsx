@@ -1,58 +1,10 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { VoiceOption } from '@/utils/audio/types';
-import { formatVoiceName } from '../utils';
+import { formatVoiceName, getVoiceQuality } from '../utils';
 import { fetchGoogleVoices } from '@/utils/audio/services/voiceService';
 
-// Fallback voices for common languages
-const fallbackVoices: Record<string, VoiceOption[]> = {
-  'en-US': [
-    { id: 'en-US-Standard-A', name: 'Standard A (Male)', gender: 'MALE' },
-    { id: 'en-US-Standard-C', name: 'Standard C (Female)', gender: 'FEMALE' }
-  ],
-  'en-GB': [
-    { id: 'en-GB-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
-    { id: 'en-GB-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
-  ],
-  'es-ES': [
-    { id: 'es-ES-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
-    { id: 'es-ES-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
-  ],
-  'fr-FR': [
-    { id: 'fr-FR-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
-    { id: 'fr-FR-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
-  ],
-  'de-DE': [
-    { id: 'de-DE-Standard-B', name: 'Standard B (Male)', gender: 'MALE' },
-    { id: 'de-DE-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
-  ],
-  'af-ZA': [
-    { id: 'af-ZA-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' }
-  ],
-  'ar-AE': [
-    { id: 'ar-AE-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
-    { id: 'ar-AE-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
-  ],
-  'zh-CN': [
-    { id: 'zh-CN-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
-    { id: 'zh-CN-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
-  ],
-  'nl-NL': [
-    { id: 'nl-NL-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
-    { id: 'nl-NL-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
-  ],
-  'ja-JP': [
-    { id: 'ja-JP-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
-    { id: 'ja-JP-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
-  ],
-  'ru-RU': [
-    { id: 'ru-RU-Standard-A', name: 'Standard A (Female)', gender: 'FEMALE' },
-    { id: 'ru-RU-Standard-B', name: 'Standard B (Male)', gender: 'MALE' }
-  ]
-};
-
-// Generic fallback for any language not in our predefined list
+// Simple fallback for any language not in our predefined list
 const genericFallbackVoices: VoiceOption[] = [
   { id: 'generic-male', name: 'Male Voice', gender: 'MALE' },
   { id: 'generic-female', name: 'Female Voice', gender: 'FEMALE' }
@@ -64,17 +16,20 @@ export function useVoiceData(
   onSelect?: (voice: VoiceOption) => void
 ) {
   const [voices, setVoices] = useState<VoiceOption[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     
     const fetchVoices = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
       setError(null);
       
       try {
+        console.log(`Fetching voices for language: ${language}`);
         // Use the fetchGoogleVoices service
         const data = await fetchGoogleVoices();
         
@@ -85,7 +40,12 @@ export function useVoiceData(
         console.warn('Error loading voices, using fallbacks:', error);
         
         if (isMounted) {
-          applyFallbackVoices(language);
+          setError(error instanceof Error ? error.message : String(error));
+          setVoices(genericFallbackVoices);
+          
+          if (onSelect && (!selectedVoice || !genericFallbackVoices.find(v => v.id === selectedVoice.id))) {
+            onSelect(genericFallbackVoices[0]);
+          }
         }
       } finally {
         if (isMounted) {
@@ -99,19 +59,19 @@ export function useVoiceData(
     return () => {
       isMounted = false;
     };
-  }, [language, selectedVoice, onSelect]);
+  }, [language]);
 
   // Process voice data returned from API
   const processVoiceData = (data: any, languageCode: string) => {
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
       console.warn('Invalid voice data format received, using fallbacks');
-      applyFallbackVoices(languageCode);
+      setVoices(genericFallbackVoices);
       return;
     }
     
     if (!data[languageCode]) {
       console.warn(`No voices found for language: ${languageCode}, using fallbacks`);
-      applyFallbackVoices(languageCode);
+      setVoices(genericFallbackVoices);
       return;
     }
     
@@ -120,7 +80,7 @@ export function useVoiceData(
     
     if (formattedVoices.length === 0) {
       console.warn(`Empty voices array for language: ${languageCode}, using fallbacks`);
-      applyFallbackVoices(languageCode);
+      setVoices(genericFallbackVoices);
     } else {
       setVoices(formattedVoices);
       
@@ -163,28 +123,22 @@ export function useVoiceData(
     
     const allVoices = [...maleVoices, ...femaleVoices, ...neutralVoices];
     
-    // Sort voices - premium voices first, then alphabetically
+    // Sort voices by quality first, then alphabetically
     allVoices.sort((a, b) => {
-      // First sort by premium status
-      if (a.isPremium && !b.isPremium) return -1;
-      if (!a.isPremium && b.isPremium) return 1;
+      // Get quality scores (higher is better)
+      const qualityA = getVoiceQuality(a.id);
+      const qualityB = getVoiceQuality(b.id);
+      
+      // First sort by quality (descending)
+      if (qualityB !== qualityA) {
+        return qualityB - qualityA;
+      }
       
       // Then sort alphabetically
       return a.name.localeCompare(b.name);
     });
     
     return allVoices;
-  };
-  
-  // Apply fallback voices when needed
-  const applyFallbackVoices = (languageCode: string) => {
-    const fallbackForLanguage = fallbackVoices[languageCode] || genericFallbackVoices;
-    setVoices(fallbackForLanguage);
-    
-    // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
-    if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
-      onSelect(fallbackForLanguage[0]);
-    }
   };
 
   return { voices, loading, error };

@@ -1,18 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { checkRateLimiting } from '../rateLimiting';
 
 /**
  * Fetch available Google TTS voices from our Supabase Edge Function
  */
 export async function fetchGoogleVoices() {
   try {
-    // Apply rate limiting - 1 call per minute for voice list
-    if (!checkRateLimiting('fetchVoices', 1, 60000)) {
-      console.warn('Rate limiting applied to voice fetching - using cached voices');
-      throw new Error('Rate limit reached for voice fetching. Try again later.');
-    }
-    
     console.log('Fetching Google TTS voices from Edge Function...');
     
     // Use the correct environment variable for Vite and properly pass the anon key
@@ -37,7 +30,6 @@ export async function fetchGoogleVoices() {
     // Check if we got fallback data due to an error
     if (data && data.fallbackUsed) {
       console.warn('Using fallback voice data:', data.message || 'Unknown error');
-      // We still have data in data.data, so continue
       return data.data;
     }
     
