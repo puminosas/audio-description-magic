@@ -9,7 +9,8 @@ import {
   LogOut,
   Menu,
   CreditCard,
-  X
+  X,
+  Database
 } from 'lucide-react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -98,6 +99,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 <span>Purchases</span>
+              </Button>
+            </Link>
+            <Link to="/admin/documentation" onClick={() => setMobileSidebarOpen(false)}>
+              <Button 
+                variant={isActiveRoute("/admin/documentation") ? "secondary" : "ghost"} 
+                className="w-full justify-start mb-1"
+              >
+                <Database className="mr-2 h-4 w-4" />
+                <span>Data</span>
               </Button>
             </Link>
             <Link to="/admin/feedback" onClick={() => setMobileSidebarOpen(false)}>
