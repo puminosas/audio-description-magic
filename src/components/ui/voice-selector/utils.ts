@@ -3,27 +3,40 @@ export function formatVoiceName(voiceName: string, gender?: string): string {
   const nameParts = voiceName.split('-');
   const voiceId = nameParts[nameParts.length - 1];
   
+  // Determine voice type with better labeling
   let voiceType = '';
+  let qualityLabel = '';
+  
   if (voiceName.includes('Studio')) {
     voiceType = 'Studio';
+    qualityLabel = '(Premium+)';
   } else if (voiceName.includes('Neural2')) {
     voiceType = 'Neural2';
+    qualityLabel = '(Premium)';
   } else if (voiceName.includes('Wavenet')) {
     voiceType = 'Wavenet';
+    qualityLabel = '(Enhanced)';
   } else if (voiceName.includes('Polyglot')) {
     voiceType = 'Polyglot';
+    qualityLabel = '(Multi-lingual)';
   } else if (voiceName.includes('Standard')) {
     voiceType = 'Standard';
+    qualityLabel = '';
+  } else {
+    // For any other voice types we might encounter
+    voiceType = nameParts[nameParts.length - 2] || 'Voice';
   }
   
+  // Determine gender label
   let genderLabel = 'Male';
-  if (gender === 'female') {
+  if (gender === 'female' || gender === 'FEMALE') {
     genderLabel = 'Female';
-  } else if (gender === 'neutral') {
+  } else if (gender === 'neutral' || gender === 'NEUTRAL') {
     genderLabel = 'Neutral';
   }
   
-  return `${voiceType} ${voiceId} (${genderLabel})`;
+  // Format the final name
+  return `${voiceType} ${voiceId} ${qualityLabel} (${genderLabel})`.trim().replace(/\s+/g, ' ');
 }
 
 // Add more utility functions as needed for the voice selector
@@ -43,6 +56,8 @@ export function getVoiceQualityBadge(voiceName: string): string | null {
     return 'Premium';
   } else if (voiceName.includes('Wavenet')) {
     return 'Enhanced';
+  } else if (voiceName.includes('Polyglot')) {
+    return 'Multi-lingual';
   } else if (voiceName.includes('Standard')) {
     return 'Standard';
   }
@@ -59,11 +74,13 @@ export function isPremiumVoice(voiceName: string): boolean {
 
 export function getVoiceQuality(voiceName: string): number {
   if (voiceName.includes('Studio')) {
-    return 3; // Highest quality
+    return 4; // Highest quality
   } else if (voiceName.includes('Neural2')) {
-    return 2; // High quality
+    return 3; // High quality
   } else if (voiceName.includes('Wavenet')) {
-    return 1; // Better quality
+    return 2; // Better quality
+  } else if (voiceName.includes('Polyglot')) {
+    return 1; // Specialized quality
   }
   return 0; // Standard quality
 }
