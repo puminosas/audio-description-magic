@@ -15,10 +15,11 @@ export async function fetchGoogleVoices() {
     
     console.log('Fetching Google TTS voices from Edge Function...');
     
-    // Add anon key to headers to fix authorization issue
+    // Important fix: Use proper environment variable handling for Vite
+    // and correctly pass the anon key in the headers
     const { data, error } = await supabase.functions.invoke('get-google-voices', {
       headers: {
-        apikey: process.env.SUPABASE_ANON_KEY || ''
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
       }
     });
     

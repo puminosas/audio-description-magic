@@ -75,6 +75,30 @@ serve(async (req) => {
   }
 
   try {
+    // Log all request headers for debugging
+    console.log("Request headers received:");
+    for (const [key, value] of req.headers.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+
+    // Check if we have the apikey header
+    const apikey = req.headers.get('apikey');
+    if (!apikey) {
+      console.error("Missing apikey header");
+      return new Response(
+        JSON.stringify({ 
+          error: "Unauthorized", 
+          message: "Missing apikey header",
+          fallbackUsed: true,
+          data: fallbackVoices 
+        }), 
+        { 
+          status: 200, // Return 200 but with error information 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const now = Date.now();
     
     // Check if we have a valid cache
@@ -96,7 +120,13 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Unhandled error:", error);
-    return new Response(JSON.stringify(fallbackVoices), {
+    return new Response(JSON.stringify({
+      error: "Internal server error",
+      message: error.message,
+      fallbackUsed: true,
+      data: fallbackVoices
+    }), {
+      status: 200, // Return 200 but with error information
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
