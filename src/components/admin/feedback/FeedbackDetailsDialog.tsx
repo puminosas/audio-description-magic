@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Dialog, 
@@ -17,16 +16,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-
-interface FeedbackItem {
-  id: string;
-  type: string;
-  message: string;
-  email?: string;
-  created_at: string;
-  status: string;
-  admin_notes?: string;
-}
+import { FeedbackItem } from '@/hooks/useAdminFeedback';
 
 interface FeedbackDetailsDialogProps {
   open: boolean;
