@@ -12,6 +12,7 @@ interface ActivityEvent {
   description: string;
   timestamp: string;
   isRegistered: boolean;
+  sessionId?: string | null;
 }
 
 const RecentActivitiesCard = () => {
@@ -50,6 +51,11 @@ const RecentActivitiesCard = () => {
         .order('created_at', { ascending: false })
         .limit(20);
       
+      if (audioError) {
+        console.error('Error fetching audio files:', audioError);
+        return;
+      }
+      
       // Convert to activity events
       const generationEvents: ActivityEvent[] = [];
       
@@ -75,7 +81,8 @@ const RecentActivitiesCard = () => {
         generationEvents.push({
           id: file.id,
           type: 'generation',
-          userId: file.user_id || file.session_id,
+          userId: file.user_id,
+          sessionId: file.session_id,
           email,
           isRegistered,
           description: `Generated audio: ${file.title || 'Untitled'}`,
@@ -119,7 +126,8 @@ const RecentActivitiesCard = () => {
       const newEvent: ActivityEvent = {
         id: newFile.id,
         type: 'generation',
-        userId: newFile.user_id || newFile.session_id,
+        userId: newFile.user_id,
+        sessionId: newFile.session_id,
         email,
         isRegistered,
         description: `Generated audio: ${newFile.title || 'Untitled'}`,
@@ -154,6 +162,17 @@ const RecentActivitiesCard = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Helper function to display user identifier
+  const getUserIdentifier = (activity: ActivityEvent) => {
+    if (activity.email) {
+      return activity.email;
+    } else if (activity.sessionId) {
+      return `Session: ${activity.sessionId.substring(0, 8)}...`;
+    } else {
+      return 'Unknown User';
+    }
+  };
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -174,7 +193,7 @@ const RecentActivitiesCard = () => {
                 <div className="flex-1">
                   <div className="flex justify-between">
                     <p className="font-medium">
-                      {activity.email ? activity.email : 'Anonymous User'}
+                      {getUserIdentifier(activity)}
                     </p>
                     <span className="text-xs text-muted-foreground">
                       {formatTime(activity.timestamp)}
