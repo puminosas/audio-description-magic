@@ -123,7 +123,14 @@ async function fetchVoicesFromGoogle() {
     throw new Error("Google credentials not configured");
   }
   
-  const client = new TextToSpeechClient({ credentials });
+  // Use no caching for listVoices to ensure we get the full, current list
+  const client = new TextToSpeechClient({ 
+    credentials,
+    // Set higher timeout to handle larger response
+    timeout: 30000
+  });
+  
+  // Request without any filters to get ALL voices
   const [voicesResponse] = await client.listVoices({});
   
   if (!voicesResponse || !voicesResponse.voices || voicesResponse.voices.length === 0) {
