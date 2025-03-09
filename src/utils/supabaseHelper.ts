@@ -2,7 +2,7 @@
 // Export types from typedClient
 export type { 
   Database,
-  SupabaseTypedClient
+  SupabaseTypedClient 
 } from './supabase/typedClient';
 
 // Export the instance

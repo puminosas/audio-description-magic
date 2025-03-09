@@ -5,8 +5,15 @@ export * from './generationService';
 export * from './historyService';
 export * from './sessionUtils';
 
-// Only export type from languageVoiceData
-export type { LanguageOption, VoiceOption } from './languageVoiceData';
+// Export functions from languageVoiceData
+export { 
+  getAvailableLanguages, 
+  getAvailableVoices,
+  initializeGoogleVoices as initGoogleVoicesFromSource
+} from './languageVoiceData';
+
+// Export types from languageVoiceData
+export type { LanguageOption, VoiceOption } from './types';
 
 // Google TTS initialization with error handling
 let googleVoicesInitialized = false;

@@ -1,5 +1,12 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+// Export the type for Database
+export type { Database };
+
+// Type for the typed client
+export type SupabaseTypedClient = typeof supabase;
 
 // The issue is that our Database type in types.ts doesn't have all our tables defined
 // This helper works around TypeScript type checking to allow us to use tables
