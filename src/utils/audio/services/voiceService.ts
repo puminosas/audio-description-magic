@@ -28,6 +28,13 @@ export async function fetchGoogleVoices() {
       throw error;
     }
     
+    // Check if we got fallback data due to an error
+    if (data && data.fallbackUsed) {
+      console.warn('Using fallback voice data:', data.message || 'Unknown error');
+      // We still have data in data.data, so continue
+      return data.data;
+    }
+    
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
       throw new Error('No voices available. Google TTS API may be unreachable.');
     }

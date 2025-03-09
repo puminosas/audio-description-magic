@@ -2,6 +2,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
+// Import the Google Cloud Text-to-Speech library
+import { TextToSpeechClient } from "https://esm.sh/@google-cloud/text-to-speech@4.2.1";
+
 // Cache the voices to avoid repeatedly fetching them
 let cachedVoices: any = null;
 let cacheTimestamp: number = 0;
@@ -68,6 +71,19 @@ const fallbackVoices = {
   }
 };
 
+// Helper function to get language display name
+function getLanguageDisplayName(code: string): string {
+  const languages: Record<string, string> = {
+    "en-US": "English (US)",
+    "en-GB": "English (UK)",
+    "es-ES": "Spanish (Spain)",
+    "fr-FR": "French (France)",
+    "de-DE": "German (Germany)",
+    // Add other languages as needed
+  };
+  return languages[code] || code;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -109,15 +125,84 @@ serve(async (req) => {
       });
     }
     
-    // Use fallback data instead of trying to call Google API
-    // This is a simplification to avoid authentication issues
-    console.log("Using fallback Google TTS voices data");
-    cachedVoices = fallbackVoices;
-    cacheTimestamp = now;
+    // Get Google credentials from Supabase secrets
+    const googleCredentials = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
     
-    return new Response(JSON.stringify(fallbackVoices), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    if (!googleCredentials) {
+      console.error("Google credentials not found in environment");
+      return new Response(JSON.stringify({
+        error: "Configuration error",
+        message: "Google credentials not configured",
+        fallbackUsed: true,
+        data: fallbackVoices
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    try {
+      // Parse credentials and create client
+      const credentials = JSON.parse(googleCredentials);
+      const client = new TextToSpeechClient({ credentials });
+      
+      // Fetch all available voices from Google TTS
+      const [result] = await client.listVoices({});
+      
+      if (!result || !result.voices || result.voices.length === 0) {
+        throw new Error("No voices returned from Google TTS API");
+      }
+      
+      // Process the voices into our required format
+      const voice_data: any = {};
+      
+      for (const voice of result.voices) {
+        for (const language_code of voice.languageCodes) {
+          if (!voice_data[language_code]) {
+            voice_data[language_code] = {
+              display_name: getLanguageDisplayName(language_code),
+              voices: { 'MALE': [], 'FEMALE': [] }
+            };
+          }
+
+          // Determine gender category
+          const gender = voice.ssmlGender === 'MALE' ? 'MALE' : 
+                         voice.ssmlGender === 'FEMALE' ? 'FEMALE' : null;
+          
+          if (gender) {
+            voice_data[language_code].voices[gender].push({
+              name: voice.name,
+              ssml_gender: voice.ssmlGender
+            });
+          }
+        }
+      }
+      
+      // Update the cache
+      cachedVoices = voice_data;
+      cacheTimestamp = now;
+      
+      console.log(`Successfully fetched ${Object.keys(voice_data).length} languages from Google TTS`);
+      
+      return new Response(JSON.stringify(voice_data), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      
+    } catch (googleError) {
+      console.error("Error fetching from Google TTS API:", googleError);
+      
+      // Return the fallback data with the error information
+      return new Response(JSON.stringify({
+        error: "Google TTS API error",
+        message: googleError.message,
+        fallbackUsed: true,
+        data: fallbackVoices
+      }), {
+        status: 200, // Return 200 with fallback data
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
   } catch (error) {
     console.error("Unhandled error:", error);
     return new Response(JSON.stringify({

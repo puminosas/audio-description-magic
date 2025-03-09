@@ -46,16 +46,24 @@ export function getAvailableVoices(languageCode: string): VoiceOption[] {
 export const fetchAndStoreGoogleVoices = async (): Promise<void> => {
   try {
     console.log('Fetching Google TTS voices from Edge Function...');
-    // Call our Edge Function to get voices
-    const response = await fetch('https://cttaphbzhmheecbqhtjj.supabase.co/functions/v1/get-google-voices');
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Failed to fetch Google voices: ${response.status} - ${errorText}`);
-      throw new Error(`Failed to fetch Google voices: ${response.statusText}`);
+    // Use the Supabase client to call our edge function
+    const { supabase } = await import('@/integrations/supabase/client');
+    const response = await supabase.functions.invoke('get-google-voices', {
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+      }
+    });
+    
+    if (response.error) {
+      console.error(`Failed to fetch Google voices: ${response.error.message}`);
+      throw new Error(`Failed to fetch Google voices: ${response.error.message}`);
     }
     
-    const data = await response.json();
+    // Check if we're getting fallback data due to an error
+    const data = response.data && response.data.fallbackUsed 
+      ? response.data.data 
+      : response.data;
     
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
       throw new Error('Invalid or empty response from Google TTS API');

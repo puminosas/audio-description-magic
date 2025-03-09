@@ -75,7 +75,11 @@ export function useVoiceData(
         setError(null);
         
         // Call our Edge Function to get voices
-        const response = await supabase.functions.invoke('get-google-voices');
+        const response = await supabase.functions.invoke('get-google-voices', {
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+          }
+        });
         
         if (response.error) {
           console.warn('Using fallback voices due to error:', response.error);
@@ -95,8 +99,13 @@ export function useVoiceData(
           return;
         }
         
+        // Check if we're getting fallback data due to an error
+        const data = response.data && response.data.fallbackUsed 
+          ? response.data.data 
+          : response.data;
+        
         // Check if we have valid data
-        if (!response.data || typeof response.data !== 'object' || Object.keys(response.data).length === 0) {
+        if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
           console.warn('Invalid voice data format received, using fallbacks');
           
           // Use fallback voices
@@ -115,15 +124,15 @@ export function useVoiceData(
         }
         
         // Format the voices for our component
-        if (isMounted && response.data[language]) {
+        if (isMounted && data[language]) {
           // Process voice data from the Edge Function
-          const maleVoices = (response.data[language].voices.MALE || []).map((v: any) => ({
+          const maleVoices = (data[language].voices.MALE || []).map((v: any) => ({
             id: v.name,
             name: formatVoiceName(v.name),
             gender: 'MALE' as const
           }));
           
-          const femaleVoices = (response.data[language].voices.FEMALE || []).map((v: any) => ({
+          const femaleVoices = (data[language].voices.FEMALE || []).map((v: any) => ({
             id: v.name,
             name: formatVoiceName(v.name, 'female'),
             gender: 'FEMALE' as const
