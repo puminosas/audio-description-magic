@@ -14,6 +14,7 @@ import AdminSettings from './AdminSettings';
 import AdminAiChatPage from './AdminAiChat';
 import AdminPurchases from './AdminPurchases';
 import AdminDocumentation from './AdminDocumentation';
+import AdminAnalytics from './AdminAnalytics';
 import AdminLayout from '@/components/layout/AdminLayout';
 
 const Admin = () => {
@@ -89,6 +90,7 @@ const Admin = () => {
         <Route path="/ai-chat" element={<AdminAiChatPage />} />
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/documentation" element={<AdminDocumentation />} />
+        <Route path="/analytics" element={<AdminAnalytics />} />
       </Routes>
     </AdminLayout>
   );

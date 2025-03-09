@@ -10,7 +10,8 @@ import {
   Menu,
   CreditCard,
   X,
-  Database
+  Database,
+  BarChart2
 } from 'lucide-react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -72,6 +73,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
                 <span>AI Chat</span>
+              </Button>
+            </Link>
+            <Link to="/admin/analytics" onClick={() => setMobileSidebarOpen(false)}>
+              <Button 
+                variant={isActiveRoute("/admin/analytics") ? "secondary" : "ghost"} 
+                className="w-full justify-start mb-1"
+              >
+                <BarChart2 className="mr-2 h-4 w-4" />
+                <span>Live Analytics</span>
               </Button>
             </Link>
             <Link to="/admin/users" onClick={() => setMobileSidebarOpen(false)}>
