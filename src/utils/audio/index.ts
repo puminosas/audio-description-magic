@@ -2,9 +2,11 @@
 // Re-export all audio utility functions
 export * from './types';
 export * from './generationService';
-export * from './languageVoiceData';
 export * from './historyService';
 export * from './sessionUtils';
+
+// Only export type from languageVoiceData
+export type { LanguageOption, VoiceOption } from './languageVoiceData';
 
 // Google TTS initialization with error handling
 let googleVoicesInitialized = false;
@@ -15,7 +17,7 @@ export const initializeGoogleVoices = async () => {
       return;
     }
     
-    // Use the exported function from languageVoiceData
+    // Import languageVoiceData dynamically to avoid circular dependencies
     const { fetchAndStoreGoogleVoices } = await import('./languageVoiceData');
     await fetchAndStoreGoogleVoices();
     googleVoicesInitialized = true;

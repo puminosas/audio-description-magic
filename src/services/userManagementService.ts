@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabaseHelper';
+import { assignAdminRole, removeAdminRole, updateUserPlan } from '@/utils/supabase/userRoles';
 
 export interface UserData {
   id: string;

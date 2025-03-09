@@ -3,6 +3,10 @@ import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import AdminLayout from '@/components/layout/AdminLayout';
+
+// Admin role helper - imported directly to avoid dynamic import
+import { assignAdminRole } from '@/utils/supabase/userRoles';
 
 // Admin pages
 import AdminAudioFiles from './AdminAudioFiles';
@@ -15,7 +19,6 @@ import AdminAiChatPage from './AdminAiChat';
 import AdminPurchases from './AdminPurchases';
 import AdminDocumentation from './AdminDocumentation';
 import AdminAnalytics from './AdminAnalytics';
-import AdminLayout from '@/components/layout/AdminLayout';
 
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -30,8 +33,6 @@ const Admin = () => {
         if (user.email === 'a.mackeliunas@gmail.com') {
           console.log("Detected admin email, attempting to assign admin role");
           try {
-            // Import helper function dynamically to avoid circular dependencies
-            const { assignAdminRole } = await import('@/utils/supabaseHelper');
             const success = await assignAdminRole(user.id);
             
             if (success) {
