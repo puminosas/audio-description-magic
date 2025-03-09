@@ -10,7 +10,8 @@ export interface LanguageOption {
 export interface VoiceOption {
   id: string;
   name: string;
-  gender: 'MALE' | 'FEMALE';
+  gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
+  isPremium?: boolean;
 }
 
 export interface AudioGenerationResult {

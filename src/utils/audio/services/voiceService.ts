@@ -15,11 +15,17 @@ export async function fetchGoogleVoices() {
     
     console.log('Fetching Google TTS voices from Edge Function...');
     
-    // Important fix: Use proper environment variable handling for Vite
-    // and correctly pass the anon key in the headers
+    // Use the correct environment variable for Vite and properly pass the anon key
+    const anon_key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+    
+    if (!anon_key) {
+      console.error('VITE_SUPABASE_ANON_KEY is not defined');
+      throw new Error('Missing API key configuration');
+    }
+    
     const { data, error } = await supabase.functions.invoke('get-google-voices', {
       headers: {
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+        apikey: anon_key
       }
     });
     
@@ -39,7 +45,7 @@ export async function fetchGoogleVoices() {
       throw new Error('No voices available. Google TTS API may be unreachable.');
     }
     
-    console.log('Successfully fetched Google TTS voices');
+    console.log(`Successfully fetched Google TTS voices: ${Object.keys(data).length} languages`);
     return data;
   } catch (error) {
     console.error('Error in fetchGoogleVoices:', error);

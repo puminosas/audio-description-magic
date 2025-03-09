@@ -1,5 +1,5 @@
 
-import { Check, User, UserRound, Users, Loader2 } from 'lucide-react';
+import { Check, User, UserRound, Users, Loader2, Star } from 'lucide-react';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { VoiceOption } from '@/utils/audio/types';
 
@@ -39,6 +39,15 @@ const VoiceList = ({
   
   // Helper function to check if a gender is female regardless of format
   const isFemale = (gender: string) => gender === 'FEMALE' || gender === 'female';
+  
+  // Helper function to check if a voice is premium
+  const isPremium = (voice: VoiceOption) => 
+    voice.isPremium || 
+    (voice.id && (
+      voice.id.includes('Neural2') || 
+      voice.id.includes('Wavenet') || 
+      voice.id.includes('Studio')
+    ));
 
   return (
     <>
@@ -57,7 +66,12 @@ const VoiceList = ({
                 <Users className="h-4 w-4 mr-2 text-purple-500" />
               }
               <div>
-                <div>{voice.name}</div>
+                <div className="flex items-center">
+                  <span>{voice.name}</span>
+                  {isPremium(voice) && (
+                    <Star className="h-3 w-3 ml-1 text-amber-400" fill="currentColor" />
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground">{voice.id}</div>
               </div>
             </div>

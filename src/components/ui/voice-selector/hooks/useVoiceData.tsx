@@ -73,11 +73,19 @@ export function useVoiceData(
       try {
         setLoading(true);
         setError(null);
+
+        // Get anon key for API auth
+        const anon_key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+        
+        if (!anon_key) {
+          console.error('VITE_SUPABASE_ANON_KEY is not defined');
+          throw new Error('Missing API key configuration');
+        }
         
         // Call our Edge Function to get voices
         const response = await supabase.functions.invoke('get-google-voices', {
           headers: {
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+            apikey: anon_key
           }
         });
         
@@ -125,23 +133,41 @@ export function useVoiceData(
         
         // Format the voices for our component
         if (isMounted && data[language]) {
-          // Process voice data from the Edge Function
+          // Process male voices
           const maleVoices = (data[language].voices.MALE || []).map((v: any) => ({
             id: v.name,
             name: formatVoiceName(v.name),
-            gender: 'MALE' as const
+            gender: 'MALE' as const,
+            isPremium: v.is_premium || false
           }));
           
+          // Process female voices
           const femaleVoices = (data[language].voices.FEMALE || []).map((v: any) => ({
             id: v.name,
             name: formatVoiceName(v.name, 'female'),
-            gender: 'FEMALE' as const
+            gender: 'FEMALE' as const,
+            isPremium: v.is_premium || false
           }));
           
-          const formattedVoices = [...maleVoices, ...femaleVoices];
+          // Process neutral voices (if any)
+          const neutralVoices = (data[language].voices.NEUTRAL || []).map((v: any) => ({
+            id: v.name,
+            name: formatVoiceName(v.name, 'neutral'),
+            gender: 'NEUTRAL' as const,
+            isPremium: v.is_premium || false
+          }));
           
-          // Sort voices by name
-          formattedVoices.sort((a, b) => a.name.localeCompare(b.name));
+          const formattedVoices = [...maleVoices, ...femaleVoices, ...neutralVoices];
+          
+          // Sort voices - premium voices first, then alphabetically
+          formattedVoices.sort((a, b) => {
+            // First sort by premium status
+            if (a.isPremium && !b.isPremium) return -1;
+            if (!a.isPremium && b.isPremium) return 1;
+            
+            // Then sort alphabetically
+            return a.name.localeCompare(b.name);
+          });
           
           if (formattedVoices.length === 0) {
             // Use fallback voices if the API returned an empty array

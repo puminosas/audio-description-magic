@@ -146,35 +146,41 @@ serve(async (req) => {
       const credentials = JSON.parse(googleCredentials);
       const client = new TextToSpeechClient({ credentials });
       
-      // Fetch all available voices from Google TTS
-      const [result] = await client.listVoices({});
+      // List all available voices including premium ones
+      const [voicesResponse] = await client.listVoices({});
       
-      if (!result || !result.voices || result.voices.length === 0) {
+      if (!voicesResponse || !voicesResponse.voices || voicesResponse.voices.length === 0) {
         throw new Error("No voices returned from Google TTS API");
       }
+      
+      console.log(`Retrieved ${voicesResponse.voices.length} voices from Google TTS API`);
       
       // Process the voices into our required format
       const voice_data: any = {};
       
-      for (const voice of result.voices) {
+      for (const voice of voicesResponse.voices) {
         for (const language_code of voice.languageCodes) {
           if (!voice_data[language_code]) {
             voice_data[language_code] = {
               display_name: getLanguageDisplayName(language_code),
-              voices: { 'MALE': [], 'FEMALE': [] }
+              voices: { 'MALE': [], 'FEMALE': [], 'NEUTRAL': [] }
             };
           }
 
           // Determine gender category
-          const gender = voice.ssmlGender === 'MALE' ? 'MALE' : 
-                         voice.ssmlGender === 'FEMALE' ? 'FEMALE' : null;
+          const gender = voice.ssmlGender;
+          const genderKey = gender === 'MALE' ? 'MALE' : 
+                           gender === 'FEMALE' ? 'FEMALE' : 'NEUTRAL';
           
-          if (gender) {
-            voice_data[language_code].voices[gender].push({
-              name: voice.name,
-              ssml_gender: voice.ssmlGender
-            });
-          }
+          // Add voice to appropriate gender category
+          voice_data[language_code].voices[genderKey].push({
+            name: voice.name,
+            ssml_gender: voice.ssmlGender,
+            // Add flag for premium voices
+            is_premium: voice.name.includes('Studio') || 
+                       voice.name.includes('Neural2') || 
+                       voice.name.includes('Wavenet')
+          });
         }
       }
       
@@ -182,7 +188,7 @@ serve(async (req) => {
       cachedVoices = voice_data;
       cacheTimestamp = now;
       
-      console.log(`Successfully fetched ${Object.keys(voice_data).length} languages from Google TTS`);
+      console.log(`Successfully processed ${Object.keys(voice_data).length} languages from Google TTS`);
       
       return new Response(JSON.stringify(voice_data), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
