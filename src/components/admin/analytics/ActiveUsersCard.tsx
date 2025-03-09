@@ -49,7 +49,7 @@ const ActiveUsersCard = () => {
       const { data: registeredUsers, error: regError } = await supabase
         .from('audio_files')
         .select('user_id, created_at')
-        .is('user_id', null, { negated: true })
+        .not('user_id', 'is', null)
         .gt('created_at', hourAgo.toISOString())
         .order('created_at', { ascending: false });
       

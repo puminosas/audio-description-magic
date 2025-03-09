@@ -70,7 +70,7 @@ const AdminAnalytics = () => {
         .from('audio_files')
         .select('user_id, session_id')
         .gt('created_at', hourAgo.toISOString())
-        .is('user_id', null, { negated: true });
+        .not('user_id', 'is', null);
       
       const { data: anonymousUsersData, error: anonymousUsersError } = await supabase
         .from('audio_files')
