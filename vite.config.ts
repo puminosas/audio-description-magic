@@ -49,6 +49,8 @@ export default defineConfig(({ mode }) => ({
           'vendor-tanstack': ['@tanstack/react-query']
         }
       }
-    }
+    },
+    // Ensure favicon files are properly processed
+    assetsInlineLimit: 0, // Don't inline assets like favicons
   }
 }));
