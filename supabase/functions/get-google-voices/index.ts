@@ -5,81 +5,13 @@ import { corsHeaders } from "../_shared/cors.ts";
 // Import the Google Cloud Text-to-Speech library
 import { TextToSpeechClient } from "https://esm.sh/@google-cloud/text-to-speech@4.2.1";
 
+// Import fallback data
+import { fallbackVoices, languageDisplayNames } from "./fallbackData.ts";
+
 // Cache configuration
 const CACHE_DURATION = 3600000; // 1 hour in milliseconds
 let cachedVoices: any = null;
 let cacheTimestamp: number = 0;
-
-// Language display name mapping
-const languageDisplayNames: Record<string, string> = {
-  "en-US": "English (US)",
-  "en-GB": "English (UK)",
-  "es-ES": "Spanish (Spain)",
-  "fr-FR": "French (France)",
-  "de-DE": "German (Germany)",
-  // Add other languages as needed
-};
-
-// Fallback data in case the Google API is unavailable
-const fallbackVoices = {
-  "en-US": {
-    display_name: "English (US)",
-    voices: {
-      MALE: [
-        { name: "en-US-Standard-A", ssml_gender: "MALE" },
-        { name: "en-US-Standard-B", ssml_gender: "MALE" }
-      ],
-      FEMALE: [
-        { name: "en-US-Standard-C", ssml_gender: "FEMALE" },
-        { name: "en-US-Standard-E", ssml_gender: "FEMALE" }
-      ]
-    }
-  },
-  "en-GB": {
-    display_name: "English (UK)",
-    voices: {
-      MALE: [
-        { name: "en-GB-Standard-B", ssml_gender: "MALE" }
-      ],
-      FEMALE: [
-        { name: "en-GB-Standard-A", ssml_gender: "FEMALE" }
-      ]
-    }
-  },
-  "es-ES": {
-    display_name: "Spanish (Spain)",
-    voices: {
-      MALE: [
-        { name: "es-ES-Standard-B", ssml_gender: "MALE" }
-      ],
-      FEMALE: [
-        { name: "es-ES-Standard-A", ssml_gender: "FEMALE" }
-      ]
-    }
-  },
-  "fr-FR": {
-    display_name: "French (France)",
-    voices: {
-      MALE: [
-        { name: "fr-FR-Standard-B", ssml_gender: "MALE" }
-      ],
-      FEMALE: [
-        { name: "fr-FR-Standard-A", ssml_gender: "FEMALE" }
-      ]
-    }
-  },
-  "de-DE": {
-    display_name: "German (Germany)",
-    voices: {
-      MALE: [
-        { name: "de-DE-Standard-B", ssml_gender: "MALE" }
-      ],
-      FEMALE: [
-        { name: "de-DE-Standard-A", ssml_gender: "FEMALE" }
-      ]
-    }
-  }
-};
 
 /**
  * Helper function to get language display name
