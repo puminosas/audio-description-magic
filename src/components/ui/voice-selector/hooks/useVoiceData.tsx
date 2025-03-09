@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { VoiceOption } from '@/utils/audio/types';
 import { formatVoiceName } from '../utils';
+import { fetchGoogleVoices } from '@/utils/audio/services/voiceService';
 
 // Fallback voices for common languages
 const fallbackVoices: Record<string, VoiceOption[]> = {
@@ -70,144 +70,21 @@ export function useVoiceData(
     let isMounted = true;
     
     const fetchVoices = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoading(true);
-        setError(null);
-
-        // Get anon key for API auth
-        const anon_key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+        // Use the fetchGoogleVoices service
+        const data = await fetchGoogleVoices();
         
-        if (!anon_key) {
-          console.error('VITE_SUPABASE_ANON_KEY is not defined');
-          throw new Error('Missing API key configuration');
-        }
-        
-        // Call our Edge Function to get voices
-        const response = await supabase.functions.invoke('get-google-voices', {
-          headers: {
-            apikey: anon_key
-          }
-        });
-        
-        if (response.error) {
-          console.warn('Using fallback voices due to error:', response.error);
-          
-          // Use fallback voices instead of showing an error
-          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
-          setVoices(fallbackForLanguage);
-          
-          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
-          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
-            onSelect(fallbackForLanguage[0]);
-          }
-          
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-        
-        // Check if we're getting fallback data due to an error
-        const data = response.data && response.data.fallbackUsed 
-          ? response.data.data 
-          : response.data;
-        
-        // Check if we have valid data
-        if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
-          console.warn('Invalid voice data format received, using fallbacks');
-          
-          // Use fallback voices
-          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
-          setVoices(fallbackForLanguage);
-          
-          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
-          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
-            onSelect(fallbackForLanguage[0]);
-          }
-          
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-        
-        // Format the voices for our component
-        if (isMounted && data[language]) {
-          // Process male voices
-          const maleVoices = (data[language].voices.MALE || []).map((v: any) => ({
-            id: v.name,
-            name: formatVoiceName(v.name),
-            gender: 'MALE' as const,
-            isPremium: v.is_premium || false
-          }));
-          
-          // Process female voices
-          const femaleVoices = (data[language].voices.FEMALE || []).map((v: any) => ({
-            id: v.name,
-            name: formatVoiceName(v.name, 'female'),
-            gender: 'FEMALE' as const,
-            isPremium: v.is_premium || false
-          }));
-          
-          // Process neutral voices (if any)
-          const neutralVoices = (data[language].voices.NEUTRAL || []).map((v: any) => ({
-            id: v.name,
-            name: formatVoiceName(v.name, 'neutral'),
-            gender: 'NEUTRAL' as const,
-            isPremium: v.is_premium || false
-          }));
-          
-          const formattedVoices = [...maleVoices, ...femaleVoices, ...neutralVoices];
-          
-          // Sort voices - premium voices first, then alphabetically
-          formattedVoices.sort((a, b) => {
-            // First sort by premium status
-            if (a.isPremium && !b.isPremium) return -1;
-            if (!a.isPremium && b.isPremium) return 1;
-            
-            // Then sort alphabetically
-            return a.name.localeCompare(b.name);
-          });
-          
-          if (formattedVoices.length === 0) {
-            // Use fallback voices if the API returned an empty array
-            const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
-            setVoices(fallbackForLanguage);
-            
-            // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
-            if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
-              onSelect(fallbackForLanguage[0]);
-            }
-          } else {
-            setVoices(formattedVoices);
-            
-            // If the selected voice is not in the new list, select the first one
-            if (onSelect && (!selectedVoice || !formattedVoices.find(v => v.id === selectedVoice.id))) {
-              onSelect(formattedVoices[0]);
-            }
-          }
-        } else if (isMounted) {
-          // Use fallback voices for this language
-          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
-          setVoices(fallbackForLanguage);
-          
-          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
-          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
-            onSelect(fallbackForLanguage[0]);
-          }
+        if (isMounted) {
+          processVoiceData(data, language);
         }
       } catch (error) {
         console.warn('Error loading voices, using fallbacks:', error);
         
         if (isMounted) {
-          // Use fallback voices instead of showing an error
-          const fallbackForLanguage = fallbackVoices[language] || genericFallbackVoices;
-          setVoices(fallbackForLanguage);
-          
-          // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
-          if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
-            onSelect(fallbackForLanguage[0]);
-          }
+          applyFallbackVoices(language);
         }
       } finally {
         if (isMounted) {
@@ -222,6 +99,92 @@ export function useVoiceData(
       isMounted = false;
     };
   }, [language, selectedVoice, onSelect]);
+
+  // Process voice data returned from API
+  const processVoiceData = (data: any, languageCode: string) => {
+    if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+      console.warn('Invalid voice data format received, using fallbacks');
+      applyFallbackVoices(languageCode);
+      return;
+    }
+    
+    if (!data[languageCode]) {
+      console.warn(`No voices found for language: ${languageCode}, using fallbacks`);
+      applyFallbackVoices(languageCode);
+      return;
+    }
+    
+    // Format the voices for our component
+    const formattedVoices = formatVoicesFromAPI(data[languageCode]);
+    
+    if (formattedVoices.length === 0) {
+      console.warn(`Empty voices array for language: ${languageCode}, using fallbacks`);
+      applyFallbackVoices(languageCode);
+    } else {
+      setVoices(formattedVoices);
+      
+      // If the selected voice is not in the new list, select the first one
+      if (onSelect && (!selectedVoice || !formattedVoices.find(v => v.id === selectedVoice.id))) {
+        onSelect(formattedVoices[0]);
+      }
+    }
+  };
+  
+  // Format voices from API response
+  const formatVoicesFromAPI = (languageData: any): VoiceOption[] => {
+    if (!languageData.voices) {
+      return [];
+    }
+
+    // Process male voices
+    const maleVoices = (languageData.voices.MALE || []).map((v: any) => ({
+      id: v.name,
+      name: formatVoiceName(v.name),
+      gender: 'MALE' as const,
+      isPremium: v.is_premium || false
+    }));
+    
+    // Process female voices
+    const femaleVoices = (languageData.voices.FEMALE || []).map((v: any) => ({
+      id: v.name,
+      name: formatVoiceName(v.name, 'female'),
+      gender: 'FEMALE' as const,
+      isPremium: v.is_premium || false
+    }));
+    
+    // Process neutral voices (if any)
+    const neutralVoices = (languageData.voices.NEUTRAL || []).map((v: any) => ({
+      id: v.name,
+      name: formatVoiceName(v.name, 'neutral'),
+      gender: 'NEUTRAL' as const,
+      isPremium: v.is_premium || false
+    }));
+    
+    const allVoices = [...maleVoices, ...femaleVoices, ...neutralVoices];
+    
+    // Sort voices - premium voices first, then alphabetically
+    allVoices.sort((a, b) => {
+      // First sort by premium status
+      if (a.isPremium && !b.isPremium) return -1;
+      if (!a.isPremium && b.isPremium) return 1;
+      
+      // Then sort alphabetically
+      return a.name.localeCompare(b.name);
+    });
+    
+    return allVoices;
+  };
+  
+  // Apply fallback voices when needed
+  const applyFallbackVoices = (languageCode: string) => {
+    const fallbackForLanguage = fallbackVoices[languageCode] || genericFallbackVoices;
+    setVoices(fallbackForLanguage);
+    
+    // If no voice is selected or the selected voice isn't in our fallbacks, select the first one
+    if (onSelect && (!selectedVoice || !fallbackForLanguage.find(v => v.id === selectedVoice.id))) {
+      onSelect(fallbackForLanguage[0]);
+    }
+  };
 
   return { voices, loading, error };
 }
