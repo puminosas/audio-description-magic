@@ -38,9 +38,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
   
   return (
-    <div className="flex h-screen bg-background w-full overflow-hidden">
+    <div className="flex bg-background w-full overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
       {/* Mobile menu button */}
-      <div className="fixed top-4 left-4 z-50 md:hidden">
+      <div className="fixed top-20 left-4 z-50 md:hidden">
         <Button 
           variant="outline" 
           size="icon" 
@@ -55,8 +55,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <div className={`
         ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
         md:translate-x-0 transition-transform duration-200 ease-in-out
-        fixed inset-y-0 left-0 z-40 w-64 bg-card/90 backdrop-blur-md border-r pt-5 px-3 flex-col justify-between
-        flex md:relative h-full shadow-lg
+        fixed md:static inset-y-0 left-0 z-40 w-64 bg-card/90 backdrop-blur-md border-r pt-5 px-3 flex-col justify-between
+        flex md:relative h-full shadow-lg mt-16 md:mt-0
       `}>
         <div className="flex flex-col h-full overflow-hidden">
           <div className="px-3 py-4 border-b mb-4">
