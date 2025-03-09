@@ -1,100 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 
-export interface NavLink {
-  name: string;
-  path: string;
-}
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useLocation } from 'react-router-dom';
 
-interface NavLinksProps {
-  links: NavLink[];
-  variant?: 'desktop' | 'mobile';
-  onLinkClick?: () => void;
-}
-
-const NavLinks = ({ links, variant = 'desktop', onLinkClick }: NavLinksProps) => {
+const NavLinks = () => {
   const location = useLocation();
-  const [hidePricing, setHidePricing] = useState(false);
   
-  // Fetch the app settings to check if pricing should be hidden
-  useEffect(() => {
-    async function fetchSettings() {
-      try {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('hidepricingfeatures')
-          .single();
-        
-        if (!error && data) {
-          setHidePricing(data.hidepricingfeatures);
-        }
-      } catch (error) {
-        console.error('Failed to fetch app settings:', error);
-      }
-    }
-    
-    fetchSettings();
-  }, []);
-  
-  const handleClick = () => {
-    if (onLinkClick) {
-      onLinkClick();
-    }
+  const isActiveRoute = (path: string) => {
+    return location.pathname === path;
   };
-
-  // Filter out the Pricing link if hidePricing is true
-  const filteredLinks = links.filter(link => {
-    if (hidePricing && link.path === '/pricing') {
-      return false;
-    }
-    return true;
-  });
-
-  if (variant === 'mobile') {
-    return (
-      <>
-        {filteredLinks.map((link) => {
-          const isActive = location.pathname === link.path || 
-                          (link.path !== '/' && location.pathname.startsWith(link.path));
-          
-          return (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`py-3 px-2 text-sm font-medium transition-colors hover:text-primary block w-full text-left ${
-                isActive ? 'text-primary' : 'text-foreground/70'
-              }`}
-              onClick={handleClick}
-            >
-              {link.name}
-            </Link>
-          );
-        })}
-      </>
-    );
-  }
-
+  
   return (
-    <>
-      {filteredLinks.map((link) => {
-        const isActive = location.pathname === link.path || 
-                        (link.path !== '/' && location.pathname.startsWith(link.path));
-        
-        return (
-          <Link
-            key={link.path}
-            to={link.path}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors hover:text-foreground hover:bg-secondary ${
-              isActive ? 'bg-secondary text-foreground' : 'text-foreground/70'
-            }`}
-            onClick={handleClick}
-          >
-            {link.name}
-          </Link>
-        );
-      })}
-    </>
+    <nav className="hidden md:flex items-center space-x-1">
+      <NavLink to="/">
+        <Button 
+          variant={isActiveRoute('/') ? 'secondary' : 'ghost'} 
+          size="sm" 
+          className="text-sm font-medium"
+        >
+          Home
+        </Button>
+      </NavLink>
+      
+      <NavLink to="/generator">
+        <Button 
+          variant={isActiveRoute('/generator') ? 'secondary' : 'ghost'} 
+          size="sm" 
+          className="text-sm font-medium"
+        >
+          Generator
+        </Button>
+      </NavLink>
+      
+      <NavLink to="/pricing">
+        <Button 
+          variant={isActiveRoute('/pricing') ? 'secondary' : 'ghost'} 
+          size="sm" 
+          className="text-sm font-medium"
+        >
+          Pricing
+        </Button>
+      </NavLink>
+      
+      <NavLink to="/api-docs">
+        <Button 
+          variant={isActiveRoute('/api-docs') ? 'secondary' : 'ghost'} 
+          size="sm" 
+          className="text-sm font-medium"
+        >
+          API
+        </Button>
+      </NavLink>
+      
+      <NavLink to="/feedback">
+        <Button 
+          variant={isActiveRoute('/feedback') ? 'secondary' : 'ghost'} 
+          size="sm" 
+          className="text-sm font-medium"
+        >
+          Feedback
+        </Button>
+      </NavLink>
+    </nav>
   );
 };
 
