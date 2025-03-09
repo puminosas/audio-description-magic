@@ -9,7 +9,8 @@ import {
 } from './analytics/useMetricsFetcher';
 import { useRealtimeSubscription } from './analytics/useRealtimeSubscription';
 
-export { AnalyticsMetrics };
+// Fix the re-export by using the 'export type' syntax
+export type { AnalyticsMetrics };
 
 export const useAnalyticsMetrics = () => {
   const [metrics, setMetrics] = useState<AnalyticsMetrics>({
