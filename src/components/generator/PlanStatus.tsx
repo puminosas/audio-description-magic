@@ -27,11 +27,11 @@ const PlanStatus = ({
       try {
         const { data, error } = await supabase
           .from('app_settings')
-          .select('unlimitedGenerationsForAll')
+          .select('unlimitedgenerationsforall')
           .single();
         
         if (!error && data) {
-          setUnlimitedGenerations(data.unlimitedGenerationsForAll);
+          setUnlimitedGenerations(data.unlimitedgenerationsforall);
         }
       } catch (error) {
         console.error('Failed to fetch app settings:', error);

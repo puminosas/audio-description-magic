@@ -16,6 +16,7 @@ serve(async (req: Request) => {
     console.log("Processing AI chat request");
     
     if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set');
       throw new Error('OPENAI_API_KEY is not set');
     }
 
@@ -24,6 +25,7 @@ serve(async (req: Request) => {
     const { message, filePath, fileContent } = requestBody;
 
     if (!message) {
+      console.error('Message is required');
       throw new Error('Message is required');
     }
 
@@ -32,7 +34,7 @@ serve(async (req: Request) => {
     // Build the messages array for OpenAI
     const messages = [];
     
-    // Add system message with more comprehensive instructions
+    // Add system message with comprehensive instructions
     messages.push({
       role: 'system',
       content: `You are an AI assistant for audiodescriptions.online admin dashboard. 
