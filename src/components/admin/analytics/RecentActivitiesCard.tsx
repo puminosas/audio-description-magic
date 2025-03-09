@@ -13,6 +13,7 @@ interface ActivityEvent {
   timestamp: string;
   isRegistered: boolean;
   sessionId?: string | null;
+  userName?: string | null;
 }
 
 const RecentActivitiesCard = () => {
@@ -59,6 +60,27 @@ const RecentActivitiesCard = () => {
       // Convert to activity events
       const generationEvents: ActivityEvent[] = [];
       
+      // Get all unique user IDs to fetch user profiles in bulk
+      const userIds = audioFiles?.filter(file => file.user_id).map(file => file.user_id) || [];
+      
+      // Fetch all profiles in a single query
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', userIds);
+      
+      if (profilesError) {
+        console.error('Error fetching user profiles:', profilesError);
+      }
+      
+      // Create a map of user IDs to emails for quick lookup
+      const userEmailMap = new Map();
+      profiles?.forEach(profile => {
+        if (profile.id) {
+          userEmailMap.set(profile.id, profile.email);
+        }
+      });
+      
       // Process audio files to activity events
       for (const file of audioFiles || []) {
         let email = null;
@@ -67,14 +89,19 @@ const RecentActivitiesCard = () => {
         // Get user email for registered users
         if (file.user_id) {
           isRegistered = true;
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', file.user_id)
-            .single();
+          email = userEmailMap.get(file.user_id);
           
-          if (profile) {
-            email = profile.email;
+          // If email wasn't found in the bulk fetch, try to get it directly
+          if (!email) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('id', file.user_id)
+              .single();
+            
+            if (profile) {
+              email = profile.email;
+            }
           }
         }
         
@@ -175,8 +202,14 @@ const RecentActivitiesCard = () => {
 
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle>Recent Activities</CardTitle>
+        <button 
+          onClick={fetchRecentActivities} 
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
       </CardHeader>
       <CardContent>
         {loading ? (

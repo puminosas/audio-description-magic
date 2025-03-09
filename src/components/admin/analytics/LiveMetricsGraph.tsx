@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { RefreshCw } from 'lucide-react';
 
 interface DataPoint {
   time: string;
@@ -65,18 +66,26 @@ const LiveMetricsGraph = () => {
         startTime.setMinutes(timePoint.getMinutes() - 30);
         
         // Query generations in this time window
-        const { count: generationsCount } = await supabase
+        const { count: generationsCount, error: genError } = await supabase
           .from('audio_files')
           .select('*', { count: 'exact' })
           .gte('created_at', startTime.toISOString())
           .lt('created_at', timePoint.toISOString());
         
+        if (genError) {
+          console.error('Error fetching generations count:', genError);
+        }
+        
         // Query unique users in this time window
-        const { data: usersData } = await supabase
+        const { data: usersData, error: usersError } = await supabase
           .from('audio_files')
           .select('user_id, session_id')
           .gte('created_at', startTime.toISOString())
           .lt('created_at', timePoint.toISOString());
+        
+        if (usersError) {
+          console.error('Error fetching users data:', usersError);
+        }
         
         // Count unique users and sessions
         const uniqueUsers = new Set();
@@ -109,16 +118,24 @@ const LiveMetricsGraph = () => {
       thirtyMinutesAgo.setMinutes(now.getMinutes() - 30);
       
       // Get generations in the last 30 minutes
-      const { count: generationsCount } = await supabase
+      const { count: generationsCount, error: genError } = await supabase
         .from('audio_files')
         .select('*', { count: 'exact' })
         .gte('created_at', thirtyMinutesAgo.toISOString());
       
+      if (genError) {
+        console.error('Error fetching recent generations count:', genError);
+      }
+      
       // Get unique users in the last 30 minutes
-      const { data: usersData } = await supabase
+      const { data: usersData, error: usersError } = await supabase
         .from('audio_files')
         .select('user_id, session_id')
         .gte('created_at', thirtyMinutesAgo.toISOString());
+      
+      if (usersError) {
+        console.error('Error fetching recent users data:', usersError);
+      }
       
       // Count unique users and sessions
       const uniqueUsers = new Set();
@@ -144,8 +161,15 @@ const LiveMetricsGraph = () => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle>Real-time Activity</CardTitle>
+        <button 
+          onClick={generateInitialData} 
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          disabled={isLoading}
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+        </button>
       </CardHeader>
       <CardContent>
         {isLoading ? (
