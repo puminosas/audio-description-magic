@@ -3,16 +3,28 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Copy, RefreshCw, Key, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Copy, RefreshCw, Key, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { fetchUserApiKeys, createApiKey, deleteApiKey } from '@/utils/apiKeyService';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 
 const ApiKeyDisplay = () => {
   const [apiKeys, setApiKeys] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingKey, setGeneratingKey] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newApiKey, setNewApiKey] = useState('');
+  const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -57,16 +69,19 @@ const ApiKeyDisplay = () => {
 
     setGeneratingKey(true);
     try {
-      const { data, error } = await createApiKey(user.id, "API Key");
+      const { data, error } = await createApiKey(user.id, newKeyName || "API Key");
       
       if (error) throw error;
       
+      setNewApiKey(data.api_key);
       toast({
         title: "Success",
         description: "New API key generated successfully!",
       });
       
       await fetchKeys();
+      setShowCreateDialog(false);
+      setNewKeyName('');
     } catch (error) {
       console.error('Error generating API key:', error);
       toast({
@@ -99,6 +114,7 @@ const ApiKeyDisplay = () => {
       });
       
       await fetchKeys();
+      setKeyToDelete(null);
     } catch (error) {
       console.error('Error revoking API key:', error);
       toast({
@@ -120,11 +136,61 @@ const ApiKeyDisplay = () => {
         </CardHeader>
         <CardContent>
           <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Authentication Required</AlertTitle>
             <AlertDescription>
               Please sign in to view and manage your API keys.
             </AlertDescription>
           </Alert>
         </CardContent>
+      </Card>
+    );
+  }
+
+  if (newApiKey) {
+    return (
+      <Card className="border-green-500">
+        <CardHeader>
+          <CardTitle className="flex items-center text-green-500">
+            <Key className="mr-2 h-5 w-5" />
+            New API Key Created
+          </CardTitle>
+          <CardDescription>
+            Please copy and save your API key now. You won't be able to see it again!
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert className="bg-yellow-50 border-yellow-200">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-600">Important</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              This API key will only be displayed once. Please copy it and store it securely now.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="relative">
+            <Input
+              value={newApiKey}
+              readOnly
+              className="font-mono text-sm pr-24"
+            />
+            <Button 
+              onClick={() => copyApiKey(newApiKey)}
+              size="sm"
+              className="absolute right-1 top-1"
+            >
+              <Copy className="h-4 w-4 mr-1" /> Copy
+            </Button>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button 
+            onClick={() => setNewApiKey('')}
+            className="w-full"
+          >
+            Done
+          </Button>
+        </CardFooter>
       </Card>
     );
   }
@@ -161,27 +227,19 @@ const ApiKeyDisplay = () => {
                     Created: {new Date(apiKey.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="relative">
                   <Input
-                    value={apiKey.api_key}
+                    value={apiKey.api_key.substring(0, 8) + "••••••••••••••••••••••••••••••••"}
                     readOnly
-                    className="font-mono text-sm"
+                    className="font-mono text-sm bg-secondary/20"
                   />
                   <Button 
                     variant="outline" 
-                    size="icon"
-                    onClick={() => copyApiKey(apiKey.api_key)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <Button 
-                    variant="destructive" 
                     size="sm"
-                    onClick={() => revokeKey(apiKey.id)}
+                    className="absolute right-1 top-1"
+                    onClick={() => setKeyToDelete(apiKey.id)}
                   >
-                    Revoke
+                    <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               </div>
@@ -191,23 +249,72 @@ const ApiKeyDisplay = () => {
       </CardContent>
       <CardFooter>
         <Button 
-          onClick={generateNewApiKey} 
+          onClick={() => setShowCreateDialog(true)} 
           disabled={generatingKey}
           className="w-full"
         >
-          {generatingKey ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Generate New API Key
-            </>
-          )}
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Generate New API Key
         </Button>
       </CardFooter>
+
+      {/* Create API Key Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New API Key</DialogTitle>
+            <DialogDescription>
+              Enter a name for your new API key to help you identify it later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="API Key Name"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={generateNewApiKey} disabled={generatingKey}>
+              {generatingKey ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Key"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete API Key Dialog */}
+      <Dialog open={!!keyToDelete} onOpenChange={() => setKeyToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke API Key</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to revoke this API key? This action cannot be undone,
+              and any applications using this key will no longer have access.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKeyToDelete(null)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => keyToDelete && revokeKey(keyToDelete)}
+            >
+              Revoke Key
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

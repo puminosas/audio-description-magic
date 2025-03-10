@@ -1,11 +1,15 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Code, Key, LockKeyhole, FileText } from 'lucide-react';
+import { Code, Key, LockKeyhole, FileText, Blocks, Info } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Link } from 'react-router-dom';
+import ApiKeyDisplay from '@/components/api/ApiKeyDisplay';
 
 const ApiDocs = () => {
   const [activeTab, setActiveTab] = useState('getting-started');
+  const { user } = useAuth();
   
   return (
     <div className="container mx-auto px-4 py-16">
@@ -16,12 +20,20 @@ const ApiDocs = () => {
             Integrate audio descriptions directly into your e-commerce platform or internal tools.
           </p>
           <div className="flex justify-center mt-8">
-            <Button>Get Your API Key</Button>
+            {!user ? (
+              <Button asChild>
+                <Link to="/auth">Sign In to Get API Keys</Link>
+              </Button>
+            ) : (
+              <Button asChild>
+                <Link to="/dashboard">Manage API Keys</Link>
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="flex mb-16">
-          <div className="w-64 shrink-0 sticky top-24 self-start hidden md:block">
+        <div className="flex flex-col gap-8 mb-16 md:flex-row">
+          <div className="w-full md:w-64 shrink-0 md:sticky md:top-24 md:self-start">
             <nav className="glassmorphism p-4 rounded-xl">
               <p className="text-sm font-medium text-muted-foreground mb-4">Documentation</p>
               <ul className="space-y-1">
@@ -73,6 +85,30 @@ const ApiDocs = () => {
                     Rate Limits
                   </button>
                 </li>
+                <li>
+                  <button
+                    onClick={() => setActiveTab('manage-keys')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${
+                      activeTab === 'manage-keys' 
+                        ? 'bg-primary/10 text-primary' 
+                        : 'text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    Manage API Keys
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setActiveTab('sdks')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${
+                      activeTab === 'sdks' 
+                        ? 'bg-primary/10 text-primary' 
+                        : 'text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    SDK & Libraries
+                  </button>
+                </li>
               </ul>
             </nav>
           </div>
@@ -82,9 +118,10 @@ const ApiDocs = () => {
               <div className="md:hidden mb-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="w-full">
-                    <TabsTrigger value="getting-started" className="flex-1">Getting Started</TabsTrigger>
-                    <TabsTrigger value="authentication" className="flex-1">Authentication</TabsTrigger>
+                    <TabsTrigger value="getting-started" className="flex-1">Start</TabsTrigger>
+                    <TabsTrigger value="authentication" className="flex-1">Auth</TabsTrigger>
                     <TabsTrigger value="endpoints" className="flex-1">Endpoints</TabsTrigger>
+                    <TabsTrigger value="manage-keys" className="flex-1">Keys</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -265,6 +302,114 @@ const ApiDocs = () => {
                     <p>X-RateLimit-Limit: 100</p>
                     <p>X-RateLimit-Remaining: 95</p>
                     <p>X-RateLimit-Reset: 1665417600</p>
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === 'manage-keys' && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 flex items-center">
+                    <Key className="mr-2 h-6 w-6 text-primary" />
+                    Manage API Keys
+                  </h2>
+                  
+                  {!user ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-4">
+                        You need to be signed in to manage your API keys.
+                      </p>
+                      <Button asChild>
+                        <Link to="/auth">Sign In</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <ApiKeyDisplay />
+                  )}
+                </div>
+              )}
+              
+              {activeTab === 'sdks' && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 flex items-center">
+                    <Blocks className="mr-2 h-6 w-6 text-primary" />
+                    SDK & Libraries
+                  </h2>
+                  <p className="text-muted-foreground mb-6">
+                    We provide official libraries for popular programming languages to make integration easier.
+                  </p>
+                  
+                  <div className="space-y-6">
+                    <div className="border border-border rounded-md p-4">
+                      <h3 className="text-lg font-semibold mb-2">JavaScript / TypeScript</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Install our official JavaScript client library to easily integrate with your web applications.
+                      </p>
+                      <div className="bg-secondary/50 p-3 rounded-md font-mono text-sm mb-3">
+                        npm install @audiodescriptions/client
+                      </div>
+                      <div className="bg-secondary/50 p-3 rounded-md font-mono text-sm">
+{`import { AudioDescriptionsClient } from '@audiodescriptions/client';
+
+const client = new AudioDescriptionsClient('YOUR_API_KEY');
+
+async function generateAudio() {
+  const result = await client.generate({
+    text: 'Your product description',
+    language: 'en',
+    voice: 'female'
+  });
+  
+  console.log(result.audio_url);
+}`}
+                      </div>
+                    </div>
+                    
+                    <div className="border border-border rounded-md p-4">
+                      <h3 className="text-lg font-semibold mb-2">PHP</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Use our PHP client for easy integration with PHP-based e-commerce platforms.
+                      </p>
+                      <div className="bg-secondary/50 p-3 rounded-md font-mono text-sm mb-3">
+                        composer require audiodescriptions/client
+                      </div>
+                      <div className="bg-secondary/50 p-3 rounded-md font-mono text-sm">
+{`<?php
+require_once 'vendor/autoload.php';
+
+$client = new AudioDescriptions\\Client('YOUR_API_KEY');
+
+$result = $client->generate([
+    'text' => 'Your product description',
+    'language' => 'en',
+    'voice' => 'female'
+]);
+
+echo $result['audio_url'];`}
+                      </div>
+                    </div>
+                    
+                    <div className="border border-border rounded-md p-4">
+                      <h3 className="text-lg font-semibold mb-2">Python</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Our Python client library makes it easy to integrate with Python applications.
+                      </p>
+                      <div className="bg-secondary/50 p-3 rounded-md font-mono text-sm mb-3">
+                        pip install audiodescriptions
+                      </div>
+                      <div className="bg-secondary/50 p-3 rounded-md font-mono text-sm">
+{`import audiodescriptions
+
+client = audiodescriptions.Client('YOUR_API_KEY')
+
+result = client.generate(
+    text='Your product description',
+    language='en',
+    voice='female'
+)
+
+print(result['audio_url'])`}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
