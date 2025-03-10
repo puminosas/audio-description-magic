@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/layout/AdminLayout';
+import { supabase } from '@/integrations/supabase/client';
 
 // Admin role helper - imported directly to avoid dynamic import
 import { assignAdminRole } from '@/utils/supabase/userRoles';
@@ -21,33 +22,76 @@ import AdminDocumentation from './AdminDocumentation';
 import AdminAnalytics from './AdminAnalytics';
 
 const Admin = () => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, setIsAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   // Emergency function to ensure the current user has admin access
   useEffect(() => {
     const setupCurrentUserAsAdmin = async () => {
-      if (user && !isAdmin && !loading) {
+      if (user && !loading) {
         // Check if the user is a.mackeliunas@gmail.com
         if (user.email === 'a.mackeliunas@gmail.com') {
-          console.log("Detected admin email, attempting to assign admin role");
+          console.log("Detected admin email, ensuring admin access");
+          
           try {
-            const success = await assignAdminRole(user.id);
+            // First, ensure the user has an admin role in user_roles table
+            const { error: roleError } = await supabase
+              .from('user_roles')
+              .upsert({
+                user_id: user.id,
+                role: 'admin'
+              }, { onConflict: 'user_id,role' });
+              
+            if (roleError) {
+              console.error("Failed to upsert user role:", roleError);
+              // Try alternate method
+              const success = await assignAdminRole(user.id);
+              
+              if (success) {
+                console.log("Admin role assigned via helper function");
+                setIsAdmin(true);
+              } else {
+                throw new Error("Failed to assign admin role via helper function");
+              }
+            } else {
+              console.log("Admin role set via direct upsert");
+              setIsAdmin(true);
+            }
             
-            if (success) {
-              console.log("Admin role assigned successfully");
+            // Next, ensure the profile has admin plan
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: user.id,
+                plan: 'admin',
+                daily_limit: 9999,
+                remaining_generations: 9999,
+                updated_at: new Date().toISOString()
+              }, { onConflict: 'id' });
+              
+            if (profileError) {
+              console.error("Failed to update profile to admin:", profileError);
+            } else {
+              console.log("Profile updated to admin plan");
+            }
+            
+            // Show success toast only if user wasn't already admin
+            if (!isAdmin) {
               toast({
-                title: "Admin access granted",
+                title: "Admin access ensured",
                 description: "You now have admin permissions"
               });
-              // Force a page reload to refresh the auth context
-              window.location.reload();
             }
           } catch (error) {
-            console.error("Failed to assign admin role:", error);
+            console.error("Error ensuring admin access:", error);
+            toast({
+              title: "Admin Setup Error",
+              description: "There was a problem setting up admin access. Please try refreshing the page.",
+              variant: "destructive"
+            });
           }
-        } else {
+        } else if (!isAdmin) {
           toast({
             title: "Access Denied",
             description: "You don't have admin permissions",
@@ -60,7 +104,7 @@ const Admin = () => {
     };
     
     setupCurrentUserAsAdmin();
-  }, [user, isAdmin, loading, navigate, toast]);
+  }, [user, isAdmin, loading, navigate, toast, setIsAdmin]);
   
   // Redirect if not admin
   if (!loading && (!user || !isAdmin)) {

@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { fetchUserProfile, handleUserAuthentication } from '@/services/profileService';
 import { getSession, onAuthStateChange } from '@/services/authService';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -11,6 +12,45 @@ export const useAuthState = () => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [prevAuthState, setPrevAuthState] = useState<'authenticated' | 'unauthenticated' | null>(null);
+  const [profileLoadAttempts, setProfileLoadAttempts] = useState<number>(0);
+
+  // Helper function to load profile
+  const loadUserProfile = useCallback(async (userId: string) => {
+    try {
+      console.log("Loading profile for user:", userId);
+      const { profile, isAdmin } = await fetchUserProfile(userId);
+      
+      console.log("Profile loaded:", profile, "isAdmin:", isAdmin);
+      setProfile(profile);
+      setIsAdmin(isAdmin);
+      
+      // If admin email but no admin role, force refresh admin status
+      if (profile?.email === 'a.mackeliunas@gmail.com' && !isAdmin) {
+        console.log("Admin email detected but no admin role, forcing refresh");
+        
+        try {
+          // Attempt to assign admin role
+          const { data } = await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: userId,
+              role: 'admin'
+            }, { onConflict: 'user_id,role' });
+          
+          // Update admin status
+          setIsAdmin(true);
+          console.log("Admin role forced for admin email");
+        } catch (e) {
+          console.error("Error forcing admin role:", e);
+        }
+      }
+      
+      return { profile, isAdmin };
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+      return { profile: null, isAdmin: false };
+    }
+  }, []);
 
   // Handle email confirmation redirect
   useEffect(() => {
@@ -23,12 +63,11 @@ export const useAuthState = () => {
           if (session) {
             setSession(session);
             setUser(session.user);
-            fetchUserProfile(session.user.id).then(({ profile, isAdmin }) => {
-              console.log("Profile loaded after hash change:", profile, "isAdmin:", isAdmin);
-              setProfile(profile);
-              setIsAdmin(isAdmin);
+            loadUserProfile(session.user.id).then(() => {
               setLoading(false);
             });
+          } else {
+            setLoading(false);
           }
         });
       }
@@ -43,7 +82,7 @@ export const useAuthState = () => {
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, []);
+  }, [loadUserProfile]);
 
   // Initialize auth state and listen for changes
   useEffect(() => {
@@ -54,11 +93,19 @@ export const useAuthState = () => {
       setPrevAuthState(session ? 'authenticated' : 'unauthenticated');
       
       if (session?.user) {
-        fetchUserProfile(session.user.id).then(({ profile, isAdmin }) => {
-          console.log("Initial profile load:", profile, "isAdmin:", isAdmin);
-          setProfile(profile);
-          setIsAdmin(isAdmin);
-          setLoading(false);
+        setProfileLoadAttempts(1);
+        loadUserProfile(session.user.id).then(({ profile }) => {
+          if (!profile) {
+            // If no profile, retry once after a delay
+            setTimeout(() => {
+              setProfileLoadAttempts(2);
+              loadUserProfile(session.user.id).then(() => {
+                setLoading(false);
+              });
+            }, 2000);
+          } else {
+            setLoading(false);
+          }
         });
         
         // Convert temporary files for authenticated user
@@ -90,10 +137,8 @@ export const useAuthState = () => {
       setPrevAuthState(currentAuthState);
       
       if (session?.user) {
-        fetchUserProfile(session.user.id).then(({ profile, isAdmin }) => {
-          console.log("Profile updated after auth change:", profile, "isAdmin:", isAdmin);
-          setProfile(profile);
-          setIsAdmin(isAdmin);
+        setProfileLoadAttempts(current => current + 1);
+        loadUserProfile(session.user.id).then(() => {
           setLoading(false);
         });
       } else {
@@ -106,7 +151,53 @@ export const useAuthState = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [prevAuthState]);
+  }, [prevAuthState, loadUserProfile]);
+
+  // Extra check for admin email
+  useEffect(() => {
+    const checkAdminEmail = async () => {
+      if (user && user.email === 'a.mackeliunas@gmail.com' && !isAdmin) {
+        console.log("Admin email detected but not set as admin, forcing admin status");
+        setIsAdmin(true);
+        
+        try {
+          // Attempt to assign admin role
+          await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: user.id,
+              role: 'admin'
+            }, { onConflict: 'user_id,role' });
+            
+          // Update profile if needed
+          if (profile && profile.plan !== 'admin') {
+            await supabase
+              .from('profiles')
+              .update({
+                plan: 'admin',
+                daily_limit: 9999,
+                remaining_generations: 9999,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', user.id);
+              
+            setProfile({
+              ...profile,
+              plan: 'admin',
+              daily_limit: 9999,
+              remaining_generations: 9999
+            });
+          }
+          
+          console.log("Admin role and profile updated for admin email");
+        } catch (e) {
+          console.error("Error forcing admin privileges:", e);
+        }
+      }
+    };
+    
+    checkAdminEmail();
+  }, [user, profile, isAdmin]);
 
   return {
     session,
