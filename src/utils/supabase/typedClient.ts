@@ -22,13 +22,15 @@ function enhanceQuery(query: any) {
   return {
     ...query,
     // Add methods with proper chaining
-    select: () => enhanceQuery(query.select()),
+    select: (...args: any[]) => enhanceQuery(query.select(...args)),
     insert: (data: any) => enhanceQuery(query.insert(data)),
     update: (data: any) => enhanceQuery(query.update(data)),
     delete: () => enhanceQuery(query.delete()),
     eq: (column: string, value: any) => enhanceQuery(query.eq(column, value)),
     order: (column: string, options: { ascending?: boolean } = {}) => 
-      enhanceQuery(query.order(column, options))
+      enhanceQuery(query.order(column, options)),
+    single: () => query.single(),
+    maybeSingle: () => query.maybeSingle()
   };
 }
 
@@ -149,6 +151,6 @@ export const supabaseTyped = {
   
   // Generic functions for any table (helpful for dynamic operations)
   custom: {
-    from: (tableName: string) => castTable(tableName),
+    from: (tableName: string) => enhanceQuery(castTable(tableName)),
   }
 };

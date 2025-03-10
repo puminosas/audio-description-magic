@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const fetchUserApiKeys = async (userId: string) => {
   try {
-    const { data, error } = await supabaseTyped.api_keys
+    const { data, error } = await supabaseTyped.custom
+      .from('api_keys')
       .select()
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -39,7 +40,8 @@ export const createApiKey = async (userId: string, name: string) => {
     }
     
     // Insert the new API key
-    const { data, error } = await supabaseTyped.api_keys
+    const { data, error } = await supabaseTyped.custom
+      .from('api_keys')
       .insert({
         user_id: userId,
         name: name || 'API Key',
@@ -59,7 +61,8 @@ export const createApiKey = async (userId: string, name: string) => {
 
 export const deleteApiKey = async (keyId: string) => {
   try {
-    const { error } = await supabaseTyped.api_keys
+    const { error } = await supabaseTyped.custom
+      .from('api_keys')
       .delete()
       .eq('id', keyId);
     
