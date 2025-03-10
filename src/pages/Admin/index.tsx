@@ -6,8 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 
-// Admin role helper - imported directly to avoid dynamic import
-import { assignAdminRole } from '@/utils/supabase/userRoles';
+// Import ensureAdminRole directly from adminRoleService
+import { ensureAdminRole } from '@/services/profile/adminRoleService';
 
 // Admin pages
 import AdminAudioFiles from './AdminAudioFiles';
@@ -26,7 +26,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Emergency function to ensure the current user has admin access
+  // Function to ensure the current user has admin access
   useEffect(() => {
     const setupCurrentUserAsAdmin = async () => {
       if (user && !loading) {
@@ -35,53 +35,22 @@ const Admin = () => {
           console.log("Detected admin email, ensuring admin access");
           
           try {
-            // First, ensure the user has an admin role in user_roles table
-            const { error: roleError } = await supabase
-              .from('user_roles')
-              .upsert({
-                user_id: user.id,
-                role: 'admin'
-              }, { onConflict: 'user_id,role' });
+            // Use ensureAdminRole directly which already has all the necessary checks
+            const success = await ensureAdminRole(user.id);
+            
+            if (success) {
+              console.log("Admin role assigned successfully");
+              setIsAdmin(true);
               
-            if (roleError) {
-              console.error("Failed to upsert user role:", roleError);
-              // Try alternate method
-              const success = await assignAdminRole(user.id);
-              
-              if (success) {
-                console.log("Admin role assigned via helper function");
-                setIsAdmin(true);
-              } else {
-                throw new Error("Failed to assign admin role via helper function");
+              // Show success toast only if user wasn't already admin
+              if (!isAdmin) {
+                toast({
+                  title: "Admin access ensured",
+                  description: "You now have admin permissions"
+                });
               }
             } else {
-              console.log("Admin role set via direct upsert");
-              setIsAdmin(true);
-            }
-            
-            // Next, ensure the profile has admin plan
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .upsert({
-                id: user.id,
-                plan: 'admin',
-                daily_limit: 9999,
-                remaining_generations: 9999,
-                updated_at: new Date().toISOString()
-              }, { onConflict: 'id' });
-              
-            if (profileError) {
-              console.error("Failed to update profile to admin:", profileError);
-            } else {
-              console.log("Profile updated to admin plan");
-            }
-            
-            // Show success toast only if user wasn't already admin
-            if (!isAdmin) {
-              toast({
-                title: "Admin access ensured",
-                description: "You now have admin permissions"
-              });
+              throw new Error("Failed to assign admin role");
             }
           } catch (error) {
             console.error("Error ensuring admin access:", error);
