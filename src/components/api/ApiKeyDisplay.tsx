@@ -25,8 +25,9 @@ const ApiKeyDisplay = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newApiKey, setNewApiKey] = useState('');
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -40,13 +41,16 @@ const ApiKeyDisplay = () => {
     if (!user) return;
     
     setLoading(true);
+    setError(null);
+    
     try {
       const { data, error } = await fetchUserApiKeys(user.id);
         
       if (error) throw error;
       setApiKeys(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching API keys:', error);
+      setError(error.message || 'Failed to fetch your API keys');
       toast({
         title: "Error",
         description: "Failed to fetch your API keys",
@@ -66,12 +70,28 @@ const ApiKeyDisplay = () => {
       });
       return;
     }
+    
+    // Check if user has permission to create API keys
+    if (profile && profile.plan !== 'premium' && profile.plan !== 'admin') {
+      toast({
+        title: "Upgrade Required",
+        description: "Your current plan does not include API access. Please upgrade to Premium.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setGeneratingKey(true);
+    setError(null);
+    
     try {
       const { data, error } = await createApiKey(user.id, newKeyName || "API Key");
       
       if (error) throw error;
+      
+      if (!data || !data.api_key) {
+        throw new Error('Failed to generate API key - no key returned');
+      }
       
       setNewApiKey(data.api_key);
       toast({
@@ -82,11 +102,12 @@ const ApiKeyDisplay = () => {
       await fetchKeys();
       setShowCreateDialog(false);
       setNewKeyName('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating API key:', error);
+      setError(error.message || 'Failed to generate a new API key');
       toast({
         title: "Error",
-        description: "Failed to generate a new API key",
+        description: error.message || "Failed to generate a new API key",
         variant: "destructive"
       });
     } finally {
@@ -115,11 +136,11 @@ const ApiKeyDisplay = () => {
       
       await fetchKeys();
       setKeyToDelete(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error revoking API key:', error);
       toast({
         title: "Error",
-        description: "Failed to revoke API key",
+        description: error.message || "Failed to revoke API key",
         variant: "destructive"
       });
     }
@@ -140,6 +161,28 @@ const ApiKeyDisplay = () => {
             <AlertTitle>Authentication Required</AlertTitle>
             <AlertDescription>
               Please sign in to view and manage your API keys.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (profile && profile.plan !== 'premium' && profile.plan !== 'admin') {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>API Keys</CardTitle>
+          <CardDescription>
+            API access is available on Premium plans
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Upgrade Required</AlertTitle>
+            <AlertDescription>
+              Your current plan does not include API access. Please upgrade to Premium to create and manage API keys.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -207,6 +250,14 @@ const ApiKeyDisplay = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />

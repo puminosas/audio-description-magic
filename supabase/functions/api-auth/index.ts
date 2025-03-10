@@ -17,6 +17,7 @@ serve(async (req) => {
     // Get API key from request headers
     const authHeader = req.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('Missing or invalid authorization header')
       return new Response(
         JSON.stringify({ error: 'Missing or invalid API key' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,6 +30,15 @@ serve(async (req) => {
     // Create a Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase URL or service role key')
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Check if the API key exists in the database
@@ -38,8 +48,16 @@ serve(async (req) => {
       .eq('api_key', apiKey)
       .single()
 
-    if (error || !data) {
+    if (error) {
       console.error('API key authentication failed:', error)
+      return new Response(
+        JSON.stringify({ error: 'Invalid API key' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!data || !data.user_id) {
+      console.error('API key not found or missing user_id')
       return new Response(
         JSON.stringify({ error: 'Invalid API key' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -53,7 +71,7 @@ serve(async (req) => {
       .eq('id', data.user_id)
       .single()
 
-    if (profileError || !profile) {
+    if (profileError) {
       console.error('Failed to fetch user profile:', profileError)
       return new Response(
         JSON.stringify({ error: 'User profile not found' }),
