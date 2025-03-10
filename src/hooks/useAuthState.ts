@@ -206,6 +206,6 @@ export const useAuthState = () => {
     isAdmin,
     loading,
     setProfile,
-    setIsAdmin
+    setIsAdmin // Make sure this is explicitly returned
   };
 };

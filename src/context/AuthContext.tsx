@@ -28,6 +28,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   loading: boolean;
   resetPassword: (email: string) => Promise<{ error: any | null; data: any | null; }>;
+  setIsAdmin: (value: boolean) => void; // Add this line to fix the TypeScript error
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,7 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut: handleSignOut,
     loading,
-    resetPassword
+    resetPassword,
+    setIsAdmin // Add setIsAdmin to the context value
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

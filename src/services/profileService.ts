@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { convertTemporaryFilesToUserFiles, getOrCreateGuestSessionId } from '@/utils/fileStorageService';
 
@@ -126,30 +125,25 @@ export const fetchUserProfile = async (userId: string) => {
 // Helper to check if the user has the admin email
 async function checkIfAdminEmail(userId: string): Promise<boolean> {
   try {
-    const { data: userData, error } = await supabase
-      .from('auth')
+    // Instead of trying to access the auth table directly, use the auth API
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user && user.id === userId) {
+      return user.email === 'a.mackeliunas@gmail.com';
+    }
+    
+    // Fallback method: get the user from profiles table
+    const { data: profile } = await supabase
+      .from('profiles')
       .select('email')
       .eq('id', userId)
       .single();
       
-    if (error) {
-      // Fallback method: get the user from profiles table
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', userId)
-        .single();
-        
-      if (profile?.email === 'a.mackeliunas@gmail.com') {
-        return true;
-      }
-      
-      // If still no email, try auth API
-      const { data: { user } } = await supabase.auth.getUser();
-      return user?.email === 'a.mackeliunas@gmail.com';
+    if (profile?.email === 'a.mackeliunas@gmail.com') {
+      return true;
     }
     
-    return userData?.email === 'a.mackeliunas@gmail.com';
+    return false;
   } catch (e) {
     console.error('Error checking admin email:', e);
     // Final fallback: check current auth session
