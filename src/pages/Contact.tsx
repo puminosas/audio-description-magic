@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,7 +85,7 @@ const Contact = () => {
           <div className="glassmorphism p-6 rounded-xl flex flex-col items-center text-center">
             <Mail className="h-8 w-8 text-primary mb-4" />
             <h3 className="text-lg font-semibold mb-2">Email Us</h3>
-            <p className="text-muted-foreground">a.mackeliunas@gmail.com</p>
+            <p className="text-muted-foreground">info@audiodescriptions.online</p>
           </div>
           
           <div className="glassmorphism p-6 rounded-xl flex flex-col items-center text-center">
