@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     },
     host: true,
     port: 8080,
-    allowedHosts: ["audiodescriptions.online"],
+    allowedHosts: ["audiodescriptions.online", "e-scriptions.onrender.com"],
   },
   plugins: [
     react(),
