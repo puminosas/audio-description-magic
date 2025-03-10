@@ -11,13 +11,18 @@ export const useFileLogic = (
   setIsLoadingFile: React.Dispatch<React.SetStateAction<boolean>>,
   setFileError: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
-  const fileOperations = useFileOperations(
+  const { getFiles: fetchFiles, getFileContent, saveFileContent } = useFileOperations(
     setFiles,
     setSelectedFile,
     () => {}, // We'll handle isLoadingFiles in the parent hook
     setIsLoadingFile,
     setFileError
   );
+
+  // Memoize getFiles to prevent recreation on every render
+  const getFiles = useCallback(async () => {
+    return fetchFiles();
+  }, [fetchFiles]);
 
   const handleFileSelect = useCallback(async (file: FileInfo) => {
     setSelectedFile(file);
@@ -26,21 +31,21 @@ export const useFileLogic = (
     try {
       // Only fetch content if not already loaded
       if (!file.content) {
-        await fileOperations.getFileContent(file.path);
+        await getFileContent(file.path);
       }
     } catch (err) {
       setFileError(err instanceof Error ? err.message : 'Failed to load file content.');
     } finally {
       setIsLoadingFile(false);
     }
-  }, [fileOperations, setSelectedFile, setIsLoadingFile, setFileError]);
+  }, [getFileContent, setSelectedFile, setIsLoadingFile, setFileError]);
 
   const handleSaveFile = useCallback(async (file: FileInfo, content: string): Promise<boolean> => {
     setIsLoadingFile(true);
     setFileError(null);
     try {
       // Save file content
-      const success = await fileOperations.saveFileContent(file.path, content);
+      const success = await saveFileContent(file.path, content);
       
       if (success) {
         // Update files list with new content
@@ -66,10 +71,10 @@ export const useFileLogic = (
     } finally {
       setIsLoadingFile(false);
     }
-  }, [fileOperations, selectedFile, setFiles, setSelectedFile, setIsLoadingFile, setFileError]);
+  }, [saveFileContent, selectedFile, setFiles, setSelectedFile, setIsLoadingFile, setFileError]);
 
   return {
-    getFiles: fileOperations.getFiles,
+    getFiles,
     handleFileSelect,
     handleSaveFile
   };

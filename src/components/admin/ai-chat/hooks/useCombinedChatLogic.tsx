@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFileState } from './file-management/useFileState';
 import { useFileFilters } from './file-management/useFileFilters';
 import useChatState from './useChatState';
@@ -69,16 +69,24 @@ const useCombinedChatLogic = () => {
     setError
   );
 
-  // Initialize files when component mounts
+  // Initialize files only on component mount
+  const [hasLoadedFiles, setHasLoadedFiles] = useState(false);
+
   useEffect(() => {
-    setIsLoadingFiles(true);
-    getFiles().finally(() => setIsLoadingFiles(false));
-  }, [getFiles, setIsLoadingFiles]);
+    // Only fetch files if we haven't loaded them yet
+    if (!hasLoadedFiles && !isLoadingFiles) {
+      setIsLoadingFiles(true);
+      getFiles().finally(() => {
+        setIsLoadingFiles(false);
+        setHasLoadedFiles(true);
+      });
+    }
+  }, [getFiles, setIsLoadingFiles, hasLoadedFiles, isLoadingFiles]);
 
   // Wrap the sendMessage handler to include selected file path
-  const sendMessageWithContext = (message: string) => {
+  const sendMessageWithContext = useCallback((message: string) => {
     handleSendMessage(message, selectedFile?.path);
-  };
+  }, [handleSendMessage, selectedFile?.path]);
 
   return {
     // File Management
