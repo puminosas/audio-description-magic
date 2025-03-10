@@ -1,8 +1,7 @@
-
 import { useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { getSession, onAuthStateChange } from '@/services/authService';
-import { handleUserAuthentication } from '@/services/profileService';
+import { handleUserAuthentication } from '@/services/profile/authProfileService';
 
 type AuthEventsProps = {
   setSession: (session: Session | null) => void;

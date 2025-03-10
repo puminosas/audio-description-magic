@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
-import { fetchUserProfile } from '@/services/profileService';
+import { fetchUserProfile } from '@/services/profile/profileService';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useProfile = (userId: string | undefined) => {
