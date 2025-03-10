@@ -1,9 +1,14 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { convertTemporaryFilesToUserFiles, getOrCreateGuestSessionId } from '@/utils/fileStorageService';
 
 export const fetchUserProfile = async (userId: string) => {
   try {
     console.log('Fetching profile for user:', userId);
+    
+    // Get the user's auth data first
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const isAdminEmail = authUser?.email === 'a.mackeliunas@gmail.com';
     
     // Use the normal supabase client directly
     const { data: profileData, error: profileError } = await supabase
@@ -20,7 +25,6 @@ export const fetchUserProfile = async (userId: string) => {
           console.log('Profile not found, creating one for user:', userId);
           
           // For the specific admin email, always create with admin plan
-          const isAdminEmail = await checkIfAdminEmail(userId);
           const planType = isAdminEmail ? 'admin' : 'free';
           const dailyLimit = isAdminEmail ? 9999 : 10;
           
@@ -30,6 +34,7 @@ export const fetchUserProfile = async (userId: string) => {
               id: userId,
               plan: planType,
               daily_limit: dailyLimit,
+              email: authUser?.email,
               remaining_generations: dailyLimit
             })
             .select('*')
@@ -47,21 +52,7 @@ export const fetchUserProfile = async (userId: string) => {
             await ensureAdminRole(userId);
           }
           
-          // Check if admin using the RPC function
-          try {
-            const { data: isAdminResult, error: roleError } = await supabase.rpc('has_role', { role: 'admin' });
-            
-            if (roleError) {
-              console.error('Error checking admin role:', roleError);
-              throw roleError;
-            }
-            
-            console.log('Admin check result:', isAdminResult);
-            return { profile: newProfile, isAdmin: !!isAdminResult };
-          } catch (roleError) {
-            console.error('Error checking admin role:', roleError);
-            return { profile: newProfile, isAdmin: isAdminEmail }; // Fallback to email check
-          }
+          return { profile: newProfile, isAdmin: isAdminEmail };
         }
       } else {
         throw profileError;
@@ -69,8 +60,6 @@ export const fetchUserProfile = async (userId: string) => {
     } else {
       console.log('Profile found for user:', userId);
       
-      // Check if admin email and ensure proper role
-      const isAdminEmail = await checkIfAdminEmail(userId);
       if (isAdminEmail && profileData && profileData.plan !== 'admin') {
         // Update to admin plan if needed
         await supabase
@@ -83,7 +72,6 @@ export const fetchUserProfile = async (userId: string) => {
           })
           .eq('id', userId);
           
-        // Refresh profile data
         profileData.plan = 'admin';
         profileData.daily_limit = 9999;
         profileData.remaining_generations = 9999;
@@ -97,7 +85,7 @@ export const fetchUserProfile = async (userId: string) => {
         
         if (roleError) {
           console.error('Error checking admin role:', roleError);
-          throw roleError;
+          return { profile: profileData, isAdmin: isAdminEmail };
         }
         
         // If should be admin but role check fails, force role assignment
@@ -110,7 +98,7 @@ export const fetchUserProfile = async (userId: string) => {
         return { profile: profileData, isAdmin: !!isAdminResult };
       } catch (roleError) {
         console.error('Error checking admin role:', roleError);
-        return { profile: profileData, isAdmin: isAdminEmail }; // Fallback to email check
+        return { profile: profileData, isAdmin: isAdminEmail };
       }
     }
     
@@ -121,40 +109,6 @@ export const fetchUserProfile = async (userId: string) => {
     return { profile: null, isAdmin: false };
   }
 };
-
-// Helper to check if the user has the admin email
-async function checkIfAdminEmail(userId: string): Promise<boolean> {
-  try {
-    // Instead of trying to access the auth table directly, use the auth API
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user && user.id === userId) {
-      return user.email === 'a.mackeliunas@gmail.com';
-    }
-    
-    // Fallback method: get the user from profiles table
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', userId)
-      .single();
-      
-    if (profile?.email === 'a.mackeliunas@gmail.com') {
-      return true;
-    }
-    
-    return false;
-  } catch (e) {
-    console.error('Error checking admin email:', e);
-    // Final fallback: check current auth session
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user?.email === 'a.mackeliunas@gmail.com';
-    } catch {
-      return false;
-    }
-  }
-}
 
 // Helper to ensure admin role is assigned
 async function ensureAdminRole(userId: string): Promise<boolean> {

@@ -1,4 +1,3 @@
-
 import { createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { signIn, signInWithGoogle, signUp, resetPassword, signOut } from '@/services/authService';
@@ -8,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 type AuthContextType = {
   session: Session | null;
   user: User | null;
-  profile: any | null; // User profile with plan and role details
+  profile: any | null;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{
     error: any | null;
@@ -28,7 +27,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   loading: boolean;
   resetPassword: (email: string) => Promise<{ error: any | null; data: any | null; }>;
-  setIsAdmin: (value: boolean) => void; // Add this line to fix the TypeScript error
+  setIsAdmin: (value: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       setIsAdmin(false);
       
-      // Show success toast
       toast({
         title: "Signed Out",
         description: "You have been successfully signed out.",
@@ -69,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut: handleSignOut,
     loading,
     resetPassword,
-    setIsAdmin // Add setIsAdmin to the context value
+    setIsAdmin
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
