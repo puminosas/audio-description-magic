@@ -1,104 +1,27 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import UserFilters from '@/components/admin/UserFilters';
 import UsersTable from '@/components/admin/UsersTable';
 import UserPagination from '@/components/admin/UserPagination';
-import { fetchUsers, toggleAdminRole, changeUserPlan, UserData } from '@/services/userManagementService';
+import { useUserManagement } from '@/hooks/admin/useUserManagement';
 
 const AdminUserManagement = () => {
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterPlan, setFilterPlan] = useState('all');
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const itemsPerPage = 10;
-  const { toast } = useToast();
-  
-  const loadUsers = async () => {
-    try {
-      setLoading(true);
-      const { users: fetchedUsers, totalCount: total } = await fetchUsers(page, itemsPerPage);
-      setUsers(fetchedUsers);
-      setTotalCount(total);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load users. You may not have admin permissions.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadUsers();
-  }, [page]);
-
-  const handleToggleAdmin = async (userId: string, isAdmin: boolean) => {
-    try {
-      setLoading(true);
-      await toggleAdminRole(userId, isAdmin);
-      
-      // Update the user list
-      await loadUsers();
-      
-      toast({
-        title: 'Success',
-        description: `User ${isAdmin ? 'removed from' : 'added to'} admin role.`,
-      });
-    } catch (error) {
-      console.error('Error toggling admin role:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update user role.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdatePlan = async (userId: string, plan: string) => {
-    try {
-      setLoading(true);
-      
-      await changeUserPlan(userId, plan);
-      
-      // Update the user list in state
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, plan } : user
-      ));
-      
-      toast({
-        title: 'Success',
-        description: `User plan updated to ${plan}.`,
-      });
-    } catch (error) {
-      console.error('Error updating user plan:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update user plan.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.id?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesPlan = filterPlan === 'all' || user.plan === filterPlan;
-    
-    return matchesSearch && matchesPlan;
-  });
+  const {
+    users,
+    loading,
+    searchTerm,
+    setSearchTerm,
+    filterPlan,
+    setFilterPlan,
+    page,
+    setPage,
+    totalCount,
+    itemsPerPage,
+    handleToggleAdmin,
+    handleUpdatePlan,
+    loadUsers
+  } = useUserManagement();
 
   return (
     <div className="space-y-4">
@@ -117,7 +40,7 @@ const AdminUserManagement = () => {
       ) : (
         <>
           <UsersTable
-            users={filteredUsers}
+            users={users}
             onToggleAdmin={handleToggleAdmin}
             onUpdatePlan={handleUpdatePlan}
           />
