@@ -36,12 +36,12 @@ export const useAuthEvents = ({
       setPrevAuthState(session ? 'authenticated' : 'unauthenticated');
       
       if (session?.user) {
-        setProfileLoadAttempts(1);
+        setProfileLoadAttempts(current => current + 1);
         loadUserProfile(session.user.id).then(({ profile }) => {
           if (!profile) {
             // If no profile, retry once after a delay
             setTimeout(() => {
-              setProfileLoadAttempts(2);
+              setProfileLoadAttempts(current => current + 1);
               loadUserProfile(session.user.id).then(() => {
                 setLoading(false);
               });
