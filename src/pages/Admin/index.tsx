@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -35,7 +34,22 @@ const Admin = () => {
           console.log("Detected admin email, ensuring admin access");
           
           try {
-            // Use ensureAdminRole directly which already has all the necessary checks
+            // First check if the user already has admin role
+            const { data: hasAdminRole, error: checkError } = await supabase
+              .rpc('has_role', { role: 'admin' });
+              
+            if (checkError) {
+              console.error("Error checking admin role:", checkError);
+            }
+            
+            // If admin role check succeeded and user has role, update state
+            if (hasAdminRole) {
+              console.log("User already has admin role");
+              setIsAdmin(true);
+              return;
+            }
+            
+            // Otherwise try to ensure admin role
             const success = await ensureAdminRole(user.id);
             
             if (success) {
