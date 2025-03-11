@@ -10,58 +10,57 @@ export const ensureAdminRole = async (userId: string): Promise<boolean> => {
   try {
     console.log('Ensuring admin role for user:', userId);
     
-    // First check if the user already has admin role using RPC function
+    // First ensure the profile is set to admin plan
+    // This must be done before checking roles to avoid permission issues
+    const profileSuccess = await updateUserProfile(userId);
+    
+    if (!profileSuccess) {
+      console.error('Failed to update user profile to admin plan');
+      // Continue execution to try other methods
+    }
+    
+    // Check if the user already has admin role using the RPC function
     const { data: isAdmin, error: checkError } = await supabase
       .rpc('has_role', { role: 'admin' });
       
     if (checkError) {
       console.error('Error checking admin role status:', checkError);
-      // Continue execution to try other methods
+      // Still continue execution to try direct check
     } else if (isAdmin) {
       console.log('User already has admin role');
-      
-      // Still update the profile to make sure it has admin plan
-      await updateUserProfile(userId);
       return true;
     }
     
-    // User doesn't have admin role, insert it
     console.log('Adding admin role to user');
     
-    // Try to directly insert the role
-    const { error } = await supabase
+    // Try to insert the role using a direct query first
+    const { error: insertError } = await supabase
       .from('user_roles')
-      .insert({
+      .upsert({
         user_id: userId,
         role: 'admin'
-      });
+      }, { onConflict: 'user_id,role' });
       
-    if (error) {
-      console.error('Error inserting admin role:', error);
+    if (insertError) {
+      console.error('Error inserting admin role:', insertError);
       
-      // Try using check_is_admin RPC function which bypasses RLS
-      const { data: adminCheckResult, error: adminCheckError } = await supabase
+      // Try a second approach with the check_is_admin RPC function
+      // This uses SECURITY DEFINER so it bypasses RLS
+      const { data: adminCheck, error: adminCheckError } = await supabase
         .rpc('check_is_admin');
         
       if (adminCheckError) {
-        console.error('Error calling check_is_admin:', adminCheckError);
+        console.error('Error calling check_is_admin RPC:', adminCheckError);
         return false;
       }
       
-      console.log('Admin status check result:', adminCheckResult);
-      
-      // If admin check succeeded but role insertion failed, 
-      // we can assume the user already has role or now gained access
-      if (adminCheckResult) {
-        await updateUserProfile(userId);
+      if (adminCheck) {
+        console.log('Admin check succeeded via RPC');
         return true;
       }
       
       return false;
     }
-    
-    // Update the user profile after role has been successfully assigned
-    await updateUserProfile(userId);
     
     console.log('Admin role successfully assigned');
     return true;
@@ -73,10 +72,26 @@ export const ensureAdminRole = async (userId: string): Promise<boolean> => {
 
 /**
  * Helper function to update user profile to admin plan
+ * Using a separate function to handle failures and retry logic
  */
 const updateUserProfile = async (userId: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    console.log('Updating profile to admin plan for user:', userId);
+    
+    // First check if profile exists
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error('Error checking for existing profile:', checkError);
+      // Continue to try creating/updating anyway
+    }
+    
+    // If profile doesn't exist or needs updating, use upsert with onConflict parameter
+    const { error: updateError } = await supabase
       .from('profiles')
       .upsert({
         id: userId,
@@ -84,13 +99,21 @@ const updateUserProfile = async (userId: string): Promise<boolean> => {
         daily_limit: 9999,
         remaining_generations: 9999,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
+      }, { 
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
       
-    if (error) {
-      console.error('Error updating profile to admin plan:', error);
+    if (updateError) {
+      console.error('Error updating profile to admin plan:', updateError);
+      
+      // Try again with RPC if available, or other methods if needed
+      // This is where you could add additional bypass methods if you create them
+      
       return false;
     }
     
+    console.log('Profile successfully updated to admin plan');
     return true;
   } catch (error) {
     console.error('Error in updateUserProfile:', error);
