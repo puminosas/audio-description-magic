@@ -1,7 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
 export const useDescriptionService = () => {
+  const [modelUsed, setModelUsed] = useState<string | null>(null);
+
   // Generate enhanced description for short inputs
   const generateEnhancedDescription = async (
     text: string,
@@ -33,6 +36,10 @@ export const useDescriptionService = () => {
       } 
       // Then check if we have data and it contains success property
       else if (descResponse.data && descResponse.data.success && descResponse.data.generated_text) {
+        // Store the model used for reference
+        if (descResponse.data.model_used) {
+          setModelUsed(descResponse.data.model_used);
+        }
         return descResponse.data.generated_text;
       }
       
@@ -44,6 +51,7 @@ export const useDescriptionService = () => {
   };
 
   return {
-    generateEnhancedDescription
+    generateEnhancedDescription,
+    modelUsed
   };
 };

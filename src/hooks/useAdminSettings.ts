@@ -15,6 +15,9 @@ export interface AppSettings {
   enableFeedback: boolean;
   hidePricingFeatures: boolean;
   unlimitedGenerationsForAll: boolean;
+  chatGptModel: string;
+  chatGptTemperature: number;
+  chatGptPrompt: string;
 }
 
 export function useAdminSettings() {
@@ -29,7 +32,10 @@ export function useAdminSettings() {
     storageRetentionDays: 30,
     enableFeedback: true,
     hidePricingFeatures: false,
-    unlimitedGenerationsForAll: false
+    unlimitedGenerationsForAll: false,
+    chatGptModel: 'gpt-3.5-turbo',
+    chatGptTemperature: 0.7,
+    chatGptPrompt: 'Create an engaging product description in {language} for an online electronics store. Focus on the most important features and benefits that appeal to customers of all ages. Write in clear, accessible language that\'s easy to understand when read aloud or converted to audio. Structure the description logically, avoiding unnecessary symbols or characters. Keep the length suitable for a 60-second audio clip. Match the language to the user\'s selection ({language}) and consider the voice name "{voice_name}" for the audio output.'
   });
   const { toast } = useToast();
   const { isAdmin } = useAuth();
@@ -62,7 +68,10 @@ export function useAdminSettings() {
           storageRetentionDays: data.storageretentiondays,
           enableFeedback: data.enablefeedback,
           hidePricingFeatures: data.hidepricingfeatures,
-          unlimitedGenerationsForAll: data.unlimitedgenerationsforall
+          unlimitedGenerationsForAll: data.unlimitedgenerationsforall,
+          chatGptModel: data.chatgptmodel || 'gpt-3.5-turbo',
+          chatGptTemperature: data.chatgpttemperature || 0.7,
+          chatGptPrompt: data.chatgptprompt || settings.chatGptPrompt
         });
       }
     } catch (error) {
@@ -93,7 +102,10 @@ export function useAdminSettings() {
         storageretentiondays: settings.storageRetentionDays,
         enablefeedback: settings.enableFeedback,
         hidepricingfeatures: settings.hidePricingFeatures,
-        unlimitedgenerationsforall: settings.unlimitedGenerationsForAll
+        unlimitedgenerationsforall: settings.unlimitedGenerationsForAll,
+        chatgptmodel: settings.chatGptModel,
+        chatgpttemperature: settings.chatGptTemperature,
+        chatgptprompt: settings.chatGptPrompt
       });
       
       const { error } = await supabase
@@ -110,7 +122,10 @@ export function useAdminSettings() {
           storageretentiondays: settings.storageRetentionDays,
           enablefeedback: settings.enableFeedback,
           hidepricingfeatures: settings.hidePricingFeatures,
-          unlimitedgenerationsforall: settings.unlimitedGenerationsForAll
+          unlimitedgenerationsforall: settings.unlimitedGenerationsForAll,
+          chatgptmodel: settings.chatGptModel,
+          chatgpttemperature: settings.chatGptTemperature,
+          chatgptprompt: settings.chatGptPrompt
         });
       
       if (error) {
