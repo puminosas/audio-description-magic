@@ -38,16 +38,8 @@ const modelInfoData = {
 };
 
 interface ChatGptSettingsCardProps {
-  settings: AppSettings & {
-    chatGptModel?: string;
-    chatGptTemperature?: number;
-    chatGptPrompt?: string;
-  };
-  setSettings: (settings: AppSettings & {
-    chatGptModel?: string;
-    chatGptTemperature?: number;
-    chatGptPrompt?: string;
-  }) => void;
+  settings: AppSettings;
+  setSettings: (settings: AppSettings) => void;
 }
 
 const ChatGptSettingsCard: React.FC<ChatGptSettingsCardProps> = ({ settings, setSettings }) => {
@@ -88,7 +80,7 @@ const ChatGptSettingsCard: React.FC<ChatGptSettingsCardProps> = ({ settings, set
         <div className="space-y-2">
           <Label htmlFor="model">Model Selection</Label>
           <Select 
-            value={settings.chatGptModel || 'gpt-3.5-turbo'} 
+            value={settings.chatGptModel} 
             onValueChange={handleModelChange}
           >
             <SelectTrigger id="model">
@@ -151,7 +143,7 @@ const ChatGptSettingsCard: React.FC<ChatGptSettingsCardProps> = ({ settings, set
             id="system-prompt" 
             placeholder="Enter the system prompt used for generating descriptions" 
             className="min-h-[150px] font-mono text-sm"
-            value={settings.chatGptPrompt || ''}
+            value={settings.chatGptPrompt}
             onChange={handlePromptChange}
           />
           <p className="text-xs text-muted-foreground">

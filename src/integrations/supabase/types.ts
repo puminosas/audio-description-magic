@@ -43,6 +43,9 @@ export type Database = {
         Row: {
           allowguestgeneration: boolean
           basicgenerationslimit: number
+          chatgptmodel: string | null
+          chatgptprompt: string | null
+          chatgpttemperature: number | null
           created_at: string | null
           enablefeedback: boolean
           enablenewuserregistration: boolean
@@ -58,6 +61,9 @@ export type Database = {
         Insert: {
           allowguestgeneration?: boolean
           basicgenerationslimit?: number
+          chatgptmodel?: string | null
+          chatgptprompt?: string | null
+          chatgpttemperature?: number | null
           created_at?: string | null
           enablefeedback?: boolean
           enablenewuserregistration?: boolean
@@ -73,6 +79,9 @@ export type Database = {
         Update: {
           allowguestgeneration?: boolean
           basicgenerationslimit?: number
+          chatgptmodel?: string | null
+          chatgptprompt?: string | null
+          chatgpttemperature?: number | null
           created_at?: string | null
           enablefeedback?: boolean
           enablenewuserregistration?: boolean
