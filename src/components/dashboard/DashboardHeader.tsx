@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createApiKey } from '@/utils/apiKeyService';
 
@@ -31,14 +31,29 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const handleCreateApiKey = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.id) return;
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "Please make sure you are logged in to create API keys.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsCreating(true);
     
     try {
+      console.log('Creating API key for user:', user.id, 'with name:', keyName);
       const { data, error } = await createApiKey(user.id, keyName);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating API key:', error);
+        throw error;
+      }
+      
+      if (!data || !data.api_key) {
+        throw new Error('Failed to generate API key - no key returned');
+      }
       
       setNewApiKey(data.api_key);
       toast({
@@ -46,11 +61,14 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         description: "API key created successfully. Make sure to copy it now!",
       });
     } catch (error: any) {
+      console.error('Detailed error creating API key:', error);
       toast({
         title: "Error creating API key",
         description: error.message || "There was a problem creating your API key.",
         variant: "destructive",
       });
+      // Close the modal on error to allow the user to try again
+      setShowCreateApiKeyModal(false);
     } finally {
       setIsCreating(false);
     }
@@ -99,7 +117,12 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isCreating}>
-                {isCreating ? "Creating..." : "Create API Key"}
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : "Create API Key"}
               </Button>
             </form>
           ) : (
