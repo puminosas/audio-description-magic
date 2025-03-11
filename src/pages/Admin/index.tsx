@@ -83,7 +83,7 @@ const Admin = () => {
             toast({
               title: "Limited Admin Access",
               description: "Some admin functions may not work properly",
-              variant: "warning"
+              variant: "destructive" // Changed from "warning" to "destructive" as that's a valid variant
             });
           }
         } else if (!isAdmin) {
