@@ -39,12 +39,12 @@ export const createApiKey = async (userId: string, name: string) => {
       if (profileError) {
         console.error('Error fetching profile data:', profileError);
         // Only call Edge Function as fallback if direct query fails
-        const session = await supabase.auth.getSession();
+        const { data: sessionData } = await supabase.auth.getSession();
         const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/get-user-plan`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.data.session?.access_token || ''}`
+            'Authorization': `Bearer ${sessionData.session?.access_token || ''}`
           },
           body: JSON.stringify({ user_id: userId })
         });
