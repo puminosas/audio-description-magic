@@ -38,10 +38,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Special case for admin email check
-    const { data: user, error: userError } = await supabase.auth
+    const { data: userData, error: userError } = await supabase.auth
       .admin.getUserById(user_id);
       
-    if (!userError && user && user.user.email === 'a.mackeliunas@gmail.com') {
+    if (!userError && userData && userData.user.email === 'a.mackeliunas@gmail.com') {
       return new Response(
         JSON.stringify({ plan: 'admin' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

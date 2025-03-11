@@ -4,9 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const fetchUserApiKeys = async (userId: string) => {
   try {
-    const { data, error } = await supabaseTyped.custom
+    const { data, error } = await supabase
       .from('api_keys')
-      .select()
+      .select('id, name, api_key, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     
@@ -40,7 +40,7 @@ export const createApiKey = async (userId: string, name: string) => {
         console.error('Error fetching profile data:', profileError);
         // Only call Edge Function as fallback if direct query fails
         const { data: sessionData } = await supabase.auth.getSession();
-        const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/get-user-plan`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-user-plan`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -65,12 +65,13 @@ export const createApiKey = async (userId: string, name: string) => {
     }
     
     // Insert the new API key
-    const { data, error } = await supabaseTyped.custom
+    const { data, error } = await supabase
       .from('api_keys')
       .insert({
         user_id: userId,
         name: name || 'API Key',
-        api_key: apiKey
+        api_key: apiKey,
+        is_active: true
       })
       .select('id, api_key, name, created_at')
       .single();
@@ -86,7 +87,7 @@ export const createApiKey = async (userId: string, name: string) => {
 
 export const deleteApiKey = async (keyId: string) => {
   try {
-    const { error } = await supabaseTyped.custom
+    const { error } = await supabase
       .from('api_keys')
       .delete()
       .eq('id', keyId);
