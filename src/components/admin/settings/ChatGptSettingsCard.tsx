@@ -86,7 +86,12 @@ const ChatGptSettingsCard: React.FC<ChatGptSettingsCardProps> = ({ settings, set
             <SelectTrigger id="model" className="w-full">
               <SelectValue placeholder="Select a model" />
             </SelectTrigger>
-            <SelectContent position="popper" className="w-full bg-background border border-input">
+            <SelectContent 
+              className="w-full bg-background border border-input"
+              position="popper"
+              align="start"
+              sideOffset={4}
+            >
               <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
               <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
               <SelectItem value="gpt-4o">GPT-4o</SelectItem>
