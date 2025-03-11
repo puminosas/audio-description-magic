@@ -23,33 +23,45 @@ export const createApiKey = async (userId: string, name: string) => {
     // Generate a random API key
     const apiKey = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
     
-    // First check if user exists and has correct plan
-    // Call the Edge Function directly
-    const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/get-user-plan`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`
-      },
-      body: JSON.stringify({ user_id: userId })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to verify user plan');
-    }
-    
-    const profile = await response.json();
-    
-    // Check if the user has the appropriate plan
-    if (profile && (profile.plan !== 'premium' && profile.plan !== 'admin')) {
-      throw new Error('Your current plan does not include API access');
-    }
-    
-    // Special case for admin email
+    // Check for admin email first to avoid unnecessary Edge Function calls
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email === 'a.mackeliunas@gmail.com') {
       console.log('Admin email detected, bypassing plan check');
-      // Continue with API key creation for admin email
+      // Skip Edge Function call for admin users
+    } else {
+      // For non-admin users, check plan via direct query first
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) {
+        console.error('Error fetching profile data:', profileError);
+        // Only call Edge Function as fallback if direct query fails
+        const session = await supabase.auth.getSession();
+        const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/get-user-plan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.data.session?.access_token || ''}`
+          },
+          body: JSON.stringify({ user_id: userId })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to verify user plan');
+        }
+        
+        const profile = await response.json();
+        
+        // Check if the user has the appropriate plan
+        if (profile && (profile.plan !== 'premium' && profile.plan !== 'admin')) {
+          throw new Error('Your current plan does not include API access');
+        }
+      } else if (profileData && profileData.plan !== 'premium' && profileData.plan !== 'admin') {
+        throw new Error('Your current plan does not include API access');
+      }
     }
     
     // Insert the new API key
