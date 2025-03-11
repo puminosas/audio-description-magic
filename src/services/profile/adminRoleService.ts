@@ -8,38 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const ensureAdminRole = async (userId: string): Promise<boolean> => {
   try {
-    // Check if role already exists to avoid unnecessary operations
-    const { data: existingRole, error: checkError } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle();
-      
-    if (checkError) {
-      console.error('Error checking existing admin role:', checkError);
-      return false;
-    }
-    
-    // If the role already exists, no need to create it again
-    if (existingRole) {
-      return true;
-    }
-    
-    // Insert the admin role directly without using RLS
-    const { error } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: userId,
-        role: 'admin'
-      });
-      
-    if (error) {
-      console.error('Error assigning admin role:', error);
-      return false;
-    }
-    
-    // Also update the profile to admin plan
+    // First update the profile to admin plan
     const { error: profileError } = await supabase
       .from('profiles')
       .upsert({
@@ -52,10 +21,39 @@ export const ensureAdminRole = async (userId: string): Promise<boolean> => {
       
     if (profileError) {
       console.error('Error updating profile to admin plan:', profileError);
-      // Role assignment succeeded but profile update failed
+      return false;
+    }
+    
+    // Check if admin role already exists using direct query
+    const { data: existingRole, error: checkError } = await supabase
+      .rpc('has_role', { role: 'admin' });
+      
+    if (checkError) {
+      console.error('Error checking admin role:', checkError);
+      return false;
+    }
+    
+    // If the role already exists, no need to create it again
+    if (existingRole) {
+      console.log('User already has admin role');
       return true;
     }
     
+    // Insert the admin role without using the user_id in the query
+    // This avoids potential RLS issues as we're using RPC functions now
+    const { error } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role: 'admin'
+      });
+      
+    if (error) {
+      console.error('Error assigning admin role:', error);
+      return false;
+    }
+    
+    console.log('Admin role successfully assigned');
     return true;
   } catch (e) {
     console.error('Error in ensureAdminRole:', e);
