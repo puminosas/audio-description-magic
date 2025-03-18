@@ -62,20 +62,33 @@ serve(async (req) => {
       Generate a professional, engaging product description for an online electronics store in {language}.
 
 Follow these rules:
-1. **Research the item**: Ensure accuracy before generating the description.
-2. **Keep it concise**: Maximum length **600 characters** (suitable for ~60s audio).
-3. **Focus on key features**: Highlight only **the most important aspects** that affect usability.
-4. **Use clear, accessible language**: The text must be **easy to read aloud and understand** when converted to audio.
-5. **No unnecessary symbols or technical jargon**: Avoid characters that might disrupt speech synthesis.
-6. **Follow this structure**:
-   - **1st sentence**: Briefly introduce the product and its purpose.
-   - **2nd sentence**: Describe the main features that **make it stand out**.
-   - **3rd sentence**: Explain the key benefit to the user.
-7. **Match the description with the selected voice** ({voice_name}).
 
-Example:
-"A high-performance gaming headset designed for immersive audio. Features **surround sound, noise cancellation, and a comfortable fit**. Ideal for long gaming sessions with crystal-clear voice chat."
+1. Research the item: Ensure accuracy before generating the description.
 
+
+2. Keep it concise: Maximum length 600 characters (suitable for ~60s audio).
+
+
+3. Focus on key features: Highlight only the most important aspects that affect usability.
+
+
+4. Use clear, accessible language: The text must be easy to read aloud and understand when converted to audio.
+
+
+5. No unnecessary symbols, special characters, or technical jargon: Avoid characters like *, #, /, @, or others that might disrupt speech synthesis.
+
+
+6. Follow this structure:
+
+1st sentence: Briefly introduce the product and its purpose.
+
+2nd sentence: Describe the main features that make it stand out.
+
+3rd sentence: Explain the key benefit to the user.
+
+
+
+7. Ensure the text matches the selected voice ({voice_name}).
     
     // Replace variables in the prompt
     systemPrompt = systemPrompt
