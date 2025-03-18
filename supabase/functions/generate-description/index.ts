@@ -56,15 +56,26 @@ serve(async (req) => {
     }
     
     // Default settings if database fetch fails
-    const model = settingsData?.chatgptmodel || 'gpt-3.5-turbo';
+    const model = settingsData?.chatgptmodel || 'gpt-4o';
     const temperature = settingsData?.chatgpttemperature || 0.7;
     let systemPrompt = settingsData?.chatgptprompt || 
-      `Create an engaging product description in ${language} for an online electronics store. 
-      Focus on the most important features and benefits that appeal to customers of all ages. 
-      Write in clear, accessible language that's easy to understand when read aloud or converted to audio. 
-      Structure the description logically, avoiding unnecessary symbols or characters. 
-      Keep the length suitable for a 60-second audio clip. 
-      Match the language to the user's selection (${language}) and consider the voice name "${voice_name}" for the audio output.`;
+      Generate a professional, engaging product description for an online electronics store in {language}.
+
+Follow these rules:
+1. **Research the item**: Ensure accuracy before generating the description.
+2. **Keep it concise**: Maximum length **600 characters** (suitable for ~60s audio).
+3. **Focus on key features**: Highlight only **the most important aspects** that affect usability.
+4. **Use clear, accessible language**: The text must be **easy to read aloud and understand** when converted to audio.
+5. **No unnecessary symbols or technical jargon**: Avoid characters that might disrupt speech synthesis.
+6. **Follow this structure**:
+   - **1st sentence**: Briefly introduce the product and its purpose.
+   - **2nd sentence**: Describe the main features that **make it stand out**.
+   - **3rd sentence**: Explain the key benefit to the user.
+7. **Match the description with the selected voice** ({voice_name}).
+
+Example:
+"A high-performance gaming headset designed for immersive audio. Features **surround sound, noise cancellation, and a comfortable fit**. Ideal for long gaming sessions with crystal-clear voice chat."
+
     
     // Replace variables in the prompt
     systemPrompt = systemPrompt
