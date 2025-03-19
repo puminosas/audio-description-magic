@@ -49,7 +49,13 @@ router.get('/files', checkAdmin, (req, res) => {
 router.post('/analyze', checkAdmin, (req, res) => {
   const { filePath } = req.body;
   console.log('Analyzing file:', filePath);
-  fs.readFile(filePath, 'utf8', async (err, data) => {
+  const rootDirectory = path.join(process.cwd(), 'project-files');
+  const resolvedPath = path.resolve(rootDirectory, filePath);
+  if (!resolvedPath.startsWith(rootDirectory)) {
+    console.error('Invalid file path:', filePath);
+    return res.status(403).send('Forbidden');
+  }
+  fs.readFile(resolvedPath, 'utf8', async (err, data) => {
     if (err) {
       console.error('Unable to read file:', err);
       return res.status(500).send('Unable to read file');
